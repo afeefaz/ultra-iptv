@@ -1,0 +1,13 @@
+{
+  "name": "@ultra/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/client.ts",
+    "./worker": "./src/worker.ts"
+  },
+  "dependencies": {
+    "@ultra/core": "workspace:*"
+  }
+}

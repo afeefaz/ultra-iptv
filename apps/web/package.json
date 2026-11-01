@@ -1,0 +1,12 @@
+{
+  "name": "@ultra/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@ultra/core": "workspace:*",
+    "@ultra/platform": "workspace:*",
+    "@ultra/ui": "workspace:*",
+    "solid-js": "1.9.18"
+  }
+}

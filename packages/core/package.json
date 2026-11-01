@@ -1,0 +1,13 @@
+{
+  "name": "@ultra/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./service": "./src/catalog/service.ts"
+  },
+  "dependencies": {
+    "idb": "8.0.4"
+  }
+}

@@ -1,0 +1,8 @@
+apks/
+research/
+node_modules/
+dist/
+dist-legacy/
+apps/web/dev/media/
+*.log
+.DS_Store

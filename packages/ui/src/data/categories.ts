@@ -1,0 +1,69 @@
+import { categoryPins, log, normalizeText, type ContentKind } from '@ultra/core';
+import { createEffect, createSignal, on, type Accessor } from 'solid-js';
+import { catalog } from './catalog';
+import { activePlaylist } from './playlists';
+import {
+  liveCatSort,
+  seriesCatSort,
+  setLiveCatSort,
+  setSeriesCatSort,
+  setVodCatSort,
+  vodCatSort,
+  type CategorySort,
+} from './settings';
+
+export const CATEGORY_SORTS: CategorySort[] = ['default', 'az', 'za', 'count'];
+
+export function categorySort(kind: ContentKind): [Accessor<CategorySort>, (v: CategorySort) => void] {
+  if (kind === 'vod') return [vodCatSort, setVodCatSort];
+  if (kind === 'series') return [seriesCatSort, setSeriesCatSort];
+  return [liveCatSort, setLiveCatSort];
+}
+
+/** Pinned category ids of the active playlist for one section, plus a toggle. */
+export function usePins(kind: ContentKind): { pins: Accessor<string[]>; toggle: (categoryId: string) => Promise<boolean> } {
+  const [pins, setPins] = createSignal<string[]>([]);
+  createEffect(
+    on(
+      () => activePlaylist()?.id,
+      (id) => {
+        if (!id) return setPins([]);
+        categoryPins(id, kind).then(setPins, (e) => log.warn('categories', 'could not load pins', { error: e }));
+      },
+    ),
+  );
+  const toggle = async (categoryId: string) => {
+    const id = activePlaylist()?.id;
+    if (!id) return false;
+    const pinned = await catalog().call('togglePin', id, kind, categoryId);
+    setPins((p) => (pinned ? p.concat(categoryId) : p.filter((c) => c !== categoryId)));
+    log.debug('categories', pinned ? 'pinned' : 'unpinned', { kind });
+    return pinned;
+  };
+  return { pins, toggle };
+}
+
+/** Pinned categories first (in pin order), then the rest in the chosen order. */
+export function arrangeCategories<T extends { id: string; name: string; count: number }>(
+  cats: T[],
+  sort: CategorySort,
+  pins: string[],
+  locale: string,
+): T[] {
+  const pinned = pins.map((id) => cats.filter((c) => c.id === id)[0]).filter((c): c is T => !!c);
+  const rest = cats.filter((c) => pins.indexOf(c.id) < 0);
+  const collator = new Intl.Collator(locale);
+  if (sort === 'az') rest.sort((a, b) => collator.compare(a.name, b.name));
+  else if (sort === 'za') rest.sort((a, b) => collator.compare(b.name, a.name));
+  else if (sort === 'count') rest.sort((a, b) => b.count - a.count);
+  return pinned.concat(rest);
+}
+
+/** Every word of the query appears in the (normalized) name, like the old global search. */
+export function makeMatcher(query: string): ((normalizedName: string) => boolean) | null {
+  const words = normalizeText(query).split(' ').filter(Boolean);
+  if (!words.length) return null;
+  return (name) => words.every((w) => name.indexOf(w) >= 0);
+}
+
+export { normalizeText };

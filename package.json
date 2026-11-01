@@ -1,0 +1,40 @@
+{
+  "name": "ultra-iptv",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.34.9",
+  "scripts": {
+    "dev": "vite --config apps/web/vite.config.ts",
+    "dev:lan": "vite --config apps/web/vite.config.ts --host",
+    "build": "vite build --config apps/web/vite.config.ts",
+    "build:legacy": "vite build --config apps/web/vite.config.ts --mode legacy && node scripts/check-legacy.mjs apps/web/dist-legacy",
+    "preview": "vite preview --config apps/web/vite.config.ts",
+    "preview:legacy": "vite preview --config apps/web/vite.config.ts --mode legacy",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint .",
+    "check": "node scripts/check-chars.mjs && tsc --noEmit -p tsconfig.json && eslint . && vitest run && vite build --config apps/web/vite.config.ts && vite build --config apps/web/vite.config.ts --mode legacy && node scripts/check-legacy.mjs apps/web/dist-legacy"
+  },
+  "devDependencies": {
+    "@babel/core": "7.29.7",
+    "@babel/preset-env": "7.29.7",
+    "@eslint/js": "10.0.1",
+    "@types/babel__core": "7.20.5",
+    "@types/node": "24.19.2",
+    "@vitejs/plugin-legacy": "8.2.3",
+    "es-check": "9.8.1",
+    "eslint": "10.14.0",
+    "fake-indexeddb": "6.2.7",
+    "fast-check": "4.10.2",
+    "postcss": "8.5.32",
+    "postcss-rtlcss": "6.0.0",
+    "terser": "5.51.2",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "8.3.5",
+    "vite-plugin-solid": "2.11.15",
+    "vitest": "5.0.5"
+  }
+}
