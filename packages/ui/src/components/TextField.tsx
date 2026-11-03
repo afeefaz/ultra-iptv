@@ -37,7 +37,10 @@ export function TextField(props: TextFieldProps): JSX.Element {
     onSelect: () => {
       if (osk) setOpen(true);
       else if (input && document.activeElement !== input) input.focus();
-      else props.onSubmit?.();
+      // OK / the keyboard's Done key inside the field: submit, or just leave the field so the
+      // remote moves between fields again (Android TV keeps the D-pad in a focused input).
+      else if (props.onSubmit) props.onSubmit();
+      else input?.blur();
     },
   });
 
@@ -65,6 +68,7 @@ export function TextField(props: TextFieldProps): JSX.Element {
               dir={props.compact && !props.value ? direction() : 'auto'}
               type={masked() ? 'password' : props.type === 'url' ? 'url' : 'text'}
               autocomplete="off"
+              enterkeyhint="done"
               autocapitalize="off"
               spellcheck={false}
               placeholder={props.placeholder ?? (props.compact ? props.label : undefined)}

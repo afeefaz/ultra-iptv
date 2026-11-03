@@ -1,9 +1,9 @@
 /// <reference lib="webworker" />
 // Catalogue worker (spec §3): fetches and parses playlists, diffs and writes IndexedDB, searches.
 // Built as a classic (non-module) worker without polyfills: keep to Chrome 53 built-ins here.
-import { log, logging, toErrorInfo } from '@ultra/core';
+import { AppError, log, logging, setFetch, toErrorInfo } from '@ultra/core';
 import { PlaylistService } from '@ultra/core/service';
-import type { FromWorker, Method, RequestMessage, WorkerApi } from './protocol';
+import type { FromWorker, HttpReplyMessage, Method, ToWorker, WorkerApi } from './protocol';
 
 declare const self: DedicatedWorkerGlobalScope;
 
@@ -19,10 +19,29 @@ const service = new PlaylistService({
   secrets: (secrets, hosts) => post({ event: 'secrets', secrets, hosts }),
 });
 
+// Native HTTP (Android): requests go to the main thread, which uses the platform's HTTP client.
+const NATIVE_TIMEOUT_MS = 60_000;
+const httpWaiters = new Map<number, { resolve: (r: HttpReplyMessage) => void }>();
+let nextHttpId = 1;
+
+function nativeFetch(url: string, init?: RequestInit): Promise<Response> {
+  return new Promise<HttpReplyMessage>((resolve) => {
+    const reqId = nextHttpId++;
+    httpWaiters.set(reqId, { resolve });
+    post({ event: 'http', reqId, url, headers: init?.headers as Record<string, string> | undefined, timeoutMs: NATIVE_TIMEOUT_MS });
+  }).then((reply) => {
+    if (reply.error !== undefined || reply.status === undefined) {
+      throw new AppError({ code: 'network', message: reply.error || 'Network error' });
+    }
+    return new Response(reply.body ?? '', { status: reply.status });
+  });
+}
+
 const api: WorkerApi = {
-  async init({ saltHex, keepHosts, logLevel }) {
+  async init({ saltHex, keepHosts, logLevel, nativeHttp }) {
     logging.configureWorker(saltHex, keepHosts);
     log.setLevel(logLevel);
+    if (nativeHttp) setFetch(nativeFetch);
     await service.init();
   },
   async setLogLevel(level) {
@@ -53,7 +72,14 @@ const api: WorkerApi = {
   clearProgress: (playlistId, kind, key) => service.clearProgress(playlistId, kind, key),
 };
 
-self.onmessage = (e: MessageEvent<RequestMessage>) => {
+self.onmessage = (e: MessageEvent<ToWorker>) => {
+  if ('httpReply' in e.data) {
+    const reply = e.data;
+    const waiter = httpWaiters.get(reply.httpReply);
+    httpWaiters.delete(reply.httpReply);
+    waiter?.resolve(reply);
+    return;
+  }
   const { id, method, args } = e.data;
   const fn = api[method as Method] as (...a: unknown[]) => Promise<unknown>;
   if (!fn) {

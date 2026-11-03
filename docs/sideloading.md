@@ -2,7 +2,7 @@
 
 Distribution starts with sideloading; app stores come later. This page covers putting a build on a Samsung TV, an LG TV, and Android phones, TVs and Fire TV.
 
-> Status: written before the app exists. `pnpm` script names and output paths are the **planned** ones and get confirmed in phase 0. Steps marked **(verify)** get checked on real hardware in phases 4–6. App IDs come from `docs/spec.md` §12 (Android/webOS `com.ultraiptv.player`, Tizen `ULTRAIPTV1.UltraIPTV`); `<TV_IP>` is the TV's IP address.
+> Status: the Android steps below were verified in phase 4 (Android TV and phone emulators). Samsung and LG steps are still the **planned** ones; steps marked **(verify)** get checked on real hardware in phases 5–6. App IDs come from `docs/spec.md` §12 (Android/webOS `com.ultraiptv.player`, Tizen `ULTRAIPTV1.UltraIPTV`); `<TV_IP>` is the TV's IP address.
 
 Keep the Mac and the TV/device on the same network.
 
@@ -98,11 +98,14 @@ adb connect <TV_IP>:5555            # Fire TV / Android TV over the network
 
 ### Build and install
 ```sh
-pnpm build:android                  # planned: builds the legacy web bundle + `npx cap sync android`
-cd apps/android/android && ./gradlew assembleDebug
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+pnpm android                        # legacy web build → cap sync → Gradle debug APK
+pnpm android:install                # … and `adb install -r` on the connected device
+node scripts/android.mjs --install -s <serial>   # pick a device when several are connected
 ```
+The APK is `apps/android/android/app/build/outputs/apk/debug/app-debug.apk` (about 16 MB; most of it is the FFmpeg audio decoder for AC-3/E-AC-3/DTS). Gradle needs Java 17–21: the script uses Android Studio's bundled JDK when `JAVA_HOME` isn't set (Homebrew's newest OpenJDK is too new for Gradle).
 - **More than one device connected:** add `-s <serial>`, e.g. `adb -s <TV_IP>:5555 install -r …`.
+- **First launch on a phone:** Android shows a one-time "Viewing full screen" tip, because the app hides the status and navigation bars; swipe from an edge to bring them back.
+- **Emulators:** `AndroidTV_4K` (D-pad, TV layout) and any phone image work on Apple Silicon. The dev server's fake provider is reachable from an emulator at `http://10.0.2.2:<port>/__fixtures/xtream` (run `pnpm dev` and keep the port in mind).
 - **Launch on a TV from the Mac:**
   ```sh
   adb shell monkey -p com.ultraiptv.player -c android.intent.category.LEANBACK_LAUNCHER 1

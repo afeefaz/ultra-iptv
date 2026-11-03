@@ -22,6 +22,7 @@ pnpm install
 | `pnpm typecheck` / `pnpm lint` | TypeScript and ESLint |
 | `pnpm build` | Modern web build → `apps/web/dist` |
 | `pnpm build:legacy` | TV/Android bundle for Chrome 53+ → `apps/web/dist-legacy`, then checks it can run there |
+| `pnpm android` / `pnpm android:install` | Android APK (phone, Android TV, Fire TV) and optional `adb install`; see `docs/sideloading.md` |
 | `pnpm preview:legacy` | Serve the legacy bundle locally |
 | `pnpm check` | All of the above, in order |
 
@@ -101,7 +102,8 @@ may not offer audio/subtitle track switching.
 ## Layout
 
 ```
-apps/web            Vite entry for the browser (TV/Android targets arrive in phases 4–6)
+apps/web            Vite entry for the browser and for Android (picks the platform at start-up)
+apps/android        Capacitor project; native ExoPlayer plugin in android/app/src/main/java/com/ultraiptv/player
   build/            legacy worker transpiling;  dev/  fake provider for `pnpm dev`
 packages/core       framework-free logic: logger + redaction, Xtream/M3U sources, catalogue
                     (IndexedDB, diff writes, favourites, search), encrypted credentials

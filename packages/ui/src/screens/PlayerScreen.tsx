@@ -20,6 +20,7 @@ import {
   releaseSurface,
   retryNow,
   seekBy,
+  openInExternalPlayer,
   seekTo,
   togglePause,
   zap,
@@ -28,6 +29,7 @@ import {
 import { formatDuration } from '../format';
 import { formatNumber, t } from '../i18n';
 import { useKeys } from '../keys';
+import { usePlatform } from '../platform-context';
 import { goBack } from '../nav';
 
 const OVERLAY_MS = 5000;
@@ -247,6 +249,7 @@ function LivePlayer(): JSX.Element {
                   <Icon name="subtitles" />
                   <span>{t('player.audioSubs')}</span>
                 </PlayerButton>
+                <ExternalButton />
               </div>
               <Show when={stats()}>
                 <p class="player-stats" dir="ltr">
@@ -494,6 +497,7 @@ function MediaPlayer(): JSX.Element {
                   <Icon name="subtitles" />
                   <span>{t('player.audioSubs')}</span>
                 </PlayerButton>
+                <ExternalButton />
               </div>
               <p class="player-hint">{t('player.mediaHint')}</p>
             </div>
@@ -538,5 +542,18 @@ function PausedPill(): JSX.Element {
         <div class="player-paused-sub">{t('player.pressOkResume')}</div>
       </div>
     </div>
+  );
+}
+
+/** "Open in another player": only where the platform supports it (Android). */
+function ExternalButton(): JSX.Element {
+  const platform = usePlatform();
+  return (
+    <Show when={platform.openExternal}>
+      <PlayerButton label={t('player.external')} onClick={() => void openInExternalPlayer()}>
+        <Icon name="forward" />
+        <span>{t('player.external')}</span>
+      </PlayerButton>
+    </Show>
   );
 }

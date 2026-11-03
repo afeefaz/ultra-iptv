@@ -24,7 +24,8 @@ import type {
 
 /** Methods the catalogue worker exposes. Every write to the catalogue goes through here. */
 export interface WorkerApi {
-  init(args: { saltHex: string; keepHosts: string[]; logLevel: LogLevel }): Promise<void>;
+  /** `nativeHttp`: send network requests to the main thread (platform native HTTP) instead of `fetch`. */
+  init(args: { saltHex: string; keepHosts: string[]; logLevel: LogLevel; nativeHttp?: boolean }): Promise<void>;
   setLogLevel(level: LogLevel): Promise<void>;
   testPlaylist(input: PlaylistInput): Promise<TestResult>;
   savePlaylist(input: PlaylistInput): Promise<PlaylistRecord>;
@@ -67,6 +68,17 @@ export type WorkerEvent =
   | { event: 'log'; entry: LogEntry }
   | { event: 'changed'; playlistId: string | null; kinds: ContentKind[] }
   | { event: 'progress'; progress: RefreshProgress }
-  | { event: 'secrets'; secrets: string[]; hosts: string[] };
+  | { event: 'secrets'; secrets: string[]; hosts: string[] }
+  | { event: 'http'; reqId: number; url: string; headers?: Record<string, string>; timeoutMs: number };
 
+/** Main thread's answer to an `http` event. */
+export interface HttpReplyMessage {
+  httpReply: number;
+  status?: number;
+  body?: string;
+  /** Set when the request never got an HTTP answer. */
+  error?: string;
+}
+
+export type ToWorker = RequestMessage | HttpReplyMessage;
 export type FromWorker = ResponseMessage | WorkerEvent;

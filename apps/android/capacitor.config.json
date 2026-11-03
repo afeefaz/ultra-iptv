@@ -1,0 +1,18 @@
+{
+  "appId": "com.ultraiptv.player",
+  "appName": "Ultra IPTV",
+  "webDir": "../web/dist-legacy",
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#080a10"
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": false
+    }
+  }
+}

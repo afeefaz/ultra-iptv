@@ -6,6 +6,7 @@ import { Icon } from './components/Icon';
 import { PickerDialog } from './components/PickerDialog';
 import { PinHost } from './components/PinDialog';
 import { VideoLayer } from './components/VideoLayer';
+import { setCatalogPlatform } from './data/catalog';
 import { clock, formatClock } from './data/epg';
 import { startParental } from './data/parental';
 import { playingPlaylistId, stopPlayback } from './data/playback';
@@ -35,6 +36,7 @@ const focusByRoute = new Map<string, string>();
 
 export function App(props: { platform: Platform }): JSX.Element {
   applyLocaleToDocument();
+  setCatalogPlatform(props.platform);
 
   const stopFocusTracking = focusManager.onChange((id) => {
     if (id && focusManager.isInZone(id, CONTENT_ZONE)) focusByRoute.set(currentRoute().name, id);
@@ -67,7 +69,10 @@ export function App(props: { platform: Platform }): JSX.Element {
         return focusManager.select();
       case 'back':
         if (leaveTextField()) return true;
-        if (!goBack()) return false;
+        if (!goBack()) {
+          props.platform.exit?.();
+          return !!props.platform.exit;
+        }
         restoreFocus(currentRoute());
         return true;
       default:

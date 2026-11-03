@@ -309,6 +309,7 @@ export const ar: Record<MessageKey, string> = {
   'settings.streamFormatDesc': 'الصيغة المستخدمة للقنوات المباشرة.',
   'settings.subtitle': 'اللغة والتشغيل والترجمة والرقابة الأبوية وقوائم التشغيل',
   'settings.subtitles': 'الترجمة والصوت',
+  'player.external': 'فتح في مشغل آخر',
   'common.yes': 'نعم',
   'common.cancel': 'إلغاء',
   'common.back': 'رجوع',

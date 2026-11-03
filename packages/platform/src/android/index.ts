@@ -1,0 +1,69 @@
+import { App } from '@capacitor/app';
+import { CapacitorHttp } from '@capacitor/core';
+import type { DeviceInfo, Platform } from '../types';
+import { webPlatform } from '../web';
+import { UltraPlayer } from './plugin';
+import { NativePlayer } from './player';
+
+/**
+ * Android phone, Android TV and Fire TV (spec §3): the same app in a Capacitor WebView, with
+ * Media3 ExoPlayer for playback and native HTTP for playlists.
+ */
+export const androidPlatform: Platform = {
+  id: 'android',
+  // The system keyboard works on phones and on TVs (Android TV's on-screen keyboard).
+  textInput: 'native',
+  // ExoPlayer plays raw MPEG-TS natively; it's what providers serve most reliably.
+  prefersHls: false,
+  createPlayer: () => new NativePlayer(),
+  keys: {
+    start(handler) {
+      // D-pad, OK, media, channel and colour keys reach the WebView as key events.
+      const stopKeys = webPlatform.keys.start(handler);
+      // Back is delivered by Capacitor, not as a key event.
+      const sub = App.addListener('backButton', () => {
+        handler({ key: 'back', raw: 'backButton', repeat: false });
+      });
+      return () => {
+        stopKeys();
+        void sub.then((h) => h.remove());
+      };
+    },
+  },
+  fileExport: {
+    async exportText(filename, mimeType, text) {
+      await UltraPlayer.shareText({ filename, mimeType, text });
+    },
+  },
+  async http(request) {
+    const res = await CapacitorHttp.get({
+      url: request.url,
+      headers: request.headers,
+      responseType: 'text',
+      connectTimeout: request.timeoutMs,
+      readTimeout: request.timeoutMs,
+    });
+    return { status: res.status, body: typeof res.data === 'string' ? res.data : JSON.stringify(res.data) };
+  },
+  async openExternal(url, title) {
+    await UltraPlayer.openExternal({ url, title });
+  },
+  exit() {
+    void App.exitApp();
+  },
+  device(): DeviceInfo {
+    const ua = navigator.userAgent;
+    const chrome = /Chrome\/([\d.]+)/.exec(ua);
+    const android = /Android ([\d.]+)/.exec(ua);
+    const model = /Android [\d.]+; ([^;)]+)/.exec(ua);
+    return {
+      platform: 'android',
+      engine: chrome ? `WebView ${chrome[1]}` : 'WebView',
+      userAgent: ua,
+      screen: { width: window.innerWidth, height: window.innerHeight, pixelRatio: window.devicePixelRatio || 1 },
+      language: navigator.language,
+      model: model ? model[1].trim() : undefined,
+      osVersion: android ? `Android ${android[1]}` : undefined,
+    };
+  },
+};

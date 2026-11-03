@@ -3312,3 +3312,14 @@ h3 {
     margin: 0 0 1rem 0;
   }
 }
+
+/* Native players (Android) draw full-screen video under a transparent page. */
+.video-behind,
+.video-behind body,
+.video-behind .app {
+  background: transparent;
+}
+
+.video-behind .topbar {
+  visibility: hidden;
+}

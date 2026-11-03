@@ -140,9 +140,11 @@ export class FocusManager {
       const opposite = sameZone.filter((c) => inBeam(from, c.rect, dir) && !isAhead(from, c.rect, dir));
       next = pickWrap(from, opposite, dir);
     }
-    if (!next) {
+    // Something straight across in another zone (the next pane) beats a diagonal jump inside
+    // this one (e.g. Right from a category row goes to the channels, not the sort button above).
+    if (!next || !inBeam(from, rectOf(next.el), dir)) {
       const target = pickNext(from, others.filter((i) => i.zone !== cur.zone).map(toCandidate), dir);
-      if (target) next = this.remembered(target.zone, pool) ?? target;
+      if (target && (!next || inBeam(from, rectOf(target.el), dir))) next = this.remembered(target.zone, pool) ?? target;
     }
     return next ? this.focus(next.id) : false;
   }

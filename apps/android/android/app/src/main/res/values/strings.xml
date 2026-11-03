@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Ultra IPTV</string>
+    <string name="title_activity_main">Ultra IPTV</string>
+    <string name="package_name">com.ultraiptv.player</string>
+    <string name="custom_url_scheme">com.ultraiptv.player</string>
+</resources>

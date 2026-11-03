@@ -53,7 +53,7 @@ pnpm dev            # planned: starts the Vite dev server for apps/web
 
 ## Android phone, Android TV, Fire TV
 
-Debug builds have WebView debugging turned on (Capacitor's `webContentsDebuggingEnabled`). Release builds don't.
+Debug builds have WebView debugging turned on (Capacitor's default for debug builds). Release builds don't.
 
 ### Connect
 ```sh
@@ -69,8 +69,8 @@ adb connect <TV_IP>:<debug-port>
 
 ### Read logs
 ```sh
-# Only our lines: WebView console (Capacitor/Console) + native player plugin (UltraIPTV)
-adb logcat -v time -s Capacitor/Console:V UltraIPTV:V
+# Only our lines: the app's logger (via Capacitor/Console) + the native player plugin (UltraIPTV)
+adb logcat -v time | grep UltraIPTV
 
 # Everything from our process only
 adb logcat -v time --pid="$(adb shell pidof -s com.ultraiptv.player)"
@@ -85,11 +85,23 @@ adb logcat -c
 3. Under the device, find the **Ultra IPTV** WebView and click **inspect**.
 
 ### Get an exported log file
-**Export** opens the Android share sheet (send it to yourself) and also keeps a copy in the app's private storage, which you can pull from a debug build:
+**Export** opens the Android share sheet (send it to yourself). The file is also left in the app's cache, which you can pull from a debug build:
 ```sh
-adb exec-out run-as com.ultraiptv.player ls files/logs
-adb exec-out run-as com.ultraiptv.player cat files/logs/<file>.ndjson > ultra-iptv-logs.ndjson
+adb exec-out run-as com.ultraiptv.player ls cache
+adb exec-out run-as com.ultraiptv.player cat cache/<file>.ndjson > ultra-iptv-logs.ndjson
 ```
+
+### Evaluate code in the app from the Mac (no Chrome window needed)
+```sh
+PID=$(adb shell pidof com.ultraiptv.player)
+adb forward tcp:9223 localabstract:webview_devtools_remote_$PID
+curl -s http://localhost:9223/json          # lists the page and the catalogue worker
+```
+Any Chrome DevTools Protocol client can then attach to the page's `webSocketDebuggerUrl`.
+
+### Things that look like bugs but aren't
+- **Wrong "now playing" on an emulator:** emulator clocks can be far off; the guide is matched against the device clock.
+- **A video box that stays black in the Live preview:** the native video view only moves on top of the page after its first frame; until then the page's own "Loading…" or error message shows. If it stays black with no message, check `UltraIPTV` lines for a playback error.
 
 ---
 

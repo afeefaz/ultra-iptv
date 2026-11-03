@@ -307,6 +307,7 @@ export const en = {
   'settings.streamFormatDesc': 'Container used for live channels.',
   'settings.subtitle': 'Language, playback, subtitles, parental control and playlists',
   'settings.subtitles': 'Subtitles & audio',
+  'player.external': 'Open in another player',
   'common.yes': 'Yes',
   'common.cancel': 'Cancel',
   'common.back': 'Back',

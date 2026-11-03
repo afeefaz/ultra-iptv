@@ -65,6 +65,26 @@ export interface Platform {
   createPlayer(): PlayerAdapter;
   /** Whether `auto` stream format should pick HLS (browsers) over raw TS (TVs play TS natively). */
   prefersHls: boolean;
+  /**
+   * Native HTTP without browser limits (CORS, forced HTTPS). When present, the catalogue worker's
+   * requests are sent through it instead of the page's `fetch`.
+   */
+  http?: (request: HttpRequest) => Promise<HttpResponse>;
+  /** Hands a stream to another installed player app (Android). */
+  openExternal?: (url: string, title: string) => Promise<void>;
+  /** Called at exit from the root screen (Back on Home); platforms without an exit ignore it. */
+  exit?: () => void;
+}
+
+export interface HttpRequest {
+  url: string;
+  headers?: Record<string, string>;
+  timeoutMs: number;
+}
+
+export interface HttpResponse {
+  status: number;
+  body: string;
 }
 
 // ---- Player (spec §4.2) ----

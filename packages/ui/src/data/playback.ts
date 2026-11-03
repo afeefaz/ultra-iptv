@@ -142,8 +142,16 @@ export function releaseSurface(owner: 'preview' | 'fullscreen'): void {
 }
 
 function setRect(r: VideoRect): void {
+  // The preview box re-measures itself often; native players pay for every update.
+  if (sameRect(r, rect())) return;
   setRectSignal(r);
   player?.setRect(r);
+}
+
+function sameRect(a: VideoRect, b: VideoRect): boolean {
+  if (a === b) return true;
+  if (!a || !b || a === 'fullscreen' || b === 'fullscreen') return false;
+  return Math.round(a.left) === Math.round(b.left) && Math.round(a.top) === Math.round(b.top) && Math.round(a.width) === Math.round(b.width) && Math.round(a.height) === Math.round(b.height);
 }
 
 /** Plays a channel; `list` is the channel list it was picked from (used for zapping). */
@@ -243,6 +251,20 @@ export function seekBy(seconds: number): void {
   const target = Math.max(0, duration ? Math.min(duration - 1, pos + seconds) : pos + seconds);
   player.seek(target);
   setPosition({ current: target, duration });
+}
+
+/**
+ * Hands what's playing to another installed player (Android "Open with…", spec §4.2) and
+ * pauses ours. False when the platform can't, or nothing is playing.
+ */
+export async function openInExternalPlayer(): Promise<boolean> {
+  const source = resolved && (usingFallback && resolved.fallback ? resolved.fallback : resolved);
+  const title = media()?.title ?? current()?.name ?? '';
+  if (!platform?.openExternal || !source) return false;
+  player?.pause();
+  log.info('player', 'open in external player');
+  await platform.openExternal(source.url, title);
+  return true;
 }
 
 /** Absolute seek (clicking the seek bar). */
