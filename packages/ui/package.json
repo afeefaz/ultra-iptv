@@ -8,9 +8,13 @@
     "./styles.css": "./src/styles.css"
   },
   "dependencies": {
+    "@fontsource/cairo": "5.3.0",
+    "@fontsource/outfit": "5.3.0",
+    "@fontsource/space-grotesk": "5.3.0",
+    "@material-symbols/svg-400": "0.48.2",
     "@ultra/core": "workspace:*",
     "@ultra/platform": "workspace:*",
-    "solid-js": "1.9.18",
-    "@ultra/worker": "workspace:*"
+    "@ultra/worker": "workspace:*",
+    "solid-js": "1.9.18"
   }
 }

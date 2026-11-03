@@ -2,15 +2,17 @@ import { log, logging } from '@ultra/core';
 import type { KeyPress, Platform } from '@ultra/platform';
 import { createEffect, createSignal, For, Match, on, onCleanup, onMount, Show, Switch, type JSX } from 'solid-js';
 import { FocusButton } from './components/FocusButton';
+import { Icon } from './components/Icon';
 import { PickerDialog } from './components/PickerDialog';
 import { PinHost } from './components/PinDialog';
 import { VideoLayer } from './components/VideoLayer';
+import { clock, formatClock } from './data/epg';
 import { startParental } from './data/parental';
 import { playingPlaylistId, stopPlayback } from './data/playback';
 import { activePlaylist, playlists, setActivePlaylist, startPlaylists } from './data/playlists';
 import { DebugScreen } from './debug/DebugScreen';
 import { CONTENT_ZONE, focusManager, FocusZone } from './focus';
-import { countsText } from './format';
+import { countsText, shortCounts } from './format';
 import { applyLocaleToDocument, direction, locale, t } from './i18n';
 import { dispatchKey } from './keys';
 import { currentRoute, goBack, navigate, switchTab, tabOf, TABS, type Route, type Tab } from './nav';
@@ -92,13 +94,31 @@ export function App(props: { platform: Platform }): JSX.Element {
       <div class="app" dir={direction()} lang={locale()}>
         <FocusZone id="topbar" remember>
           <header class="topbar">
-            <div class="brand">{t('app.name')}</div>
+            <div class="brand" aria-label={t('app.name')}>
+              <span class="brand-mark">
+                <Icon name="play" />
+              </span>
+              <span class="brand-name" dir="ltr">
+                ULTRA <b>IPTV</b>
+              </span>
+            </div>
             <nav class="tabs">
               <For each={TABS}>{(tab) => <TabButton tab={tab} />}</For>
             </nav>
             <div class="topbar-end">
               <PlaylistSwitcher />
-              <TabButton tab="settings" />
+              <FocusButton
+                id="tab-settings"
+                class="icon-button"
+                selected={tabOf(currentRoute()) === 'settings'}
+                label={t('tab.settings')}
+                onSelect={() => switchTab('settings')}
+              >
+                <Icon name="settings" />
+              </FocusButton>
+              <span class="topbar-clock" dir="ltr">
+                {formatClock(clock())}
+              </span>
             </div>
           </header>
         </FocusZone>
@@ -175,8 +195,12 @@ function PlaylistSwitcher(): JSX.Element {
   const [open, setOpen] = createSignal(false);
   return (
     <Show when={playlists().length > 0}>
-      <FocusButton id="topbar-playlist" class="tab playlist-chip" onSelect={() => setOpen(true)} label={t('playlists.switch')}>
-        <bdi>{activePlaylist()?.name ?? t('playlists.none')}</bdi> ▾
+      <FocusButton id="topbar-playlist" class="playlist-chip" onSelect={() => setOpen(true)} label={t('playlists.switch')}>
+        <span class="playlist-chip-name">
+          <bdi>{activePlaylist()?.name ?? t('playlists.none')}</bdi>
+        </span>
+        <Show when={activePlaylist()}>{(p) => <span class="playlist-chip-counts">{shortCounts(p())}</span>}</Show>
+        <Icon name="down" />
       </FocusButton>
       <Show when={open()}>
         <PickerDialog

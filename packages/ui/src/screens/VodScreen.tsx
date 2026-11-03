@@ -12,6 +12,7 @@ import {
 import { createEffect, createMemo, createSignal, on, onCleanup, Show, type JSX } from 'solid-js';
 import { CategoryRail } from '../components/CategoryRail';
 import { FocusButton } from '../components/FocusButton';
+import { Icon } from '../components/Icon';
 import { TextField } from '../components/TextField';
 import { makeMatcher, normalizeText } from '../data/categories';
 import { PickerDialog } from '../components/PickerDialog';
@@ -23,7 +24,7 @@ import { progressRatio, useProgress } from '../data/media';
 import { activePlaylist, refreshing, versionOf } from '../data/playlists';
 import { setVodSort, vodSort, type SortBy } from '../data/settings';
 import { FocusZone } from '../focus';
-import { statusText } from '../format';
+import { formatLeft, statusText } from '../format';
 import { formatNumber, locale, t } from '../i18n';
 import { useKeys } from '../keys';
 import { navigate } from '../nav';
@@ -105,9 +106,9 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
   const railItems = createMemo<RailItem[]>(() => {
     const locked = lockedCategories();
     return [
-      { id: 'continue', name: t('vod.continue'), count: continueRows().length, locked: false },
-      { id: 'fav', name: t('live.favorites'), count: favKeys().length, locked: false },
-      { id: 'all', name: props.kind === 'vod' ? t('vod.allMovies') : t('vod.allSeries'), count: all().length, locked: false },
+      { id: 'continue', name: t('vod.continue'), count: continueRows().length, locked: false, icon: 'history' },
+      { id: 'fav', name: t('live.favorites'), count: favKeys().length, locked: false, icon: 'star' },
+      { id: 'all', name: props.kind === 'vod' ? t('vod.allMovies') : t('vod.allSeries'), count: all().length, locked: false, icon: 'grid' },
       ...cats().map((c) => ({
         id: c.id,
         name: c.id === UNCATEGORIZED ? t('live.uncategorized') : c.name,
@@ -172,7 +173,6 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
   });
 
   const progressOf = (row: Row) => (props.kind === 'vod' ? progressRatio(progress().get(`vod|${row.key}`)) : 0);
-  const subOf = (row: Row) => [row.year, row.rating ? `★ ${row.rating}` : ''].filter(Boolean).join(' · ');
   const isRefreshing = () => !!(playlistId() && refreshing()[playlistId()!]);
 
   return (
@@ -194,7 +194,12 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
           <>
             <div class="live-header">
               <span class="live-title">
-                <bdi>{p().name}</bdi> · <bdi>{railItems().filter((c) => c.id === category())[0]?.name ?? ''}</bdi> ({formatNumber(items().length)})
+                <span class="dot" />
+                <bdi>{p().name}</bdi>
+                <span class="sep">•</span>
+                <span class="accent">
+                  <bdi>{railItems().filter((c) => c.id === category())[0]?.name ?? ''}</bdi>
+                </span>
               </span>
               <span class="hint">{statusText(p(), isRefreshing())}</span>
             </div>
@@ -229,16 +234,19 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
                       value={query()}
                       onChange={setQuery}
                     />
-                    <FocusButton id="vod-sort" class="chip-button sort-chip" onSelect={() => setSortOpen(true)}>
-                      {t('vod.sort', { by: t(`sort.${vodSort()}`) })}
+                    <span class="pill count">{t('vod.titles', { n: formatNumber(items().length) })}</span>
+                    <FocusButton id="vod-sort" class="sort-chip" onSelect={() => setSortOpen(true)}>
+                      <span>{t('vod.sort', { by: t(`sort.${vodSort()}`) })}</span>
+                      <Icon name="down" />
                     </FocusButton>
                   </div>
+                  <FocusStrip row={focused()} kind={props.kind} progress={focused() ? progress().get(`vod|${focused()!.key}`) : undefined} />
                   <VirtualGrid
                     id="vgrid"
                     label={t(props.kind === 'vod' ? 'tab.movies' : 'tab.series')}
                     items={items()}
                     columns={COLUMNS}
-                    rowHeight={20}
+                    rowHeight={23}
                     ref={(api) => (grid = api)}
                     onFocusItem={(row, index) => {
                       setFocused(row);
@@ -259,7 +267,15 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
                       </p>
                     }
                     renderItem={(row) => (
-                      <PosterTile title={row.name} poster={row.logo} sub={subOf(row)} progress={progressOf(row)} favorite={favSet().has(row.key)} />
+                      <PosterTile
+                        title={row.name}
+                        poster={row.logo}
+                        year={row.year}
+                        rating={row.rating}
+                        progress={progressOf(row)}
+                        watched={props.kind === 'vod' && !!progress().get(`vod|${row.key}`)?.watched}
+                        favorite={favSet().has(row.key)}
+                      />
                     )}
                   />
                 </div>
@@ -299,4 +315,38 @@ function sortRows(rows: Row[], by: SortBy, loc: string): Row[] {
     default:
       return rows.sort((a, b) => (b.added ?? 0) - (a.added ?? 0));
   }
+}
+
+/** What the grid cursor is on: title, year, rating and time left, without leaving the grid. */
+function FocusStrip(props: { row: Row | null; kind: Kind; progress?: ProgressRow }): JSX.Element {
+  return (
+    <div class="focus-strip">
+      <span class="strip-play">
+        <Icon name={props.kind === 'vod' ? 'play' : 'series'} />
+      </span>
+      <div class="strip-text">
+        <div class="strip-title">
+          <bdi>{props.row?.name ?? ''}</bdi>
+        </div>
+        <div class="strip-meta">
+          <Show when={props.row?.year}>
+            <span>{props.row!.year}</span>
+          </Show>
+          <Show when={props.row?.year && props.row?.rating}>
+            <span> · </span>
+          </Show>
+          <Show when={props.row?.rating}>
+            <span class="star">★ {props.row!.rating}</span>
+          </Show>
+        </div>
+      </div>
+      <Show when={props.progress && !props.progress.watched && props.progress.position > 0}>
+        <span class="strip-left">{t('home.left', { time: formatLeft(props.progress!.duration - props.progress!.position) })}</span>
+      </Show>
+      <span class="ok-hint strip-left">
+        <span class="key-cap">OK</span>
+        {t('vod.openHint')}
+      </span>
+    </div>
+  );
 }

@@ -1,6 +1,6 @@
 import { createSignal, Show, type JSX } from 'solid-js';
 import { useFocusable } from '../focus';
-import { t } from '../i18n';
+import { direction, t } from '../i18n';
 import { usePlatform } from '../platform-context';
 import { OnScreenKeyboard } from './OnScreenKeyboard';
 
@@ -61,7 +61,8 @@ export function TextField(props: TextFieldProps): JSX.Element {
             <input
               id={`${props.id}-input`}
               ref={(el) => (input = el)}
-              dir="auto"
+              // Empty search boxes follow the app language, so Arabic placeholders read right to left.
+              dir={props.compact && !props.value ? direction() : 'auto'}
               type={masked() ? 'password' : props.type === 'url' ? 'url' : 'text'}
               autocomplete="off"
               autocapitalize="off"

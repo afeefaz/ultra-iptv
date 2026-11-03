@@ -6,3 +6,5 @@ dist-legacy/
 apps/web/dev/media/
 *.log
 .DS_Store
+
+design/current-ui/

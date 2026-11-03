@@ -5,6 +5,7 @@ import { focusManager } from '../focus';
 import { formatNumber, locale, t } from '../i18n';
 import { useKeys } from '../keys';
 import { FocusButton } from './FocusButton';
+import { Icon, type IconName } from './Icon';
 import { PickerDialog } from './PickerDialog';
 import { TextField } from './TextField';
 import { VirtualList, type VirtualListApi } from './VirtualList';
@@ -14,6 +15,8 @@ export interface RailItem {
   name: string;
   count: number;
   locked: boolean;
+  /** Fixed rows (Favourites, Recent, All…) carry an icon. */
+  icon?: IconName;
 }
 
 export interface CategoryRailProps {
@@ -79,7 +82,7 @@ export function CategoryRail(props: CategoryRailProps): JSX.Element {
       <div class="pane-tools">
         <TextField id={`${props.id}-search`} compact label={t('search.categories')} value={query()} onChange={setQuery} />
         <FocusButton id={`${props.id}-sort`} class="icon-button" label={t('categories.sortTitle')} onSelect={() => setSortOpen(true)}>
-          ⇅
+          <Icon name="sort" />
         </FocusButton>
       </div>
       <VirtualList
@@ -98,12 +101,13 @@ export function CategoryRail(props: CategoryRailProps): JSX.Element {
         empty={<p class="hint pane-empty">{t('search.noCategories')}</p>}
         renderRow={(c) => (
           <>
+            <Show when={c.icon}>{(name) => <Icon name={name()} />}</Show>
             <span class="list-label">
               <bdi>{c.name}</bdi>
             </span>
             <Show when={c.locked}>
               <span class="lock-icon" aria-label={t('live.lock')}>
-                🔒
+                <Icon name="lock" />
               </span>
             </Show>
             <Show when={canPin(c.id)}>
@@ -119,7 +123,7 @@ export function CategoryRail(props: CategoryRailProps): JSX.Element {
                   void togglePin(c);
                 }}
               >
-                📌
+                <Icon name={isPinned(c.id) ? 'pinFill' : 'pin'} />
               </span>
             </Show>
             <span class="list-count">{formatNumber(c.count)}</span>

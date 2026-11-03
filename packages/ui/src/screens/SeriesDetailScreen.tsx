@@ -1,6 +1,7 @@
 import { favoriteKeys, getItem, log, type SeriesInfo, type SeriesRow } from '@ultra/core';
 import { createEffect, createMemo, createSignal, For, on, Show, type JSX } from 'solid-js';
 import { FocusButton } from '../components/FocusButton';
+import { Icon } from '../components/Icon';
 import { VirtualList, type VirtualListApi } from '../components/VirtualList';
 import { catalog } from '../data/catalog';
 import { episodeItem, episodeKey, episodesOf, progressRatio, resumePosition, useProgress, watch, type EpisodeEntry } from '../data/media';
@@ -79,7 +80,9 @@ export function SeriesDetailScreen(props: { id: string }): JSX.Element {
     }),
   );
 
-  const seasonEpisodes = createMemo(() => episodes().filter((e) => e.season === (season() ?? seasons()[0])));
+  const currentSeason = () => season() ?? seasons()[0];
+  const seasonEpisodes = createMemo(() => episodes().filter((e) => e.season === currentSeason()));
+  const watchedCount = createMemo(() => episodes().filter((e) => progressOf(e)?.watched).length);
 
   const play = (e: EpisodeEntry, startAt: number) => {
     const r = row();
@@ -102,103 +105,164 @@ export function SeriesDetailScreen(props: { id: string }): JSX.Element {
     return n.startAt ? t('series.continue', params) + ` (${formatDuration(n.startAt)})` : t('series.play', params);
   };
 
+  const poster = () => info()?.poster ?? row()?.logo;
+
   return (
     <div class="screen detail">
+      <Show when={info()?.backdrop}>
+        {(src) => (
+          <div class="detail-backdrop">
+            <img src={src()} alt="" referrerPolicy="no-referrer" />
+          </div>
+        )}
+      </Show>
       <Show when={row() !== undefined} fallback={<p class="hint">{t('detail.loading')}</p>}>
         <Show when={row()} fallback={<p class="hint">{t('detail.notFound')}</p>}>
           {(r) => (
-            <div class="detail-body">
-              <div class="detail-poster">
-                <Show when={info()?.poster ?? r().logo}>{(src) => <img src={src()} alt="" referrerPolicy="no-referrer" />}</Show>
+            <>
+              <div class="crumbs">
+                <Icon name="series" />
+                <span class="accent">{t('tab.series')}</span>
+                <span class="sep">/</span>
+                <bdi>{r().name}</bdi>
               </div>
-              <div class="detail-main series-main">
-                <h1 class="screen-title">
-                  <bdi>{r().name}</bdi>
-                </h1>
-                <p class="detail-facts">
-                  {[r().year, info()?.genre, info()?.rating ? `★ ${info()!.rating}` : '', t('series.episodes', { n: formatNumber(episodes().length) })]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </p>
-                <Show when={info()?.plot}>
-                  <p class="detail-plot clamp">
-                    <bdi>{info()!.plot}</bdi>
-                  </p>
-                </Show>
-                <FocusZone id="series-actions">
-                  <div class="button-row">
-                    <Show when={upNext()}>
-                      {(n) => (
-                        <FocusButton id="series-next" class="btn-primary" autofocus onSelect={() => play(episodes()[n().index], n().startAt)}>
-                          ▶ {upNextLabel()}
-                        </FocusButton>
-                      )}
+              <div class="detail-body">
+                <div class="detail-side">
+                  <div class="detail-poster">
+                    <Show when={poster()} fallback={<span class="poster-initial">{r().name.slice(0, 1)}</span>}>
+                      {(src) => <img src={src()} alt="" referrerPolicy="no-referrer" />}
                     </Show>
-                    <FocusButton id="series-fav" onSelect={() => void toggleFavorite()}>
-                      {favorite() ? '★ ' + t('live.removeFav') : '☆ ' + t('live.addFav')}
-                    </FocusButton>
                   </div>
-                </FocusZone>
-                <Show when={seasons().length > 1}>
-                  <FocusZone id="series-seasons" remember>
-                    <div class="button-row wrap season-tabs">
-                      <For each={seasons()}>
-                        {(s) => (
-                          <FocusButton
-                            id={`season-${s}`}
-                            class="chip-button"
-                            selected={(season() ?? seasons()[0]) === s}
-                            onSelect={() => {
-                              setSeason(s);
-                              setTimeout(() => list?.focusIndex(0), 0);
-                            }}
-                          >
-                            {t('series.season', { n: s })}
+                  <Show when={episodes().length > 0}>
+                    <div class="watch-card">
+                      <div class="watch-card-row">
+                        <span>{t('series.watchedOf', { n: formatNumber(watchedCount()), total: formatNumber(episodes().length) })}</span>
+                        <span class="accent">{formatNumber(Math.round((watchedCount() / episodes().length) * 100))}%</span>
+                      </div>
+                      <span class="progress progress-accent">
+                        <span class="progress-fill" style={{ width: `${Math.round((watchedCount() / episodes().length) * 100)}%` }} />
+                      </span>
+                    </div>
+                  </Show>
+                </div>
+                <div class="detail-main">
+                  <div class="detail-badges">
+                    <span class="pill pill-accent">{t('detail.series')}</span>
+                    <Show when={seasons().length}>
+                      <span class="pill pill-cyan">{t('series.seasons', { n: formatNumber(seasons().length) })}</span>
+                    </Show>
+                  </div>
+                  <h1 class="detail-title">
+                    <bdi>{r().name}</bdi>
+                  </h1>
+                  <div class="facts">
+                    <Show when={info()?.rating ?? r().rating}>
+                      <span class="fact fact-star">
+                        <Icon name="starFill" />
+                        {info()?.rating ?? r().rating}
+                      </span>
+                    </Show>
+                    <Show when={r().year}>
+                      <span class="fact">
+                        <Icon name="calendar" />
+                        {r().year}
+                      </span>
+                    </Show>
+                    <Show when={info()?.genre}>
+                      <span class="fact">
+                        <bdi>{info()!.genre}</bdi>
+                      </span>
+                    </Show>
+                    <span class="fact">
+                      <Icon name="series" />
+                      {t('series.episodes', { n: formatNumber(episodes().length) })}
+                    </span>
+                  </div>
+                  <FocusZone id="series-actions">
+                    <div class="button-row detail-actions">
+                      <Show when={upNext()}>
+                        {(n) => (
+                          <FocusButton id="series-next" class="btn-primary btn-lg" autofocus onSelect={() => play(episodes()[n().index], n().startAt)}>
+                            <Icon name="play" />
+                            <span>{upNextLabel()}</span>
                           </FocusButton>
                         )}
-                      </For>
+                      </Show>
+                      <FocusButton id="series-fav" class="btn-lg" onSelect={() => void toggleFavorite()}>
+                        <Icon name={favorite() ? 'bookmarked' : 'bookmark'} />
+                        <span>{favorite() ? t('live.removeFav') : t('live.addFav')}</span>
+                      </FocusButton>
                     </div>
                   </FocusZone>
-                </Show>
-                <FocusZone id="series-episodes" remember>
-                  <div class="episode-list">
-                    <VirtualList
-                      id="ep"
-                      label={t('series.season', { n: season() ?? 1 })}
-                      items={seasonEpisodes()}
-                      rowHeight={4}
-                      ref={(api) => (list = api)}
-                      rowClass={() => 'list-item episode-row'}
-                      onSelect={(e) => play(e, resumePosition(progressOf(e)))}
-                      empty={<p class="hint pane-empty">{error() || (info() || r().episodes ? t('series.noEpisodes') : t('detail.loadingInfo'))}</p>}
-                      renderRow={(e) => (
-                        <>
-                          <span class="list-number">{e.episode}</span>
-                          <span class="channel-text">
-                            <span class="list-label">
-                              <bdi>{e.title}</bdi>
-                            </span>
-                            <Show when={progressRatio(progressOf(e)) > 0 && !progressOf(e)?.watched}>
-                              <span class="progress">
-                                <span class="progress-fill" style={{ width: `${Math.round(progressRatio(progressOf(e)) * 100)}%` }} />
-                              </span>
-                            </Show>
-                          </span>
-                          <Show when={progressOf(e)?.watched}>
-                            <span class="watched-mark">✓</span>
-                          </Show>
-                          <Show when={e.durationSecs}>
-                            <span class="list-count" dir="ltr">
-                              {formatDuration(e.durationSecs!)}
-                            </span>
-                          </Show>
-                        </>
+                  <Show when={info()?.plot}>
+                    <p class="detail-plot clamp">
+                      <bdi>{info()!.plot}</bdi>
+                    </p>
+                  </Show>
+                </div>
+              </div>
+
+              <Show when={seasons().length > 1}>
+                <FocusZone id="series-seasons" remember>
+                  <div class="day-tabs season-tabs">
+                    <For each={seasons()}>
+                      {(s) => (
+                        <FocusButton
+                          id={`season-${s}`}
+                          selected={currentSeason() === s}
+                          onSelect={() => {
+                            setSeason(s);
+                            setTimeout(() => list?.focusIndex(0), 0);
+                          }}
+                        >
+                          {t('series.season', { n: s })}
+                        </FocusButton>
                       )}
-                    />
+                    </For>
                   </div>
                 </FocusZone>
-              </div>
-            </div>
+              </Show>
+              <FocusZone id="series-episodes" remember>
+                <div class="episode-list">
+                  <VirtualList
+                    id="ep"
+                    label={t('series.season', { n: currentSeason() ?? 1 })}
+                    items={seasonEpisodes()}
+                    rowHeight={4.4}
+                    ref={(api) => (list = api)}
+                    rowClass={() => 'list-item episode-row'}
+                    onSelect={(e) => play(e, resumePosition(progressOf(e)))}
+                    empty={<p class="hint pane-empty">{error() || (info() || r().episodes ? t('series.noEpisodes') : t('detail.loadingInfo'))}</p>}
+                    renderRow={(e) => (
+                      <>
+                        <span class="list-number">{e.episode}</span>
+                        <span class="channel-text">
+                          <span class="list-label">
+                            <bdi>{e.title}</bdi>
+                          </span>
+                          <Show when={progressRatio(progressOf(e)) > 0 && !progressOf(e)?.watched}>
+                            <span class="progress">
+                              <span class="progress-fill" style={{ width: `${Math.round(progressRatio(progressOf(e)) * 100)}%` }} />
+                            </span>
+                          </Show>
+                        </span>
+                        <Show when={progressOf(e)?.watched}>
+                          <span class="watched-mark">
+                            <Icon name="checkCircle" />
+                          </span>
+                        </Show>
+                        <Show when={e.durationSecs}>
+                          <span class="list-count" dir="ltr">
+                            {formatDuration(e.durationSecs!)}
+                          </span>
+                        </Show>
+                        <Icon name="play" />
+                      </>
+                    )}
+                  />
+                </div>
+              </FocusZone>
+            </>
           )}
         </Show>
       </Show>

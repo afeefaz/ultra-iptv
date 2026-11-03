@@ -1,6 +1,7 @@
 import { log, parseXtreamUrl, type PlaylistInput, type PlaylistType, type TestResult } from '@ultra/core';
 import { createSignal, For, onMount, Show, type JSX } from 'solid-js';
 import { FocusButton } from '../components/FocusButton';
+import { Icon } from '../components/Icon';
 import { TextField } from '../components/TextField';
 import { catalog } from '../data/catalog';
 import { playlists, refreshPlaylist, reloadPlaylists, setActivePlaylist } from '../data/playlists';
@@ -101,108 +102,164 @@ export function PlaylistFormScreen(props: { id?: string }): JSX.Element {
 
   return (
     <div class="screen form-screen">
+      <div class="crumbs">
+        <Icon name="playlist" />
+        <span class="accent">{t('settings.playlists')}</span>
+        <span class="sep">/</span>
+        <span>{editing ? t('form.edit') : t('form.add')}</span>
+      </div>
       <h1 class="screen-title">{editing ? t('form.editTitle') : t('form.addTitle')}</h1>
-      <FocusZone id="playlist-form" remember>
-        <div class="form">
-          <div class="button-row segmented" role="radiogroup">
-            <FocusButton id="form-type-xtream" selected={type() === 'xtream'} autofocus={!editing} onSelect={() => setType('xtream')}>
-              {t('form.xtream')}
-            </FocusButton>
-            <FocusButton id="form-type-m3u" selected={type() === 'm3u'} onSelect={() => setType('m3u')}>
-              {t('form.m3u')}
-            </FocusButton>
-          </div>
-
-          <TextField id="form-name" label={t('form.name')} value={name()} onChange={setName} placeholder={t('form.namePlaceholder')} autofocus={editing} />
-
-          <Show
-            when={type() === 'xtream'}
-            fallback={
-              <TextField id="form-m3u" label={t('form.m3uUrl')} type="url" value={m3uUrl()} onChange={setM3uUrl} placeholder="https://…/playlist.m3u" onSubmit={() => void testAndSave()} />
-            }
-          >
-            <TextField
-              id="form-server"
-              label={t('form.server')}
-              type="url"
-              value={server()}
-              onChange={onServer}
-              placeholder="http://example.com:8080"
-              hint={t('form.serverHint')}
-            />
-            <div class="button-row chips" dir="ltr">
-              <For each={SERVER_CHIPS}>
-                {(chip) => (
-                  <FocusButton id={`form-chip-${chip}`} class="chip" onSelect={() => onServer(server() + chip)}>
-                    {chip}
-                  </FocusButton>
-                )}
-              </For>
+      <p class="form-sub">{t('form.subtitle')}</p>
+      <div class="form-layout">
+        <FocusZone id="playlist-form" remember>
+          <div class="form">
+            <div class="segmented type-tabs" role="radiogroup">
+              <FocusButton id="form-type-xtream" selected={type() === 'xtream'} autofocus={!editing} onSelect={() => setType('xtream')}>
+                <Icon name="dns" />
+                <span>{t('form.xtream')}</span>
+              </FocusButton>
+              <FocusButton id="form-type-m3u" selected={type() === 'm3u'} onSelect={() => setType('m3u')}>
+                <Icon name="link" />
+                <span>{t('form.m3u')}</span>
+              </FocusButton>
             </div>
-            <TextField id="form-user" label={t('form.username')} value={username()} onChange={setUsername} />
-            <TextField
-              id="form-pass"
-              label={t('form.password')}
-              type="password"
-              value={password()}
-              onChange={setPassword}
-              hint={editing ? t('form.passwordKeep') : undefined}
-              onSubmit={() => void testAndSave()}
-            />
-          </Show>
 
-          <FocusButton id="form-advanced" class="link-button" selected={advanced()} onSelect={() => setAdvanced(!advanced())}>
-            {t('form.advanced')} {advanced() ? '▾' : '▸'}
-          </FocusButton>
-          <Show when={advanced()}>
-            <TextField id="form-ua" label={t('form.userAgent')} value={userAgent()} onChange={setUserAgent} hint={t('form.userAgentHint')} />
-            <div class="field">
-              <div class="field-label">{t('form.refreshEvery')}</div>
-              <div class="button-row segmented">
-                <For each={REFRESH_CHOICES}>
-                  {(h) => (
-                    <FocusButton id={`form-refresh-${h}`} selected={refreshHours() === h} onSelect={() => setRefreshHours(h)}>
-                      {t('form.hours', { n: formatNumber(h) })}
-                    </FocusButton>
-                  )}
-                </For>
-              </div>
+            <div class="field-card">
+              <TextField id="form-name" label={t('form.name')} value={name()} onChange={setName} placeholder={t('form.namePlaceholder')} autofocus={editing} />
             </div>
-            <Show when={type() === 'xtream'}>
-              <div class="field">
-                <div class="field-label">{t('form.epgOffset')}</div>
-                <div class="button-row segmented" dir="ltr">
-                  <For each={EPG_OFFSETS}>
-                    {(h) => (
-                      <FocusButton id={`form-epg-${h}`} selected={epgOffset() === h} onSelect={() => setEpgOffset(h)}>
-                        {h > 0 ? `+${h}` : String(h)}
+
+            <Show
+              when={type() === 'xtream'}
+              fallback={
+                <div class="field-card">
+                  <TextField id="form-m3u" label={t('form.m3uUrl')} type="url" value={m3uUrl()} onChange={setM3uUrl} placeholder="https://…/playlist.m3u" onSubmit={() => void testAndSave()} />
+                </div>
+              }
+            >
+              <div class="field-card">
+                <TextField
+                  id="form-server"
+                  label={t('form.server')}
+                  type="url"
+                  value={server()}
+                  onChange={onServer}
+                  placeholder="http://example.com:8080"
+                  hint={t('form.serverHint')}
+                />
+                <div class="button-row chips" dir="ltr">
+                  <span class="chips-label">{t('form.quickInput')}</span>
+                  <For each={SERVER_CHIPS}>
+                    {(chip) => (
+                      <FocusButton id={`form-chip-${chip}`} class="chip" onSelect={() => onServer(server() + chip)}>
+                        {chip}
                       </FocusButton>
                     )}
                   </For>
                 </div>
-                <div class="field-hint">{t('form.epgHint')}</div>
+              </div>
+              <div class="field-card field-pair">
+                <TextField id="form-user" label={t('form.username')} value={username()} onChange={setUsername} />
+                <TextField
+                  id="form-pass"
+                  label={t('form.password')}
+                  type="password"
+                  value={password()}
+                  onChange={setPassword}
+                  hint={editing ? t('form.passwordKeep') : undefined}
+                  onSubmit={() => void testAndSave()}
+                />
               </div>
             </Show>
-          </Show>
 
-          <Show when={message()}>
-            {(m) => (
-              <p class={`form-message form-${m().kind}`} role={m().kind === 'error' ? 'alert' : 'status'}>
-                {m().text}
-              </p>
-            )}
-          </Show>
+            <FocusButton id="form-advanced" class="link-button" selected={advanced()} onSelect={() => setAdvanced(!advanced())}>
+              <Icon name="tune" />
+              <span>{t('form.advanced')}</span>
+              <Icon name={advanced() ? 'up' : 'down'} />
+            </FocusButton>
+            <Show when={advanced()}>
+              <div class="field-card">
+                <TextField id="form-ua" label={t('form.userAgent')} value={userAgent()} onChange={setUserAgent} hint={t('form.userAgentHint')} />
+                <div class="field">
+                  <div class="field-label">{t('form.refreshEvery')}</div>
+                  <div class="segmented">
+                    <For each={REFRESH_CHOICES}>
+                      {(h) => (
+                        <FocusButton id={`form-refresh-${h}`} selected={refreshHours() === h} onSelect={() => setRefreshHours(h)}>
+                          {t('form.hours', { n: formatNumber(h) })}
+                        </FocusButton>
+                      )}
+                    </For>
+                  </div>
+                </div>
+                <Show when={type() === 'xtream'}>
+                  <div class="field">
+                    <div class="field-label">{t('form.epgOffset')}</div>
+                    <div class="segmented" dir="ltr">
+                      <For each={EPG_OFFSETS}>
+                        {(h) => (
+                          <FocusButton id={`form-epg-${h}`} selected={epgOffset() === h} onSelect={() => setEpgOffset(h)}>
+                            {h > 0 ? `+${h}` : String(h)}
+                          </FocusButton>
+                        )}
+                      </For>
+                    </div>
+                    <div class="field-hint">{t('form.epgHint')}</div>
+                  </div>
+                </Show>
+              </div>
+            </Show>
 
-          <div class="button-row form-actions">
-            <FocusButton id="form-submit" class="btn-primary" onSelect={() => void testAndSave()}>
-              {phase() === 'testing' ? t('form.testing') : phase() === 'saving' ? t('form.saving') : t('form.testSave')}
-            </FocusButton>
-            <FocusButton id="form-cancel" onSelect={() => goBack()}>
-              {t('form.cancel')}
-            </FocusButton>
+            <Show when={message()}>
+              {(m) => (
+                <p class={`form-message form-${m().kind}`} role={m().kind === 'error' ? 'alert' : 'status'}>
+                  {m().text}
+                </p>
+              )}
+            </Show>
+
+            <div class="button-row form-actions">
+              <FocusButton id="form-submit" class="btn-primary btn-lg" onSelect={() => void testAndSave()}>
+                <Icon name="check" />
+                <span>{phase() === 'testing' ? t('form.testing') : phase() === 'saving' ? t('form.saving') : t('form.testSave')}</span>
+              </FocusButton>
+              <FocusButton id="form-cancel" class="btn-lg" onSelect={() => goBack()}>
+                <Icon name="close" />
+                <span>{t('form.cancel')}</span>
+              </FocusButton>
+            </div>
           </div>
-        </div>
-      </FocusZone>
+        </FocusZone>
+        <aside class="form-aside">
+          <div class="guide-card">
+            <h2>
+              <Icon name="info" />
+              {type() === 'xtream' ? t('form.xtream') : t('form.m3u')}
+            </h2>
+            <p>{type() === 'xtream' ? t('form.guideXtream') : t('form.guideM3u')}</p>
+            <ul>
+              <li>
+                <Icon name="check" />
+                <span>{t('form.guidePoint1')}</span>
+              </li>
+              <li>
+                <Icon name="check" />
+                <span>{t('form.guidePoint2')}</span>
+              </li>
+              <li>
+                <Icon name="check" />
+                <span>{t('form.guidePoint3')}</span>
+              </li>
+            </ul>
+          </div>
+          <div class="guide-card">
+            <h2>
+              <Icon name="lock" />
+              {t('form.privacyTitle')}
+            </h2>
+            <p>{t('form.privacy')}</p>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }

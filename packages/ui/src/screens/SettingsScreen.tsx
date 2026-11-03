@@ -2,7 +2,9 @@ import type { StreamFormat } from '@ultra/core';
 import type { BufferProfile } from '@ultra/platform';
 import { For, Show, type JSX } from 'solid-js';
 import { FocusButton } from '../components/FocusButton';
+import { Icon, type IconName } from '../components/Icon';
 import { lockedCategories, lockedChannels, pinSet, requestPin } from '../data/parental';
+import { activePlaylist } from '../data/playlists';
 import {
   bufferProfile,
   preferredAudio,
@@ -16,17 +18,36 @@ import {
   subtitleSize,
   type SubtitleSize,
 } from '../data/settings';
-import { FocusZone } from '../focus';
+import { focusManager, FocusZone } from '../focus';
+import { countsText } from '../format';
 import { formatNumber, locale, setLocale, t, type Locale, type MessageKey } from '../i18n';
 import { navigate } from '../nav';
+import { usePlatform } from '../platform-context';
 
 // Language names are always shown in their own language.
-const LANGUAGES: Array<{ id: Locale; name: string }> = [
-  { id: 'en', name: 'English' },
-  { id: 'ar', name: 'العربية' },
+const LANGUAGES: Array<{ id: Locale; name: string; badge: string; sub: MessageKey }> = [
+  { id: 'en', name: 'English', badge: 'EN', sub: 'settings.lang.enSub' },
+  { id: 'ar', name: 'العربية', badge: 'ع', sub: 'settings.lang.arSub' },
 ];
 
-function Choice<T extends string>(props: {
+interface Section {
+  id: string;
+  icon: IconName;
+  title: MessageKey;
+  /** First control of the section, focused when the menu entry is chosen. */
+  first: () => string;
+}
+
+const SECTIONS: Section[] = [
+  { id: 'general', icon: 'language', title: 'settings.language', first: () => `settings-lang-${locale()}` },
+  { id: 'playback', icon: 'tune', title: 'settings.playback', first: () => `settings-format-${streamFormat()}` },
+  { id: 'subtitles', icon: 'subtitles', title: 'settings.subtitles', first: () => `settings-subsize-${subtitleSize()}` },
+  { id: 'parental', icon: 'shield', title: 'settings.parental', first: () => (pinSet() ? 'settings-pin-change' : 'settings-pin-set') },
+  { id: 'playlists', icon: 'playlist', title: 'settings.playlists', first: () => 'settings-playlists' },
+  { id: 'about', icon: 'info', title: 'settings.about', first: () => 'settings-about' },
+];
+
+function Segmented<T extends string>(props: {
   id: string;
   label: string;
   value: T;
@@ -34,135 +55,227 @@ function Choice<T extends string>(props: {
   onChange: (v: T) => void;
 }): JSX.Element {
   return (
-    <div class="field">
-      <div class="field-label">{props.label}</div>
-      <div class="button-row segmented" role="radiogroup" aria-label={props.label}>
-        <For each={props.options}>
-          {(o) => (
-            <FocusButton id={`${props.id}-${o.value}`} selected={props.value === o.value} onSelect={() => props.onChange(o.value)}>
-              {t(o.label)}
-            </FocusButton>
-          )}
-        </For>
-      </div>
+    <div class="segmented" role="radiogroup" aria-label={props.label}>
+      <For each={props.options}>
+        {(o) => (
+          <FocusButton id={`${props.id}-${o.value}`} selected={props.value === o.value} onSelect={() => props.onChange(o.value)}>
+            {t(o.label)}
+          </FocusButton>
+        )}
+      </For>
     </div>
   );
 }
 
+function Card(props: { section: Section; aside?: string; children: JSX.Element }): JSX.Element {
+  return (
+    <section class="settings-card" id={`settings-${props.section.id}`}>
+      <div class="settings-card-head">
+        <h2>
+          <Icon name={props.section.icon} />
+          {t(props.section.title)}
+        </h2>
+        <Show when={props.aside}>
+          <span class="aside">{props.aside}</span>
+        </Show>
+      </div>
+      {props.children}
+    </section>
+  );
+}
+
 export function SettingsScreen(): JSX.Element {
+  const platform = usePlatform();
+  const section = (id: string) => SECTIONS.filter((s) => s.id === id)[0];
+  const jump = (s: Section) => {
+    document.getElementById(`settings-${s.id}`)?.scrollIntoView();
+    focusManager.focus(s.first());
+  };
+
   return (
     <div class="screen settings">
-      <h1 class="screen-title">{t('tab.settings')}</h1>
-      <FocusZone id="settings" remember>
-        <section class="settings-section">
-          <h2 class="section-title">{t('settings.language')}</h2>
-          <div class="button-row">
-            {LANGUAGES.map((lang) => (
-              <FocusButton
-                id={`settings-lang-${lang.id}`}
-                selected={locale() === lang.id}
-                autofocus={lang.id === locale()}
-                onSelect={() => setLocale(lang.id)}
-              >
-                <span lang={lang.id}>{lang.name}</span>
-              </FocusButton>
-            ))}
-          </div>
-        </section>
+      <div class="settings-header">
+        <Icon name="settings" />
+        <div>
+          <h1 class="screen-title">{t('tab.settings')}</h1>
+          <div class="sub">{t('settings.subtitle')}</div>
+        </div>
+      </div>
+      <div class="settings-layout">
+        <FocusZone id="settings-menu" remember>
+          <nav class="settings-menu">
+            <div class="eyebrow">{t('settings.menu')}</div>
+            <For each={SECTIONS}>
+              {(s) => (
+                <FocusButton id={`settings-menu-${s.id}`} class="list-item" autofocus={s.id === 'general'} onSelect={() => jump(s)}>
+                  <Icon name={s.icon} />
+                  <span class="list-label">{t(s.title)}</span>
+                  <Icon name="chevronRight" />
+                </FocusButton>
+              )}
+            </For>
+          </nav>
+        </FocusZone>
+        <FocusZone id="settings" remember>
+          <div class="settings-sections">
+            <Card section={section('general')} aside={t('settings.lang.aside')}>
+              <div class="option-cards">
+                {LANGUAGES.map((lang) => (
+                  <FocusButton id={`settings-lang-${lang.id}`} selected={locale() === lang.id} onSelect={() => setLocale(lang.id)}>
+                    <span class="lang-badge" lang={lang.id}>
+                      {lang.badge}
+                    </span>
+                    <span class="option-card-text">
+                      <span class="option-card-title" lang={lang.id}>
+                        {lang.name}
+                      </span>
+                      <span class="option-card-sub">{t(lang.sub)}</span>
+                    </span>
+                    <Icon name={locale() === lang.id ? 'checkCircle' : 'radioOff'} />
+                  </FocusButton>
+                ))}
+              </div>
+            </Card>
 
-        <section class="settings-section">
-          <h2 class="section-title">{t('settings.playback')}</h2>
-          <Choice<StreamFormat>
-            id="settings-format"
-            label={t('settings.streamFormat')}
-            value={streamFormat()}
-            onChange={setStreamFormat}
-            options={[
-              { value: 'auto', label: 'settings.format.auto' },
-              { value: 'hls', label: 'settings.format.hls' },
-              { value: 'ts', label: 'settings.format.ts' },
-            ]}
-          />
-          <Choice<BufferProfile>
-            id="settings-buffer"
-            label={t('settings.buffer')}
-            value={bufferProfile()}
-            onChange={setBufferProfile}
-            options={[
-              { value: 'low', label: 'settings.buffer.low' },
-              { value: 'balanced', label: 'settings.buffer.balanced' },
-              { value: 'stable', label: 'settings.buffer.stable' },
-            ]}
-          />
-          <Choice<SubtitleSize>
-            id="settings-subsize"
-            label={t('settings.subtitleSize')}
-            value={subtitleSize()}
-            onChange={setSubtitleSize}
-            options={[
-              { value: 'small', label: 'settings.size.small' },
-              { value: 'medium', label: 'settings.size.medium' },
-              { value: 'large', label: 'settings.size.large' },
-            ]}
-          />
-          <div class="field">
-            <div class="field-label">
-              {t('settings.languages', {
-                audio: preferredAudio() ?? t('settings.none'),
-                text: preferredText() === 'off' ? t('player.off') : (preferredText() ?? t('settings.none')),
-              })}
-            </div>
-            <Show when={preferredAudio() || preferredText()}>
-              <div class="button-row">
-                <FocusButton
-                  id="settings-forget-langs"
-                  onSelect={() => {
-                    setPreferredAudio(null);
-                    setPreferredText(null);
-                  }}
+            <Card section={section('playback')}>
+              <div class="setting-row">
+                <div>
+                  <div class="setting-name">{t('settings.streamFormat')}</div>
+                  <div class="setting-desc">{t('settings.streamFormatDesc')}</div>
+                </div>
+                <Segmented<StreamFormat>
+                  id="settings-format"
+                  label={t('settings.streamFormat')}
+                  value={streamFormat()}
+                  onChange={setStreamFormat}
+                  options={[
+                    { value: 'auto', label: 'settings.format.auto' },
+                    { value: 'hls', label: 'settings.format.hls' },
+                    { value: 'ts', label: 'settings.format.ts' },
+                  ]}
+                />
+              </div>
+              <div class="setting-name">{t('settings.buffer')}</div>
+              <div class="setting-desc">{t('settings.bufferDesc')}</div>
+              <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
+                <For each={['low', 'balanced', 'stable'] as BufferProfile[]}>
+                  {(b) => (
+                    <FocusButton id={`settings-buffer-${b}`} selected={bufferProfile() === b} onSelect={() => setBufferProfile(b)}>
+                      <span class="option-card-text">
+                        <span class="option-card-title">{t(`settings.buffer.${b}`)}</span>
+                        <span class="option-card-sub">{t(`settings.buffer.${b}Sub`)}</span>
+                      </span>
+                      <Icon name={bufferProfile() === b ? 'checkCircle' : 'radioOff'} />
+                    </FocusButton>
+                  )}
+                </For>
+              </div>
+            </Card>
+
+            <Card section={section('subtitles')}>
+              <div class="setting-row">
+                <div class="setting-name">{t('settings.subtitleSize')}</div>
+                <Segmented<SubtitleSize>
+                  id="settings-subsize"
+                  label={t('settings.subtitleSize')}
+                  value={subtitleSize()}
+                  onChange={setSubtitleSize}
+                  options={[
+                    { value: 'small', label: 'settings.size.small' },
+                    { value: 'medium', label: 'settings.size.medium' },
+                    { value: 'large', label: 'settings.size.large' },
+                  ]}
+                />
+              </div>
+              <div class="status-row">
+                <Icon name="volume" />
+                <div class="grow">
+                  <div class="setting-name">{t('settings.languageMemory')}</div>
+                  <div class="setting-desc">
+                    {t('settings.languages', {
+                      audio: preferredAudio() ?? t('settings.none'),
+                      text: preferredText() === 'off' ? t('player.off') : (preferredText() ?? t('settings.none')),
+                    })}
+                  </div>
+                </div>
+                <Show when={preferredAudio() || preferredText()}>
+                  <FocusButton
+                    id="settings-forget-langs"
+                    onSelect={() => {
+                      setPreferredAudio(null);
+                      setPreferredText(null);
+                    }}
+                  >
+                    {t('settings.forget')}
+                  </FocusButton>
+                </Show>
+              </div>
+            </Card>
+
+            <Card section={section('parental')} aside={pinSet() ? t('settings.pinOn') : t('settings.pinOff')}>
+              <div class="status-row">
+                <Icon name="lock" />
+                <div class="grow">
+                  <div class="setting-name">{pinSet() ? t('settings.pinActive') : t('settings.noPin')}</div>
+                  <div class="setting-desc">
+                    {pinSet()
+                      ? t('settings.pinSet', { cats: formatNumber(lockedCategories().size), chans: formatNumber(lockedChannels().size) })
+                      : t('settings.pinNotSet')}
+                  </div>
+                </div>
+                <Show
+                  when={pinSet()}
+                  fallback={
+                    <FocusButton id="settings-pin-set" class="btn-primary" onSelect={() => void requestPin('create')}>
+                      <Icon name="key" />
+                      <span>{t('settings.setPin')}</span>
+                    </FocusButton>
+                  }
                 >
-                  {t('settings.forget')}
+                  <FocusButton id="settings-pin-change" class="btn-primary" onSelect={() => void requestPin('change')}>
+                    <Icon name="key" />
+                    <span>{t('settings.changePin')}</span>
+                  </FocusButton>
+                  <FocusButton id="settings-pin-remove" class="btn-danger" onSelect={() => void requestPin('remove')}>
+                    {t('settings.removePin')}
+                  </FocusButton>
+                </Show>
+              </div>
+            </Card>
+
+            <Card section={section('playlists')}>
+              <div class="status-row">
+                <Icon name="playlist" />
+                <div class="grow">
+                  <div class="setting-name">
+                    <bdi>{activePlaylist()?.name ?? t('playlists.none')}</bdi>
+                  </div>
+                  <Show when={activePlaylist()}>{(p) => <div class="setting-desc">{countsText(p())}</div>}</Show>
+                </div>
+                <FocusButton id="settings-playlists" onSelect={() => navigate({ name: 'playlists' })}>
+                  <Icon name="list" />
+                  <span>{t('playlists.manage')}</span>
                 </FocusButton>
               </div>
-            </Show>
-          </div>
-        </section>
+            </Card>
 
-        <section class="settings-section">
-          <h2 class="section-title">{t('settings.parental')}</h2>
-          <p class="hint">
-            {pinSet()
-              ? t('settings.pinSet', { cats: formatNumber(lockedCategories().size), chans: formatNumber(lockedChannels().size) })
-              : t('settings.pinNotSet')}
-          </p>
-          <div class="button-row">
-            <Show
-              when={pinSet()}
-              fallback={
-                <FocusButton id="settings-pin-set" onSelect={() => void requestPin('create')}>
-                  {t('settings.setPin')}
+            <Card section={section('about')}>
+              <div class="status-row">
+                <Icon name="info" />
+                <div class="grow">
+                  <div class="setting-name">{t('about.version', { version: __APP_VERSION__ })}</div>
+                  <div class="setting-desc">
+                    {t('about.platform', { platform: platform.id })} · {t('about.build', { time: __BUILD_TIME__ })}
+                  </div>
+                </div>
+                <FocusButton id="settings-about" onSelect={() => navigate({ name: 'about' })}>
+                  {t('settings.about')}
                 </FocusButton>
-              }
-            >
-              <FocusButton id="settings-pin-change" onSelect={() => void requestPin('change')}>
-                {t('settings.changePin')}
-              </FocusButton>
-              <FocusButton id="settings-pin-remove" class="btn-danger" onSelect={() => void requestPin('remove')}>
-                {t('settings.removePin')}
-              </FocusButton>
-            </Show>
+              </div>
+            </Card>
           </div>
-        </section>
-
-        <section class="settings-section">
-          <FocusButton id="settings-playlists" class="list-item" onSelect={() => navigate({ name: 'playlists' })}>
-            <span class="list-label">{t('settings.playlists')}</span>
-          </FocusButton>
-          <FocusButton id="settings-about" class="list-item" onSelect={() => navigate({ name: 'about' })}>
-            <span class="list-label">{t('settings.about')}</span>
-          </FocusButton>
-        </section>
-      </FocusZone>
+        </FocusZone>
+      </div>
     </div>
   );
 }

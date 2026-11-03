@@ -2,6 +2,7 @@ import { getItem, log, type ChannelRow, type EpgEntry } from '@ultra/core';
 import { createEffect, createMemo, createSignal, For, on, Show, type JSX } from 'solid-js';
 import { ChannelLogo } from '../components/ChannelLogo';
 import { FocusButton } from '../components/FocusButton';
+import { Icon } from '../components/Icon';
 import { VirtualList, type VirtualListApi } from '../components/VirtualList';
 import { catalog } from '../data/catalog';
 import { formatClock } from '../data/epg';
@@ -9,8 +10,8 @@ import { watch } from '../data/media';
 import { ensureUnlocked, isChannelLocked } from '../data/parental';
 import { activePlaylist } from '../data/playlists';
 import { FocusZone } from '../focus';
-import { errorText, formatDate } from '../format';
-import { t } from '../i18n';
+import { errorText, formatDate, formatLeft } from '../format';
+import { formatNumber, t } from '../i18n';
 
 const HOUR_MS = 3600_000;
 const DAY_MS = 24 * HOUR_MS;
@@ -35,6 +36,7 @@ export function CatchupScreen(props: { channelId: string }): JSX.Element {
   const [items, setItems] = createSignal<Programme[] | null>(null);
   const [error, setError] = createSignal('');
   const [day, setDay] = createSignal<string | null>(null);
+  const [focused, setFocused] = createSignal<Programme | null>(null);
   let list: VirtualListApi | undefined;
 
   createEffect(
@@ -104,58 +106,104 @@ export function CatchupScreen(props: { channelId: string }): JSX.Element {
           {(ch) => (
             <>
               <div class="catchup-header">
-                <ChannelLogo src={ch().logo} large />
+                <ChannelLogo src={ch().logo} name={ch().name} large />
                 <div>
                   <h1 class="screen-title">{t('catchup.title', { channel: ch().name })}</h1>
-                  <Show when={ch().stream.t !== 'x'}>
-                    <p class="hint">{t('catchup.hourly')}</p>
-                  </Show>
+                  <div class="catchup-meta">
+                    <span class="accent">{t('catchup.days', { n: formatNumber(Math.min(MAX_DAYS, ch().catchupDays || 1)) })}</span>
+                    <Show when={items()}>{(list) => <span> · {t('catchup.count', { n: formatNumber(list().length) })}</span>}</Show>
+                    <Show when={ch().stream.t !== 'x'}>
+                      <span> · {t('catchup.hourly')}</span>
+                    </Show>
+                  </div>
                 </div>
               </div>
               <FocusZone id="catchup-days" remember>
-                <div class="button-row wrap season-tabs">
+                <div class="day-tabs">
                   <For each={days()}>
                     {(d, i) => (
                       <FocusButton
                         id={`cday-${i()}`}
-                        class="chip-button"
                         selected={currentDay() === d}
                         onSelect={() => {
                           setDay(d);
                           setTimeout(() => list?.focusIndex(0), 0);
                         }}
                       >
-                        {dayLabel(d)}
+                        <Icon name="calendar" />
+                        <span>{dayLabel(d)}</span>
                       </FocusButton>
                     )}
                   </For>
                 </div>
               </FocusZone>
-              <FocusZone id="catchup-list" remember>
-                <div class="episode-list">
-                  <VirtualList
-                    id="cprog"
-                    label={t('catchup.open')}
-                    items={shown()}
-                    rowHeight={3.6}
-                    autofocusIndex={0}
-                    ref={(api) => (list = api)}
-                    rowClass={() => 'list-item'}
-                    onSelect={(p) => void play(p)}
-                    empty={<p class="hint pane-empty">{items() === null ? t('catchup.loading') : error() || t('catchup.empty')}</p>}
-                    renderRow={(p) => (
-                      <>
-                        <span class="nn-time catchup-time" dir="ltr">
-                          {formatClock(p.start)}–{formatClock(p.stop)}
+              <div class="catchup-body">
+                <FocusZone id="catchup-list" remember>
+                  <div class="catchup-list">
+                    <VirtualList
+                      id="cprog"
+                      label={t('catchup.open')}
+                      items={shown()}
+                      rowHeight={4.4}
+                      autofocusIndex={0}
+                      ref={(api) => (list = api)}
+                      rowClass={() => 'list-item programme-row'}
+                      onFocusRow={(p) => setFocused(p)}
+                      onSelect={(p) => void play(p)}
+                      empty={<p class="hint pane-empty">{items() === null ? t('catchup.loading') : error() || t('catchup.empty')}</p>}
+                      renderRow={(p) => (
+                        <>
+                          <span class="programme-time" dir="ltr">
+                            {formatClock(p.start)}–{formatClock(p.stop)}
+                          </span>
+                          <span class="programme-text">
+                            <span class="programme-title">
+                              <bdi>{p.title}</bdi>
+                            </span>
+                            <Show when={p.description}>
+                              <span class="programme-desc">
+                                <bdi>{p.description}</bdi>
+                              </span>
+                            </Show>
+                          </span>
+                          <Icon name="replay" />
+                        </>
+                      )}
+                    />
+                  </div>
+                </FocusZone>
+                <Show when={focused()}>
+                  {(p) => (
+                    <div class="programme-panel">
+                      <div class="eyebrow">{t('catchup.recording')}</div>
+                      <h2 class="programme-panel-title">
+                        <bdi>{p().title}</bdi>
+                      </h2>
+                      <div class="meta">
+                        <bdi>{ch().name}</bdi> · <span class="accent">{dayLabel(dayKey(p().start))}</span>{' '}
+                        <span dir="ltr">
+                          {formatClock(p().start)}–{formatClock(p().stop)}
                         </span>
-                        <span class="list-label">
-                          <bdi>{p.title}</bdi>
+                      </div>
+                      <Show when={p().description}>
+                        <p class="desc">
+                          <bdi>{p().description}</bdi>
+                        </p>
+                      </Show>
+                      <div class="facts">
+                        <span class="fact">
+                          <Icon name="schedule" />
+                          {formatLeft((p().stop - p().start) / 1000)}
                         </span>
-                      </>
-                    )}
-                  />
-                </div>
-              </FocusZone>
+                      </div>
+                      <div class="ok-hint">
+                        <span class="key-cap">OK</span>
+                        {t('catchup.watchFromStart')}
+                      </div>
+                    </div>
+                  )}
+                </Show>
+              </div>
             </>
           )}
         </Show>

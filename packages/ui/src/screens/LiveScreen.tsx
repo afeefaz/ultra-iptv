@@ -11,6 +11,7 @@ import {
 import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, type JSX } from 'solid-js';
 import { CategoryRail } from '../components/CategoryRail';
 import { ChannelLogo } from '../components/ChannelLogo';
+import { Icon, type IconName } from '../components/Icon';
 import { TextField } from '../components/TextField';
 import { makeMatcher, normalizeText } from '../data/categories';
 import { FocusButton } from '../components/FocusButton';
@@ -23,6 +24,7 @@ import {
   claimSurface,
   playbackStatus,
   playChannel,
+  playerState,
   playingChannel,
   recentVersion,
   releaseSurface,
@@ -42,6 +44,7 @@ interface CategoryItem {
   name: string;
   count: number;
   locked: boolean;
+  icon?: IconName;
 }
 
 const VIRTUAL = ['fav', 'recent', 'all'];
@@ -97,9 +100,9 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
   const categoryItems = createMemo<CategoryItem[]>(() => {
     const locked = lockedCategories();
     return [
-      { id: 'fav', name: t('live.favorites'), count: favKeys().length, locked: false },
-      { id: 'recent', name: t('live.recent'), count: fromKeys(recent()).length, locked: false },
-      { id: 'all', name: t('live.all'), count: all().length, locked: false },
+      { id: 'fav', name: t('live.favorites'), count: favKeys().length, locked: false, icon: 'star' },
+      { id: 'recent', name: t('live.recent'), count: fromKeys(recent()).length, locked: false, icon: 'history' },
+      { id: 'all', name: t('live.all'), count: all().length, locked: false, icon: 'grid' },
       ...cats().map((c) => ({
         id: c.id,
         name: c.id === UNCATEGORIZED ? t('live.uncategorized') : c.name,
@@ -311,7 +314,13 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
           <>
             <div class="live-header">
               <span class="live-title">
-                <bdi>{p().name}</bdi> · <bdi>{categoryName(category())}</bdi> ({formatNumber(channels().length)})
+                <span class="dot" />
+                <bdi>{p().name}</bdi>
+                <span class="sep">•</span>
+                <span class="accent">
+                  <bdi>{categoryName(category())}</bdi>
+                </span>
+                <span class="pill pill-accent">{formatNumber(channels().length)}</span>
               </span>
               <span class="hint">{statusText(p(), isRefreshing())}</span>
             </div>
@@ -379,10 +388,12 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
                     {(c) => (
                       <div class="channel-info">
                         <div class="channel-info-title">
-                          <span class="list-number">{c().num}</span>
+                          <span class="num">{c().num}</span>
                           <bdi>{c().name}</bdi>
                           <Show when={rowLocked(c())}>
-                            <span class="lock-icon">🔒</span>
+                            <span class="lock-icon">
+                              <Icon name="lock" />
+                            </span>
                           </Show>
                         </div>
                         <div class="hint">
@@ -394,12 +405,14 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
                         </div>
                         <NowNextView data={focusedEpg()} />
                         <div class="button-row">
-                          <FocusButton id="live-fav" onSelect={() => void toggleFavorite(focused())}>
-                            {favSet().has(c().key) ? '★ ' + t('live.removeFav') : '☆ ' + t('live.addFav')}
+                          <FocusButton id="live-fav" class={favSet().has(c().key) ? 'btn-primary' : ''} onSelect={() => void toggleFavorite(focused())}>
+                            <Icon name={favSet().has(c().key) ? 'starFill' : 'star'} />
+                            <span>{favSet().has(c().key) ? t('live.removeFav') : t('live.addFav')}</span>
                           </FocusButton>
                           <Show when={c().catchupDays}>
                             <FocusButton id="live-catchup" onSelect={() => navigate({ name: 'catchup', channelId: c().id })}>
-                              ⟲ {t('catchup.open')}
+                              <Icon name="replay" />
+                              <span>{t('catchup.open')}</span>
                             </FocusButton>
                           </Show>
                         </div>
@@ -433,7 +446,7 @@ function ChannelRowContent(props: { channel: ChannelRow; epg: boolean; favorite:
   return (
     <>
       <span class="list-number">{props.channel.num}</span>
-      <ChannelLogo src={props.channel.logo} />
+      <ChannelLogo src={props.channel.logo} name={props.channel.name} />
       <span class="channel-text">
         <span class="list-label">
           <bdi>{props.channel.name}</bdi>
@@ -452,10 +465,14 @@ function ChannelRowContent(props: { channel: ChannelRow; epg: boolean; favorite:
         </Show>
       </span>
       <Show when={props.locked}>
-        <span class="lock-icon">🔒</span>
+        <span class="lock-icon">
+          <Icon name="lock" />
+        </span>
       </Show>
       <Show when={props.favorite}>
-        <span class="fav-star">★</span>
+        <span class="fav-star">
+          <Icon name="starFill" />
+        </span>
       </Show>
     </>
   );
@@ -483,6 +500,11 @@ function PreviewBox(): JSX.Element {
   });
   return (
     <div class="preview-box" ref={(el) => (box = el)}>
+      <Show when={playingChannel() && playerState() === 'playing'}>
+        <div class="preview-badges">
+          <span class="pill pill-live">{t('player.live')}</span>
+        </div>
+      </Show>
       <Show when={!playingChannel()}>
         <span class="preview-hint">{t('live.watchHint')}</span>
       </Show>

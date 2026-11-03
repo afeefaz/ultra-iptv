@@ -54,6 +54,12 @@ export function countsText(p: PlaylistRecord): string {
   });
 }
 
+/** Compact counts for the top bar: "300 ch · 200 mov". */
+export function shortCounts(p: PlaylistRecord): string {
+  const c = p.counts ?? {};
+  return t('status.short', { live: formatNumber(c.live ?? 0), vod: formatNumber(c.vod ?? 0) });
+}
+
 export function statusText(p: PlaylistRecord, isRefreshing: boolean): string {
   if (isRefreshing) return t('status.refreshing');
   if (p.lastError) return t('status.failed', { message: errorText(p.lastError) });
@@ -68,4 +74,11 @@ export function formatDuration(totalSeconds: number): string {
   const sec = s % 60;
   const two = (n: number) => (n < 10 ? '0' : '') + n;
   return h ? `${h}:${two(m)}:${two(sec)}` : `${m}:${two(sec)}`;
+}
+
+/** Minutes for remaining/total times: "1h 14m", "54m". */
+export function formatLeft(seconds: number): string {
+  const m = Math.max(0, Math.round(seconds / 60));
+  const h = Math.floor(m / 60);
+  return h ? t('time.hm', { h: formatNumber(h), m: formatNumber(m % 60) }) : t('time.m', { m: formatNumber(m) });
 }

@@ -1,7 +1,7 @@
 import { log } from '@ultra/core';
 import { createSignal, onCleanup, onMount, Show, type JSX } from 'solid-js';
 import { ChannelLogo } from '../components/ChannelLogo';
-import { NowNextView } from '../components/NowNextView';
+import { Icon } from '../components/Icon';
 import { TrackSheet } from '../components/TrackSheet';
 import { VirtualList } from '../components/VirtualList';
 import { catalog } from '../data/catalog';
@@ -175,35 +175,77 @@ function LivePlayer(): JSX.Element {
         {(c) => (
           <>
             <div class="player-top">
-              <ChannelLogo src={c().logo} />
               <span class="player-num">{c().num}</span>
-              <span class="player-name">
-                <bdi>{c().name}</bdi>
-              </span>
-              <Show when={isChannelLocked(c())}>
-                <span aria-hidden="true">🔒</span>
-              </Show>
-              <span class="player-clock" dir="ltr">
-                {formatClock(clock())}
-              </span>
+              <div class="player-title">
+                <div class="player-name">
+                  <bdi>{c().name}</bdi>
+                  <Show when={isChannelLocked(c())}>
+                    <span class="lock-icon">
+                      <Icon name="lock" />
+                    </span>
+                  </Show>
+                </div>
+              </div>
+              <div class="player-end">
+                <span class="player-clock" dir="ltr">
+                  {formatClock(clock())}
+                </span>
+                <span class="pill pill-live">{t('player.live')}</span>
+              </div>
             </div>
             <div class="player-bottom">
-              <NowNextView data={nowNext()} />
+              <Show when={nowNext().now}>
+                {(now) => (
+                  <div class="player-card">
+                    <div class="player-prog">
+                      <div class="player-prog-title">
+                        <h2>
+                          <bdi>{now().title}</bdi>
+                        </h2>
+                        <span class="time" dir="ltr">
+                          {formatClock(now().start)} – {formatClock(now().stop)}
+                        </span>
+                      </div>
+                      <Show when={now().description}>
+                        <p class="desc">
+                          <bdi>{now().description}</bdi>
+                        </p>
+                      </Show>
+                      <span class="progress progress-accent">
+                        <span class="progress-fill" style={{ width: `${Math.round((nowNext().progress ?? 0) * 100)}%` }} />
+                      </span>
+                    </div>
+                    <Show when={nowNext().next}>
+                      {(next) => (
+                        <div class="up-next">
+                          <div class="up-next-label">
+                            {t('player.upNext')} <span dir="ltr">({formatClock(next().start)})</span>
+                          </div>
+                          <div class="up-next-title">
+                            <bdi>{next().title}</bdi>
+                          </div>
+                        </div>
+                      )}
+                    </Show>
+                  </div>
+                )}
+              </Show>
               <div class="player-controls">
                 <PlayerButton label={t('common.back')} onClick={() => goBack()}>
-                  ←
+                  <Icon name="back" />
                 </PlayerButton>
                 <PlayerButton label={t('player.prevChannel')} onClick={() => void zap(-1)}>
-                  ▲
+                  <Icon name="up" />
                 </PlayerButton>
                 <PlayerButton label={t('player.nextChannel')} onClick={() => void zap(1)}>
-                  ▼
+                  <Icon name="down" />
                 </PlayerButton>
                 <PlayerButton label={t('player.channelList')} onClick={() => setMiniList(true)}>
-                  ☰
+                  <Icon name="list" />
                 </PlayerButton>
                 <PlayerButton label={t('player.audioSubs')} onClick={() => setSheet(true)}>
-                  {t('player.audioSubs')}
+                  <Icon name="subtitles" />
+                  <span>{t('player.audioSubs')}</span>
                 </PlayerButton>
               </div>
               <Show when={stats()}>
@@ -211,13 +253,13 @@ function LivePlayer(): JSX.Element {
                   {statsText()}
                 </p>
               </Show>
-              <p class="hint player-hint">{t('player.hint')}</p>
+              <p class="player-hint">{t('player.hint')}</p>
             </div>
           </>
         )}
       </Show>
       <Show when={playerState() === 'paused'}>
-        <div class="player-paused">❚❚</div>
+        <PausedPill />
       </Show>
       <Show when={miniList()}>
         <MiniChannelList onPick={() => setMiniList(false)} />
@@ -260,7 +302,7 @@ function MiniChannelList(props: { onPick: () => void }): JSX.Element {
         renderRow={(c) => (
           <>
             <span class="list-number">{c.num}</span>
-            <ChannelLogo src={c.logo} />
+            <ChannelLogo src={c.logo} name={c.name} />
             <span class="list-label">
               <bdi>{c.name}</bdi>
             </span>
@@ -381,36 +423,54 @@ function MediaPlayer(): JSX.Element {
         {(m) => (
           <>
             <div class="player-top">
-              <span class="player-name">
-                <bdi>{m().title}</bdi>
+              <div class="player-title">
+                <div class="player-name">
+                  <bdi>{m().title}</bdi>
+                </div>
                 <Show when={m().subtitle}>
                   <span class="player-subtitle">
                     <bdi>{m().subtitle}</bdi>
                   </span>
                 </Show>
-              </span>
-              <span class="player-clock" dir="ltr">
-                {formatClock(clock())}
-              </span>
+              </div>
+              <div class="player-end">
+                <span class="player-clock" dir="ltr">
+                  {formatClock(clock())}
+                </span>
+              </div>
             </div>
             <div class="player-bottom">
-              <div class="seek-row" dir="ltr">
-                <span class="seek-time">{formatDuration(playbackPosition().current)}</span>
-                <span
-                  class="progress seek-bar"
-                  role="slider"
-                  aria-valuemin={0}
-                  aria-valuemax={Math.round(playbackPosition().duration)}
-                  aria-valuenow={Math.round(playbackPosition().current)}
-                  onClick={(e) => {
-                    const r = e.currentTarget.getBoundingClientRect();
-                    const d = playbackPosition().duration;
-                    if (d && r.width) seekTo(((e.clientX - r.left) / r.width) * d);
-                  }}
-                >
-                  <span class="progress-fill" style={{ width: `${Math.round(ratio() * 1000) / 10}%` }} />
-                </span>
-                <span class="seek-time">{playbackPosition().duration ? formatDuration(playbackPosition().duration) : '--:--'}</span>
+              <div class="seek-panel" dir="ltr">
+                <div class="seek-head">
+                  <span>
+                    <span class="seek-now">{formatDuration(playbackPosition().current)}</span>
+                    <span class="seek-total">/ {playbackPosition().duration ? formatDuration(playbackPosition().duration) : '--:--'}</span>
+                    <Show when={playbackPosition().duration}>
+                      <span class="pill">{t('player.watchedPct', { n: formatNumber(Math.round(ratio() * 100)) })}</span>
+                    </Show>
+                  </span>
+                  <Show when={playbackPosition().duration}>
+                    <span class="seek-remaining">−{formatDuration(playbackPosition().duration - playbackPosition().current)}</span>
+                  </Show>
+                </div>
+                <div class="seek-row">
+                  <span
+                    class="progress seek-bar"
+                    role="slider"
+                    aria-valuemin={0}
+                    aria-valuemax={Math.round(playbackPosition().duration)}
+                    aria-valuenow={Math.round(playbackPosition().current)}
+                    onClick={(e) => {
+                      const r = e.currentTarget.getBoundingClientRect();
+                      const d = playbackPosition().duration;
+                      if (d && r.width) seekTo(((e.clientX - r.left) / r.width) * d);
+                    }}
+                  >
+                    <span class="progress-fill" style={{ width: `${Math.round(ratio() * 1000) / 10}%` }}>
+                      <span class="seek-handle" />
+                    </span>
+                  </span>
+                </div>
               </div>
               <Show when={stats()}>
                 <p class="player-stats" dir="ltr">
@@ -419,28 +479,29 @@ function MediaPlayer(): JSX.Element {
               </Show>
               <div class="player-controls" dir="ltr">
                 <PlayerButton label={t('common.back')} onClick={() => goBack()}>
-                  ←
+                  <Icon name="back" />
                 </PlayerButton>
                 <PlayerButton label={t('player.back10')} onClick={() => seekBy(-SEEK_SECONDS)}>
-                  −10
+                  <Icon name="replay10" />
                 </PlayerButton>
                 <PlayerButton label={playerState() === 'paused' ? t('player.play') : t('player.pause')} wide onClick={() => togglePause()}>
-                  {playerState() === 'paused' ? '▶' : '❚❚'}
+                  <Icon name={playerState() === 'paused' ? 'play' : 'pause'} />
                 </PlayerButton>
                 <PlayerButton label={t('player.forward10')} onClick={() => seekBy(SEEK_SECONDS)}>
-                  +10
+                  <Icon name="forward10" />
                 </PlayerButton>
                 <PlayerButton label={t('player.audioSubs')} onClick={() => setSheet(true)}>
-                  {t('player.audioSubs')}
+                  <Icon name="subtitles" />
+                  <span>{t('player.audioSubs')}</span>
                 </PlayerButton>
               </div>
-              <p class="hint player-hint">{t('player.mediaHint')}</p>
+              <p class="player-hint">{t('player.mediaHint')}</p>
             </div>
           </>
         )}
       </Show>
       <Show when={playerState() === 'paused'}>
-        <div class="player-paused">❚❚</div>
+        <PausedPill />
       </Show>
       <Show when={sheet()}>
         <TrackSheet onClose={() => setSheet(false)} />
@@ -464,6 +525,18 @@ function PlayerButton(props: { label: string; wide?: boolean; onClick: () => voi
       }}
     >
       {props.children}
+    </div>
+  );
+}
+
+function PausedPill(): JSX.Element {
+  return (
+    <div class="player-paused">
+      <Icon name="pause" />
+      <div>
+        <div class="player-paused-title">{t('player.paused')}</div>
+        <div class="player-paused-sub">{t('player.pressOkResume')}</div>
+      </div>
     </div>
   );
 }

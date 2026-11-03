@@ -6,6 +6,7 @@ import { FocusZone } from '../focus';
 import { formatNumber, t } from '../i18n';
 import { useKeys } from '../keys';
 import { FocusButton } from './FocusButton';
+import { Icon } from './Icon';
 
 const PIN_LENGTH = 4;
 const MAX_FAILURES = 5;
@@ -123,7 +124,11 @@ function PinDialog(props: { mode: PinMode; onDone: (ok: boolean) => void }): JSX
     <div class="dialog-backdrop">
       <FocusZone id="pin-dialog" trap>
         <div class="dialog pin-dialog" role="dialog" aria-modal="true" aria-label={title()}>
+          <div class="pin-lock">
+            <Icon name="lock" />
+          </div>
           <h2 class="dialog-title">{title()}</h2>
+          <p class="pin-sub">{props.mode === 'verify' ? t('pin.verifySub') : t('pin.manageSub')}</p>
           <div class="pin-dots" dir="ltr" aria-label={formatNumber(digits().length)}>
             <For each={[0, 1, 2, 3]}>{(i) => <span class="pin-dot" classList={{ filled: i < digits().length }} />}</For>
           </div>
@@ -145,7 +150,7 @@ function PinDialog(props: { mode: PinMode; onDone: (ok: boolean) => void }): JSX
               0
             </FocusButton>
             <FocusButton id="pin-back" class="pin-key pin-small" label={t('osk.backspace')} onSelect={backspace}>
-              ⌫
+              <Icon name="backspace" />
             </FocusButton>
           </div>
         </div>
