@@ -40,6 +40,14 @@ const ZAP_DELAY_MS = 1500;
 const SEEK_SECONDS = 10;
 const SKIP_SECONDS = 30;
 const PLAY_PAUSE_CONTROL = 2;
+/** Presses closer together than this count as holding the key. */
+const SCRUB_HOLD_MS = 400;
+const SCRUB_STEPS = [
+  { after: 0, seconds: 10 },
+  { after: 6, seconds: 30 },
+  { after: 16, seconds: 60 },
+  { after: 30, seconds: 300 },
+];
 
 /** Full screen: the live player, or the movie/episode/catch-up player. */
 export function PlayerScreen(): JSX.Element {
@@ -366,6 +374,23 @@ function MediaPlayer(): JSX.Element {
   ];
   /** Index of the button the remote is on; null means Left/Right seek and OK pauses. */
   const [control, setControl] = createSignal<number | null>(null);
+  /** The remote is on the timeline's dot: Left/Right pick a time and OK jumps there. */
+  const [onTimeline, setOnTimeline] = createSignal(false);
+  /** Position under the finger, mouse or remote while choosing a time (seconds), else null. */
+  const [dragAt, setDragAt] = createSignal<number | null>(null);
+  let lastScrubAt = 0;
+  let scrubRun = 0;
+
+  /** Single presses move 10 s for precision; holding the key speeds up to minutes at a time. */
+  const scrub = (direction: number) => {
+    const { current, duration } = playbackPosition();
+    if (!duration) return;
+    const time = Date.now();
+    scrubRun = time - lastScrubAt < SCRUB_HOLD_MS ? scrubRun + 1 : 0;
+    lastScrubAt = time;
+    const step = SCRUB_STEPS.filter((s) => scrubRun >= s.after).pop()!.seconds;
+    setDragAt(Math.max(0, Math.min(duration, (dragAt() ?? current) + direction * step)));
+  };
   let hideTimer: ReturnType<typeof setTimeout> | undefined;
 
   const showOverlay = () => {
@@ -373,9 +398,11 @@ function MediaPlayer(): JSX.Element {
     clearTimeout(hideTimer);
     // Paused media keeps the overlay up so the position stays visible.
     hideTimer = setTimeout(() => {
-      if (playerState() === 'paused') return;
+      // Paused, or choosing a time: the position has to stay visible.
+      if (playerState() === 'paused' || dragAt() !== null) return;
       setOverlay(false);
       setControl(null);
+      setOnTimeline(false);
     }, OVERLAY_MS);
   };
 
@@ -395,7 +422,43 @@ function MediaPlayer(): JSX.Element {
       setSheet(false);
       return true;
     }
+    if (control() !== null && press.key === 'up') {
+      setControl(null);
+      setOnTimeline(true);
+      return true;
+    }
     if (moveInControls(press.key, controls, control, setControl)) return true;
+    if (onTimeline() && playbackPosition().duration) {
+      const at = dragAt();
+      switch (press.key) {
+        case 'left':
+          scrub(-1);
+          return true;
+        case 'right':
+          scrub(1);
+          return true;
+        case 'ok':
+          if (at === null) break; // nothing chosen yet: OK pauses as usual
+          setDragAt(null);
+          seekTo(at);
+          return true;
+        case 'up':
+          setDragAt(null);
+          setOnTimeline(false);
+          return true;
+        case 'down':
+          setDragAt(null);
+          setOnTimeline(false);
+          setControl(PLAY_PAUSE_CONTROL);
+          return true;
+        case 'back':
+          if (at === null) break;
+          setDragAt(null); // back to where it's playing, still on the timeline
+          return true;
+        default:
+          break;
+      }
+    }
     const status = playbackStatus()?.kind;
     switch (press.key) {
       case 'left':
@@ -429,7 +492,8 @@ function MediaPlayer(): JSX.Element {
         setControl(PLAY_PAUSE_CONTROL);
         return true;
       case 'up':
-        return true; // just shows the overlay
+        if (playbackPosition().duration) setOnTimeline(true);
+        return true;
       case 'back':
       case 'stop':
         goBack();
@@ -439,8 +503,6 @@ function MediaPlayer(): JSX.Element {
     }
   });
 
-  /** Position under the finger/mouse while dragging the seek bar (seconds), else null. */
-  const [dragAt, setDragAt] = createSignal<number | null>(null);
   const shownTime = () => dragAt() ?? playbackPosition().current;
   const ratio = () => {
     const p = playbackPosition();
@@ -511,7 +573,7 @@ function MediaPlayer(): JSX.Element {
               </div>
             </div>
             <div class="player-bottom">
-              <div class="seek-panel" dir="ltr">
+              <div class="seek-panel" classList={{ 'is-focused': onTimeline() }} dir="ltr">
                 <div class="seek-head">
                   <span>
                     <span class="seek-now">{formatDuration(shownTime())}</span>
@@ -527,7 +589,7 @@ function MediaPlayer(): JSX.Element {
                 <div class="seek-row">
                   <span
                     class="progress seek-bar"
-                    classList={{ dragging: dragAt() !== null }}
+                    classList={{ dragging: dragAt() !== null, 'is-focused': onTimeline() }}
                     ref={(el) => (bar = el)}
                     role="slider"
                     aria-valuemin={0}

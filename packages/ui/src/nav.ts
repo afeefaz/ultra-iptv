@@ -1,4 +1,4 @@
-import { log } from '@ultra/core';
+import { log, type ContentKind } from '@ultra/core';
 import { createSignal } from 'solid-js';
 
 export type Tab = 'home' | 'live' | 'movies' | 'series' | 'settings';
@@ -8,6 +8,7 @@ export type Route =
   | { name: 'about' }
   | { name: 'debug' }
   | { name: 'playlists' }
+  | { name: 'hidden-categories'; kind: ContentKind }
   | { name: 'playlist-form'; id?: string }
   | { name: 'player'; tab?: Tab }
   | { name: 'vod-detail'; id: string }
@@ -34,6 +35,7 @@ export function tabOf(route: Route): Tab {
     case 'about':
     case 'debug':
     case 'playlists':
+    case 'hidden-categories':
     case 'playlist-form':
       return 'settings';
     case 'player':

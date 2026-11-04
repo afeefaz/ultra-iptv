@@ -28,6 +28,11 @@ export interface UltraPlayerPlugin {
   selectText(options: { id: string | null }): Promise<void>;
   openExternal(options: { url: string; title: string }): Promise<void>;
   shareText(options: { filename: string; mimeType: string; text: string }): Promise<void>;
+  systemUsage(): Promise<{ ramUsed: number; ramTotal: number; appUsed: number }>;
+  /** Reads the URL for `seconds` and discards the data; 0 stops at the first response. */
+  measureDownload(options: { url: string; seconds: number }): Promise<{ status: number; ttfbMs: number; bytes: number; ms: number }>;
+  cancelDownload(): Promise<void>;
+  addListener(event: 'downloadProgress', fn: (e: { bytes: number; ms: number }) => void): Promise<PluginListenerHandle>;
   addListener(event: 'state', fn: (e: { state: string }) => void): Promise<PluginListenerHandle>;
   addListener(event: 'error', fn: (e: { kind: string; fatal: boolean; message: string; httpStatus?: number }) => void): Promise<PluginListenerHandle>;
   addListener(event: 'tracks', fn: (e: { audio: NativeTrack[]; text: NativeTrack[] }) => void): Promise<PluginListenerHandle>;

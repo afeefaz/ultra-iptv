@@ -1,4 +1,5 @@
 import { toKey } from '../keymap';
+import { jsHeapUsed } from '../usage';
 import type { DeviceInfo, Platform } from '../types';
 import { tizenGlobals } from './api';
 import { AvPlayPlayer } from './player';
@@ -85,6 +86,16 @@ export const tizenPlatform: Platform = {
         );
       });
     },
+  },
+  async systemUsage() {
+    const info = tizenGlobals().tizen?.systeminfo;
+    const ramTotal = info?.getTotalMemory();
+    const ramFree = info?.getAvailableMemory();
+    return {
+      ramTotal,
+      ramUsed: ramTotal !== undefined && ramFree !== undefined ? ramTotal - ramFree : undefined,
+      appUsed: jsHeapUsed(),
+    };
   },
   device(): DeviceInfo {
     const { tizen, webapis } = tizenGlobals();

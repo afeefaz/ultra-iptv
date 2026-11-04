@@ -1,9 +1,10 @@
-import type { StreamFormat } from '@ultra/core';
+import type { ContentKind, StreamFormat } from '@ultra/core';
 import type { BufferProfile } from '@ultra/platform';
 import { For, Show, type JSX } from 'solid-js';
 import { FocusButton } from '../components/FocusButton';
 import { Icon, type IconName } from '../components/Icon';
-import { CATEGORY_SORTS } from '../data/categories';
+import { SpeedTestCard } from '../components/SpeedTestCard';
+import { CATEGORY_SORTS, useHiddenCategories } from '../data/categories';
 import { lockedCategories, lockedChannels, pinSet, requestPin } from '../data/parental';
 import { activePlaylist } from '../data/playlists';
 import {
@@ -15,6 +16,13 @@ import {
   HOME_SECTIONS,
   homeShows,
   keepTitleOpen,
+  MAX_TEXT_SCALE,
+  MIN_TEXT_SCALE,
+  setShowSystemUsage,
+  setTextScale,
+  showSystemUsage,
+  TEXT_SCALE_STEP,
+  textScale,
   preferredAudio,
   preferredText,
   setBufferProfile,
@@ -57,10 +65,13 @@ const SECTIONS: Section[] = [
   { id: 'general', icon: 'language', title: 'settings.language', first: () => `settings-lang-${locale()}` },
   { id: 'playback', icon: 'tune', title: 'settings.playback', first: () => `settings-format-${streamFormat()}` },
   { id: 'subtitles', icon: 'subtitles', title: 'settings.subtitles', first: () => `settings-subsize-${subtitleSize()}` },
+  { id: 'display', icon: 'tv', title: 'settings.display', first: () => 'settings-text-down' },
   { id: 'browsing', icon: 'grid', title: 'settings.browsing', first: () => `settings-detail-${detailMode()}` },
+  { id: 'hidden', icon: 'list', title: 'settings.hiddenCategories', first: () => 'settings-hidden-live' },
   { id: 'home', icon: 'layers', title: 'settings.home', first: () => 'settings-home-hero' },
   { id: 'parental', icon: 'shield', title: 'settings.parental', first: () => (pinSet() ? 'settings-pin-change' : 'settings-pin-set') },
   { id: 'playlists', icon: 'playlist', title: 'settings.playlists', first: () => 'settings-playlists' },
+  { id: 'network', icon: 'sync', title: 'settings.network', first: () => 'settings-speed' },
   { id: 'about', icon: 'info', title: 'settings.about', first: () => 'settings-about' },
 ];
 
@@ -102,6 +113,11 @@ function Card(props: { section: Section; aside?: string; children: JSX.Element }
 }
 
 const VOD_SORTS: SortBy[] = ['added', 'name', 'rating', 'year'];
+const HIDDEN_KINDS: Array<{ kind: ContentKind; title: MessageKey }> = [
+  { kind: 'live', title: 'tab.live' },
+  { kind: 'vod', title: 'tab.movies' },
+  { kind: 'series', title: 'tab.series' },
+];
 
 export function SettingsScreen(): JSX.Element {
   const platform = usePlatform();
@@ -231,6 +247,56 @@ export function SettingsScreen(): JSX.Element {
               </div>
             </Card>
 
+            <Card section={section('display')}>
+              <div class="setting-name">{t('settings.textSize')}</div>
+              <div class="setting-desc">{t('settings.textSizeDesc')}</div>
+              <div class="stepper" role="group" aria-label={t('settings.textSize')}>
+                <FocusButton
+                  id="settings-text-down"
+                  class="stepper-button"
+                  label={t('settings.textSmaller')}
+                  onSelect={() => setTextScale(Math.max(MIN_TEXT_SCALE, textScale() - TEXT_SCALE_STEP))}
+                >
+                  −
+                </FocusButton>
+                <span class="stepper-value" dir="ltr">
+                  {textScale()}%
+                </span>
+                <FocusButton
+                  id="settings-text-up"
+                  class="stepper-button"
+                  label={t('settings.textBigger')}
+                  onSelect={() => setTextScale(Math.min(MAX_TEXT_SCALE, textScale() + TEXT_SCALE_STEP))}
+                >
+                  +
+                </FocusButton>
+                <Show when={textScale() !== 100}>
+                  <FocusButton id="settings-text-reset" onSelect={() => setTextScale(100)}>
+                    {t('settings.textReset')}
+                  </FocusButton>
+                </Show>
+                <span class="stepper-range" dir="ltr">
+                  {MIN_TEXT_SCALE}–{MAX_TEXT_SCALE}%
+                </span>
+              </div>
+              <Show when={platform.systemUsage}>
+                <div class="setting-name setting-gap">{t('settings.usage')}</div>
+                <div class="setting-desc">{t('settings.usageDesc')}</div>
+                <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
+                  <For each={[true, false]}>
+                    {(on) => (
+                      <FocusButton id={`settings-usage-${on}`} selected={showSystemUsage() === on} onSelect={() => setShowSystemUsage(on)}>
+                        <span class="option-card-text">
+                          <span class="option-card-title">{t(on ? 'settings.usage.on' : 'settings.usage.off')}</span>
+                        </span>
+                        <Icon name={showSystemUsage() === on ? 'checkCircle' : 'radioOff'} />
+                      </FocusButton>
+                    )}
+                  </For>
+                </div>
+              </Show>
+            </Card>
+
             <Card section={section('browsing')}>
               <div class="setting-name">{t('settings.detailMode')}</div>
               <div class="setting-desc">{t('settings.detailModeDesc')}</div>
@@ -292,6 +358,23 @@ export function SettingsScreen(): JSX.Element {
                   </For>
                 </div>
               </Show>
+            </Card>
+
+            <Card section={section('hidden')}>
+              <div class="setting-desc">{t('settings.hiddenDesc')}</div>
+              <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
+                <For each={HIDDEN_KINDS}>
+                  {(k) => (
+                    <FocusButton id={`settings-hidden-${k.kind}`} onSelect={() => navigate({ name: 'hidden-categories', kind: k.kind })}>
+                      <span class="option-card-text">
+                        <span class="option-card-title">{t(k.title)}</span>
+                        <span class="option-card-sub">{t('hidden.summary', { n: formatNumber(useHiddenCategories(k.kind).hidden().length) })}</span>
+                      </span>
+                      <Icon name="chevronRight" />
+                    </FocusButton>
+                  )}
+                </For>
+              </div>
             </Card>
 
             <Card section={section('home')} aside={t('settings.homeAside')}>
@@ -361,6 +444,10 @@ export function SettingsScreen(): JSX.Element {
                   <span>{t('playlists.manage')}</span>
                 </FocusButton>
               </div>
+            </Card>
+
+            <Card section={section('network')}>
+              <SpeedTestCard />
             </Card>
 
             <Card section={section('about')}>

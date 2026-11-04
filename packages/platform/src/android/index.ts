@@ -1,6 +1,7 @@
 import { App } from '@capacitor/app';
 import { CapacitorHttp } from '@capacitor/core';
 import type { DeviceInfo, Platform } from '../types';
+import { jsHeapUsed } from '../usage';
 import { webPlatform } from '../web';
 import { UltraPlayer } from './plugin';
 import { NativePlayer } from './player';
@@ -44,6 +45,23 @@ export const androidPlatform: Platform = {
       readTimeout: request.timeoutMs,
     });
     return { status: res.status, body: typeof res.data === 'string' ? res.data : JSON.stringify(res.data) };
+  },
+  async systemUsage() {
+    const usage = await UltraPlayer.systemUsage();
+    // The native figure is the app's main process; the page's memory lives in a separate one.
+    return { ...usage, appUsed: usage.appUsed + (jsHeapUsed() ?? 0) };
+  },
+  async download(url, { seconds, onProgress, isCancelled }) {
+    const sub = await UltraPlayer.addListener('downloadProgress', (e) => {
+      if (isCancelled?.()) void UltraPlayer.cancelDownload();
+      else onProgress?.(e.bytes, e.ms);
+    });
+    try {
+      // Sent uncompressed, so the byte count is what really crossed the network.
+      return { ...(await UltraPlayer.measureDownload({ url, seconds })), compressed: false };
+    } finally {
+      void sub.remove();
+    }
   },
   async openExternal(url, title) {
     await UltraPlayer.openExternal({ url, title });

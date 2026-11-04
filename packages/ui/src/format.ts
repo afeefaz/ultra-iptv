@@ -10,6 +10,13 @@ export function resolutionLabel(width: number, height: number): string {
   return `${height}p`;
 }
 
+/** Two decimals for gigabytes, one for megabytes below 100, so changes are visible as they happen. */
+export function formatBytes(bytes: number, unit: 'GB' | 'MB'): string {
+  if (unit === 'GB') return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
+  const mb = bytes / 1024 ** 2;
+  return `${mb < 100 ? mb.toFixed(1) : Math.round(mb)} MB`;
+}
+
 export function timeAgo(ms: number): string {
   const diff = Math.max(0, Date.now() - ms);
   const min = Math.floor(diff / 60_000);

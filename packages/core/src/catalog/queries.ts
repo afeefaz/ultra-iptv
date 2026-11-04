@@ -2,6 +2,7 @@
 import { openUltraDb, playlistRange } from './db';
 import {
   catKey,
+  hiddenCategoriesKey,
   pinsKey,
   type CategoryRow,
   type ContentKind,
@@ -69,6 +70,12 @@ export async function getProgress(playlistId: string, kind: ProgressKind, key: s
 
 export async function getItem<K extends ContentKind>(playlistId: string, kind: K, id: string): Promise<KindRows[K] | undefined> {
   return (await (await openUltraDb()).get(kind as 'live', [playlistId, id])) as unknown as KindRows[K] | undefined;
+}
+
+/** Category ids hidden in Settings for one section. */
+export async function hiddenCategories(playlistId: string, kind: ContentKind): Promise<string[]> {
+  const v = await (await openUltraDb()).get('settings', hiddenCategoriesKey(playlistId, kind));
+  return Array.isArray(v) ? (v as string[]) : [];
 }
 
 /** Pinned category ids, in the order they were pinned. */

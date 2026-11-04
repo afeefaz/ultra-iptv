@@ -1,17 +1,19 @@
-import { log, logging } from '@ultra/core';
+import { log, logging, type ContentKind } from '@ultra/core';
 import type { KeyPress, Platform } from '@ultra/platform';
-import { createEffect, createSignal, For, Match, on, onCleanup, onMount, Show, Switch, type JSX } from 'solid-js';
+import { createEffect, createRenderEffect, createSignal, For, Match, on, onCleanup, onMount, Show, Switch, type JSX } from 'solid-js';
 import { FocusButton } from './components/FocusButton';
 import { Icon } from './components/Icon';
 import { LoadingLine } from './components/LoadingProgress';
 import { PickerDialog } from './components/PickerDialog';
 import { PinHost } from './components/PinDialog';
+import { SystemUsageReadout } from './components/SystemUsageReadout';
 import { VideoLayer } from './components/VideoLayer';
 import { setCatalogPlatform } from './data/catalog';
 import { clock, formatClock } from './data/epg';
 import { startParental } from './data/parental';
 import { playingPlaylistId, stopPlayback } from './data/playback';
 import { activePlaylist, playlists, setActivePlaylist, startPlaylists } from './data/playlists';
+import { textScale } from './data/settings';
 import { DebugScreen } from './debug/DebugScreen';
 import { CONTENT_ZONE, focusManager, FocusZone } from './focus';
 import { countsText } from './format';
@@ -27,10 +29,14 @@ import { PlaceholderScreen } from './screens/PlaceholderScreen';
 import { PlayerScreen } from './screens/PlayerScreen';
 import { PlaylistFormScreen } from './screens/PlaylistFormScreen';
 import { PlaylistsScreen } from './screens/PlaylistsScreen';
+import { HiddenCategoriesScreen } from './screens/HiddenCategoriesScreen';
 import { SeriesDetailScreen } from './screens/SeriesDetailScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { VodDetailScreen } from './screens/VodDetailScreen';
 import { VodScreen } from './screens/VodScreen';
+
+/** The root size in styles.css: one rem is 1/120 of the screen's width at 100%. */
+const BASE_ROOT_VW = 0.8333;
 
 // Last focused content item per route, restored when coming back.
 const focusByRoute = new Map<string, string>();
@@ -39,6 +45,16 @@ export function App(props: { platform: Platform }): JSX.Element {
   applyLocaleToDocument();
   setCatalogPlatform(props.platform);
   onBackNavigated(restoreFocus);
+
+  let scaled = false;
+  createRenderEffect(() => {
+    const root = document.documentElement.style;
+    root.fontSize = `${(BASE_ROOT_VW * textScale()) / 100}vw`;
+    root.setProperty('--text-scale', String(textScale() / 100));
+    // Lists and the video preview measure in pixels; they re-measure on resize.
+    if (scaled) window.dispatchEvent(new Event('resize'));
+    scaled = true;
+  });
 
   const stopFocusTracking = focusManager.onChange((id) => {
     if (id && focusManager.isInZone(id, CONTENT_ZONE)) focusByRoute.set(currentRoute().name, id);
@@ -112,6 +128,7 @@ export function App(props: { platform: Platform }): JSX.Element {
               <For each={TABS}>{(tab) => <TabButton tab={tab} />}</For>
             </nav>
             <div class="topbar-end">
+              <SystemUsageReadout />
               <PlaylistSwitcher />
               <FocusButton
                 id="tab-settings"
@@ -158,6 +175,9 @@ export function App(props: { platform: Platform }): JSX.Element {
               </Match>
               <Match when={currentRoute().name === 'settings'}>
                 <SettingsScreen />
+              </Match>
+              <Match when={currentRoute().name === 'hidden-categories' && currentRoute()} keyed>
+                {(r) => <HiddenCategoriesScreen kind={(r as { kind: ContentKind }).kind} />}
               </Match>
               <Match when={currentRoute().name === 'playlists'}>
                 <PlaylistsScreen />

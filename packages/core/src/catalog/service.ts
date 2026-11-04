@@ -1,5 +1,6 @@
 import { log, logging } from '../log';
 import { createLimiter } from '../net/limit';
+import type { SpeedTargets } from '../net/speed';
 import { AppError, getTextStream, toErrorInfo } from '../net/http';
 import { checkPin, hashPin, isValidPin, type PinHash } from '../secure/pin';
 import { SecretBox } from '../secure/secret-box';
@@ -13,6 +14,7 @@ import { hash64 } from './hash';
 import {
   CONTENT_KINDS,
   maskUser,
+  hiddenCategoriesKey,
   pinsKey,
   type AccountInfo,
   type ContentKind,
@@ -58,6 +60,7 @@ export interface RefreshProgress {
 }
 
 /** Step weights: big lists take longer to download and save than logins and category lists. */
+const SPEED_MOVIES = 3;
 const W = { small: 1, list: 4, save: 3 };
 const XTREAM_TOTAL = W.small * 4 + W.list * 3 + W.save * 3;
 const M3U_TOTAL = W.list * 3 + W.save * 3;
@@ -389,6 +392,32 @@ export class PlaylistService {
     const pinned = pins.indexOf(categoryId) < 0;
     await db.put('settings', pinned ? pins.concat(categoryId) : pins.filter((id) => id !== categoryId), key);
     return pinned;
+  }
+
+  async setHiddenCategories(playlistId: string, kind: ContentKind, categoryIds: string[]): Promise<void> {
+    await (await openUltraDb()).put('settings', categoryIds, hiddenCategoriesKey(playlistId, kind));
+  }
+
+  /** What the speed test downloads: a few of the provider's video files, then its big lists. */
+  async speedTargets(playlistId: string): Promise<SpeedTargets> {
+    const db = await openUltraDb();
+    const record = await db.get('playlists', playlistId);
+    if (!record) throw new AppError({ code: 'not-found', message: 'Playlist not found' });
+    const secret = await this.secret(playlistId);
+    const range = IDBKeyRange.bound([playlistId, ''], [playlistId, '\uffff']);
+    const movies = await db.getAll('vod', range, SPEED_MOVIES);
+    const downloads: SpeedTargets['downloads'] = [];
+    for (const movie of movies) {
+      const ref: MediaRef = movie.stream.t === 'x' ? { t: 'movie', id: movie.stream.id, ext: movie.stream.ext } : { t: 'url', url: movie.stream.url };
+      downloads.push({ url: (await this.mediaUrl(playlistId, ref, false)).url, kind: 'media' });
+    }
+    if (record.type === 'xtream') {
+      const api = this.xtream(secret, record.userAgent);
+      downloads.push({ url: api.url('get_vod_streams'), kind: 'catalog' }, { url: api.url('get_live_streams'), kind: 'catalog' });
+      return { ping: api.url(), downloads };
+    }
+    downloads.push({ url: secret.m3uUrl!, kind: 'catalog' });
+    return { ping: secret.m3uUrl!, downloads };
   }
 
   async saveProgress(row: ProgressRow): Promise<void> {

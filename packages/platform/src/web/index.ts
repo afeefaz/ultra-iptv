@@ -1,4 +1,5 @@
 import { toKey } from '../keymap';
+import { jsHeapUsed } from '../usage';
 import type { DeviceInfo, Key, Platform } from '../types';
 import { WebPlayer } from './player';
 
@@ -43,6 +44,10 @@ export const webPlatform: Platform = {
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     },
+  },
+  // A browser only reveals its own page's memory, not the device's.
+  async systemUsage() {
+    return { appUsed: jsHeapUsed() };
   },
   device(): DeviceInfo {
     const ua = navigator.userAgent;

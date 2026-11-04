@@ -239,6 +239,11 @@ describe('PlaylistService (category pins)', () => {
     expect(await categoryPins(rec.id, 'live')).toEqual(['3', '1']);
     expect(await service.togglePin(rec.id, 'live', '3')).toBe(false);
     expect(await categoryPins(rec.id, 'live')).toEqual(['1']);
+    const { hiddenCategories } = await import('./queries');
+    expect(await hiddenCategories(rec.id, 'live')).toEqual([]);
+    await service.setHiddenCategories(rec.id, 'live', ['2']);
+    expect(await hiddenCategories(rec.id, 'live')).toEqual(['2']);
+    expect(await hiddenCategories(rec.id, 'vod')).toEqual([]);
     await service.remove(rec.id);
     expect(await categoryPins(rec.id, 'live')).toEqual([]);
     expect(await categoryPins(rec.id, 'vod')).toEqual([]);

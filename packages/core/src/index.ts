@@ -12,6 +12,7 @@ export {
   listProgress,
   recentKeys,
   categoryPins,
+  hiddenCategories,
 } from './catalog/queries';
 export { versionKey } from './catalog/details';
 export { nowNext, type NowNext } from './catalog/epg';
@@ -22,3 +23,14 @@ export { fillUrl } from './catalog/stream-creds';
 export { normalizeText } from './catalog/hash';
 export { AppError, setFallbackFetch, setFetch, toErrorInfo } from './net/http';
 export { parseXtreamUrl } from './sources/xtream';
+export {
+  fetchDownload,
+  runSpeedTest,
+  SpeedTestCancelled,
+  type DownloadFn,
+  type DownloadOptions,
+  type DownloadResult,
+  type SpeedProgress,
+  type SpeedResult,
+  type SpeedTargets,
+} from './net/speed';

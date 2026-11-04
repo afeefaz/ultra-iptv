@@ -1,4 +1,4 @@
-import { categoryPins, log, normalizeText, type ContentKind } from '@ultra/core';
+import { categoryPins, hiddenCategories, log, normalizeText, type ContentKind } from '@ultra/core';
 import { createEffect, createRoot, createSignal, on, type Accessor } from 'solid-js';
 import { catalog } from './catalog';
 import { activePlaylist } from './playlists';
@@ -55,6 +55,47 @@ export function usePins(kind: ContentKind): { pins: Accessor<string[]>; toggle: 
     return pinned;
   };
   return { pins: store.pins, toggle };
+}
+
+// Hidden categories, shared like pins: Settings and the libraries stay in sync.
+const hiddenStores: Partial<Record<ContentKind, { hidden: Accessor<string[]>; set: (v: string[]) => void }>> = {};
+
+function hiddenStore(kind: ContentKind) {
+  let store = hiddenStores[kind];
+  if (store) return store;
+  store = createRoot(() => {
+    const [hidden, set] = createSignal<string[]>([]);
+    createEffect(
+      on(
+        () => activePlaylist()?.id,
+        (id) => {
+          if (!id) return set([]);
+          hiddenCategories(id, kind).then(set, (e) => log.warn('categories', 'could not load hidden', { error: e }));
+        },
+      ),
+    );
+    return { hidden, set: (v: string[]) => void set(v) };
+  });
+  hiddenStores[kind] = store;
+  return store;
+}
+
+/** Categories hidden in Settings for the active playlist and one section. */
+export function useHiddenCategories(kind: ContentKind): { hidden: Accessor<string[]>; setHidden: (ids: string[]) => void } {
+  const store = hiddenStore(kind);
+  const setHidden = (ids: string[]) => {
+    store.set(ids);
+    const id = activePlaylist()?.id;
+    if (id) void catalog().call('setHiddenCategories', id, kind, ids);
+  };
+  return { hidden: store.hidden, setHidden };
+}
+
+/** Items left once hidden categories are gone: one still listed elsewhere stays. */
+export function withoutHidden<T extends { categoryIds: string[] }>(rows: T[], hidden: string[]): T[] {
+  if (!hidden.length) return rows;
+  const set = new Set(hidden);
+  return rows.filter((r) => !r.categoryIds.length || r.categoryIds.some((id) => !set.has(id)));
 }
 
 /** Pinned categories first (in pin order), then the rest in the chosen order. */

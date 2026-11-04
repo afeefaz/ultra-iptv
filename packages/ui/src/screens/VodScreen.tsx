@@ -13,7 +13,7 @@ import { FocusButton } from '../components/FocusButton';
 import { PinButton } from '../components/PinButton';
 import { Icon } from '../components/Icon';
 import { TextField } from '../components/TextField';
-import { makeMatcher } from '../data/categories';
+import { makeMatcher, useHiddenCategories, withoutHidden } from '../data/categories';
 import { cachedLibrary, loadLibrary, type Library } from '../data/libraryCache';
 import { enterLibrary, rememberedSearch, rememberSearch } from '../data/libraryMemory';
 import { PickerDialog } from '../components/PickerDialog';
@@ -23,7 +23,7 @@ import { catalog } from '../data/catalog';
 import { ensureUnlocked, isCategoryLocked, lockedCategories, unlocked } from '../data/parental';
 import { progressRatio, useProgress } from '../data/media';
 import { activePlaylist, refreshing, versionOf } from '../data/playlists';
-import { detailMode, keepTitleOpen, setVodSort, vodSort, type SortBy } from '../data/settings';
+import { detailMode, keepTitleOpen, setVodSort, textScale, vodSort, type SortBy } from '../data/settings';
 import { focusManager, FocusZone } from '../focus';
 import { formatLeft, statusText } from '../format';
 import { formatNumber, locale, t } from '../i18n';
@@ -46,6 +46,8 @@ const NO_ROWS: Row[] = [];
 const NO_CATEGORIES: CategoryRow[] = [];
 const NO_KEYS = new Map<string, Row>();
 const COLUMNS = 6;
+const MIN_COLUMNS = 3;
+const MAX_COLUMNS = 8;
 const SORTS: SortBy[] = ['added', 'name', 'rating', 'year'];
 const lastCategory = new Map<string, string>();
 // Grid position per playlist+kind, so Back from a detail page lands on the same poster.
@@ -60,7 +62,8 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
   // Already in memory on the way back from the player or a page, so the first paint has everything.
   const held = cachedLibrary<Row>(activePlaylist()?.id ?? null, props.kind);
   const [library, setLibrary] = createSignal<Library<Row> | undefined>(held);
-  const all = (): Row[] => library()?.rows ?? NO_ROWS;
+  const { hidden: hiddenCats } = useHiddenCategories(props.kind);
+  const all = createMemo((): Row[] => withoutHidden(library()?.rows ?? NO_ROWS, hiddenCats()));
   const cats = (): CategoryRow[] => library()?.cats ?? NO_CATEGORIES;
   const [favKeys, setFavKeys] = createSignal<string[]>(held?.favs ?? []);
   // Starts on the remembered category, so nothing flashes "All" (and resets) on the way back.
@@ -122,7 +125,9 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
     if (!lib) return NO_ROWS;
     const sort = vodSort();
     const lang = locale();
-    return lib.sorted(`${id}|${sort}|${lang}`, () => sortRows(id === 'all' ? lib.rows.slice() : lib.rows.filter((r) => r.categoryIds.indexOf(id) >= 0), sort, lang));
+    const rows = all();
+    const key = `${id}|${sort}|${lang}|${id === 'all' ? hiddenCats().join() : ''}`;
+    return lib.sorted(key, () => sortRows(id === 'all' ? rows.slice() : rows.filter((r) => r.categoryIds.indexOf(id) >= 0), sort, lang));
   });
 
   const items = createMemo<Row[]>(() => {
@@ -139,12 +144,14 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
       { id: 'continue', name: t('vod.continue'), count: continueRows().length, locked: false, icon: 'history' },
       { id: 'fav', name: t('live.favorites'), count: favKeys().length, locked: false, icon: 'star' },
       { id: 'all', name: props.kind === 'vod' ? t('vod.allMovies') : t('vod.allSeries'), count: all().length, locked: false, icon: 'grid' },
-      ...cats().map((c) => ({
-        id: c.id,
-        name: c.id === UNCATEGORIZED ? t('live.uncategorized') : c.name,
-        count: c.count,
-        locked: locked.has(c.id),
-      })),
+      ...cats()
+        .filter((c) => hiddenCats().indexOf(c.id) < 0)
+        .map((c) => ({
+          id: c.id,
+          name: c.id === UNCATEGORIZED ? t('live.uncategorized') : c.name,
+          count: c.count,
+          locked: locked.has(c.id),
+        })),
     ];
   });
 
@@ -172,7 +179,15 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
     }),
   );
 
-  const chooseCategory = (id: string) => {
+  // Bigger text means bigger posters, so fewer fit across (and more when it's smaller).
+  const columns = () => Math.max(MIN_COLUMNS, Math.min(MAX_COLUMNS, Math.round((COLUMNS * 100) / textScale())));
+
+  // The open category was hidden in Settings.
+  createEffect(() => {
+    if (hiddenCats().indexOf(category()) >= 0) chooseCategory('all');
+  });
+
+  function chooseCategory(id: string): void {
     if (id === category()) return;
     setCategory(id);
     setQuery('');
@@ -181,7 +196,7 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
     lastCategory.set(memoryKey(), id);
     lastGridIndex.set(memoryKey(), null);
     grid?.scrollToIndex(0);
-  };
+  }
 
   const open = (row: Row) => {
     if (detailMode() === 'inline') return setOpenId(row.id);
@@ -289,7 +304,7 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
                         id="vgrid"
                         label={t(props.kind === 'vod' ? 'tab.movies' : 'tab.series')}
                         items={items()}
-                        columns={COLUMNS}
+                        columns={columns()}
                         rowHeight={23}
                         ref={(api) => (grid = api)}
                         onFocusItem={(row, index) => {

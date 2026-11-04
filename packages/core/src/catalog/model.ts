@@ -260,6 +260,7 @@ export interface DetailRow {
 
 /** Settings-store key holding a playlist's pinned category ids for one content kind. */
 export const pinsKey = (playlistId: string, kind: ContentKind) => `catpins|${playlistId}|${kind}`;
+export const hiddenCategoriesKey = (playlistId: string, kind: ContentKind) => `cathidden|${playlistId}|${kind}`;
 
 export const RESUME_MIN_SECONDS = 120;
 export const WATCHED_RATIO = 0.92;

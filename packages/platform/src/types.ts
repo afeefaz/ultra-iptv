@@ -70,10 +70,36 @@ export interface Platform {
    * requests are sent through it instead of the page's `fetch`.
    */
   http?: (request: HttpRequest) => Promise<HttpResponse>;
+  /** Device and app memory, for the optional readout next to the playlist. */
+  systemUsage?: () => Promise<SystemUsage>;
+  /** Reads a URL natively without keeping the data (speed test). Others read it with `fetch`. */
+  download?: (url: string, options: DownloadOptions) => Promise<DownloadResult>;
   /** Hands a stream to another installed player app (Android). */
   openExternal?: (url: string, title: string) => Promise<void>;
   /** Called at exit from the root screen (Back on Home); platforms without an exit ignore it. */
   exit?: () => void;
+}
+
+/** All in bytes. A field is missing when this device can't report it. */
+export interface SystemUsage {
+  ramUsed?: number;
+  ramTotal?: number;
+  /** This app's own memory, as far as the platform can see it. */
+  appUsed?: number;
+}
+
+export interface DownloadOptions {
+  seconds: number;
+  onProgress?: (bytes: number, ms: number) => void;
+  isCancelled?: () => boolean;
+}
+
+export interface DownloadResult {
+  status: number;
+  ttfbMs: number;
+  bytes: number;
+  ms: number;
+  compressed: boolean;
 }
 
 export interface HttpRequest {

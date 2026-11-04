@@ -19,6 +19,7 @@ import type {
   RefreshProgress,
   RefreshResult,
   SearchResults,
+  SpeedTargets,
   TestResult,
 } from '@ultra/core';
 
@@ -48,6 +49,8 @@ export interface WorkerApi {
   seriesInfo(playlistId: string, seriesId: string): Promise<SeriesInfo>;
   catchupListings(playlistId: string, streamId: string, days: number): Promise<EpgEntry[]>;
   togglePin(playlistId: string, kind: ContentKind, categoryId: string): Promise<boolean>;
+  setHiddenCategories(playlistId: string, kind: ContentKind, categoryIds: string[]): Promise<void>;
+  speedTargets(playlistId: string): Promise<SpeedTargets>;
   saveProgress(row: ProgressRow): Promise<void>;
   clearProgress(playlistId: string, kind: ProgressKind, key: string): Promise<void>;
 }

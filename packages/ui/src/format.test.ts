@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { resolutionLabel } from './format';
+import { formatBytes, resolutionLabel } from './format';
+
+describe('formatBytes', () => {
+  it('shows enough digits to see it change', () => {
+    expect(formatBytes(1.5 * 1024 ** 3, 'GB')).toBe('1.50 GB');
+    expect(formatBytes(52.25 * 1024 ** 2, 'MB')).toBe('52.3 MB');
+    expect(formatBytes(182.4 * 1024 ** 2, 'MB')).toBe('182 MB');
+  });
+});
 
 describe('resolutionLabel', () => {
   it('names common sizes', () => {

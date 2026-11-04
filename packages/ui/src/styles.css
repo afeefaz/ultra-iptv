@@ -560,6 +560,13 @@ h3 {
   color: var(--dim);
 }
 
+.field-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .field-box.is-empty .field-value {
   color: var(--dim);
 }
@@ -703,13 +710,14 @@ h3 {
   background: var(--well);
 }
 
+/* The columns grow with the text size (--text-scale is 1 at 100%), so names keep fitting. */
 .pane-categories {
-  width: 22%;
+  width: calc(22% + (var(--text-scale, 1) - 1) * 18%);
   flex-shrink: 0;
 }
 
 .pane-channels {
-  width: 30%;
+  width: calc(30% + (var(--text-scale, 1) - 1) * 10%);
 }
 
 .pane-preview,
@@ -998,11 +1006,11 @@ h3 {
 }
 
 .live .pane-categories {
-  width: 23%;
+  width: calc(23% + (var(--text-scale, 1) - 1) * 18%);
 }
 
 .live .pane-channels {
-  width: 33%;
+  width: calc(33% + (var(--text-scale, 1) - 1) * 10%);
 }
 
 .channel-row .logo {
@@ -1539,7 +1547,7 @@ h3 {
 
 /* ---------- Movies & Series ---------- */
 .vod .pane-categories {
-  width: 21%;
+  width: calc(21% + (var(--text-scale, 1) - 1) * 18%);
 }
 
 .focus-strip {
@@ -2524,6 +2532,22 @@ h3 {
 
 .player-button.is-focused {
   box-shadow: 0 0 0 0.2rem var(--strong);
+}
+
+/* The remote is on the timeline: Left/Right pick a time, OK jumps there. */
+.seek-panel.is-focused {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 0.15rem var(--accent);
+}
+
+.seek-bar.is-focused {
+  height: 0.8rem;
+}
+
+.seek-bar.is-focused .seek-handle {
+  background: var(--strong);
+  box-shadow: 0 0 0 0.3rem rgba(245, 158, 11, 0.5);
+  transform: scale(1.7);
 }
 
 /* Media seek panel */
@@ -3607,6 +3631,125 @@ h3 {
 
 .about .title-with-back {
   margin-bottom: 1rem;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  margin-top: 0.8rem;
+}
+
+.btn.stepper-button {
+  justify-content: center;
+  width: 3.4rem;
+  height: 3.4rem;
+  padding: 0;
+  font-size: 1.8rem;
+}
+
+.stepper-value {
+  min-width: 6rem;
+  color: var(--strong);
+  font-size: 1.6rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.stepper-range {
+  margin-left: 1rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.stepper .stepper-button + .stepper-range,
+.stepper .btn:not(.stepper-button) {
+  margin-left: 1rem;
+}
+
+.system-usage {
+  display: flex;
+  align-items: center;
+  margin-right: 1rem;
+  color: var(--text);
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.system-usage span {
+  margin-left: 1rem;
+}
+
+.system-usage b {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.hidden-note {
+  margin: 0 0 0.8rem;
+}
+
+.hidden-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.btn.hidden-clear {
+  flex-shrink: 0;
+  margin-left: 0.6rem;
+}
+
+.hidden-list .list-item .icon:first-child {
+  margin-right: 0.8rem;
+  color: var(--accent);
+}
+
+.hidden-list .list-item.is-focused .icon:first-child {
+  color: inherit;
+}
+
+.hidden-list .list-item.is-off .icon:first-child,
+.hidden-list .list-item.is-off .list-label {
+  color: var(--dim);
+}
+
+.hidden-list .pill {
+  margin-right: 0.8rem;
+}
+
+.speed-running {
+  margin-top: 0.9rem;
+}
+
+.speed-running .progress {
+  display: block;
+  margin-top: 0.5rem;
+}
+
+.speed-result {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.speed-figure {
+  flex: 1;
+  min-width: 10rem;
+  color: var(--muted);
+}
+
+.speed-value {
+  color: var(--strong);
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.speed-verdict {
+  width: 100%;
+  margin-top: 0.8rem;
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .setting-gap {

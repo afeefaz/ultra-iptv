@@ -73,6 +73,15 @@ export const [detailMode, setDetailMode] = persisted<DetailMode>('vod.detailMode
 /** Next to categories: choosing another category keeps the open title (or closes it). */
 export const [keepTitleOpen, setKeepTitleOpen] = persisted<boolean>('vod.keepTitleOpen', true);
 
+export const MIN_TEXT_SCALE = 70;
+export const MAX_TEXT_SCALE = 150;
+export const TEXT_SCALE_STEP = 5;
+/** Percent. Scales the whole interface with its text, so every screen keeps its layout. */
+export const [textScale, setTextScale] = persisted<number>('display.textScale', 100);
+
+/** The live memory and storage readout next to the playlist. */
+export const [showSystemUsage, setShowSystemUsage] = persisted<boolean>('display.systemUsage', false);
+
 /** Home sections the user can hide; "Explore library" always shows. */
 export type HomeSection = 'hero' | 'continue' | 'favorites' | 'recent';
 export const HOME_SECTIONS: HomeSection[] = ['hero', 'continue', 'favorites', 'recent'];

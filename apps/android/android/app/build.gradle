@@ -1,5 +1,10 @@
 apply plugin: 'com.android.application'
 
+// The release key and its password live outside the repo (docs/sideloading.md).
+def releaseProps = new Properties()
+def releasePropsFile = new File(System.getProperty('user.home'), '.ultra-iptv/keystore.properties')
+if (releasePropsFile.exists()) releasePropsFile.withInputStream { releaseProps.load(it) }
+
 android {
     namespace = "com.ultraiptv.player"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,8 +21,19 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (releasePropsFile.exists()) {
+            release {
+                storeFile new File(releasePropsFile.parentFile, releaseProps['storeFile'])
+                storePassword releaseProps['storePassword']
+                keyAlias releaseProps['keyAlias']
+                keyPassword releaseProps['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            if (releasePropsFile.exists()) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

@@ -45,7 +45,11 @@ export interface TizenGlobals {
       registerKeyBatch(names: string[], ok?: () => void, fail?: (e: unknown) => void): void;
     };
     application?: { getCurrentApplication(): { exit(): void } };
-    systeminfo?: { getCapability(key: string): string };
+    systeminfo?: {
+      getCapability(key: string): string;
+      getTotalMemory(): number;
+      getAvailableMemory(): number;
+    };
     filesystem?: {
       resolve(
         location: string,

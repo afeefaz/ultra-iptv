@@ -4,6 +4,9 @@ node_modules/
 dist/
 dist-legacy/
 dist-tizen/
+*.jks
+*.keystore
+keystore.properties
 apps/web/dev/media/
 *.log
 .DS_Store

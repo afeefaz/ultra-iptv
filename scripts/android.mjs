@@ -4,7 +4,7 @@
 //   node scripts/android.mjs                 debug APK
 //   node scripts/android.mjs --install       … and install on the connected device/emulator
 //   node scripts/android.mjs --install -s emulator-5554   pick a device (adb serial)
-//   node scripts/android.mjs --release       release APK (see docs/sideloading.md for signing)
+//   node scripts/android.mjs --release       signed release APK, for sharing (docs/sideloading.md)
 //
 // Gradle needs Java 17–21; Android Studio's bundled JDK is used when JAVA_HOME isn't set.
 import { execFileSync } from 'node:child_process';
@@ -28,14 +28,20 @@ const run = (cmd, cmdArgs, cwd = root) => {
   execFileSync(cmd, cmdArgs, { cwd, env, stdio: 'inherit' });
 };
 
-run('corepack', ['pnpm', 'build:legacy']);
+if (release) {
+  // No source maps in anything shared publicly: they would contain the source code.
+  run('corepack', ['pnpm', 'exec', 'vite', 'build', '--config', 'apps/web/vite.config.ts', '--mode', 'legacy', '--sourcemap', 'false']);
+  run('node', ['scripts/check-legacy.mjs', 'apps/web/dist-legacy']);
+} else {
+  run('corepack', ['pnpm', 'build:legacy']);
+}
 run('corepack', ['pnpm', 'exec', 'cap', 'sync', 'android'], join(root, 'apps/android'));
 run('./gradlew', [release ? 'assembleRelease' : 'assembleDebug', '--console=plain', '-q'], join(root, 'apps/android/android'));
 
 const apk = join(
   root,
   'apps/android/android/app/build/outputs/apk',
-  release ? 'release/app-release-unsigned.apk' : 'debug/app-debug.apk',
+  release ? 'release/app-release.apk' : 'debug/app-debug.apk',
 );
 console.log(`\nAPK: ${apk}`);
 if (install) run('adb', [...(serial ? ['-s', serial] : []), 'install', '-r', apk]);

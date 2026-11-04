@@ -69,6 +69,8 @@ const api: WorkerApi = {
   seriesInfo: (playlistId, seriesId) => service.seriesInfo(playlistId, seriesId),
   catchupListings: (playlistId, streamId, days) => service.catchupListings(playlistId, streamId, days),
   togglePin: (playlistId, kind, categoryId) => service.togglePin(playlistId, kind, categoryId),
+  setHiddenCategories: (playlistId, kind, categoryIds) => service.setHiddenCategories(playlistId, kind, categoryIds),
+  speedTargets: (playlistId) => service.speedTargets(playlistId),
   saveProgress: (row) => service.saveProgress(row),
   clearProgress: (playlistId, kind, key) => service.clearProgress(playlistId, kind, key),
 };

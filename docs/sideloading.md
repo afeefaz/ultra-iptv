@@ -113,7 +113,29 @@ The APK is `apps/android/android/app/build/outputs/apk/debug/app-debug.apk` (abo
 - **Uninstall:** `adb uninstall com.ultraiptv.player`.
 - **Without adb:** copy the APK to the device and open it with a file manager (allow *Install unknown apps* for that file manager). On Fire TV, use a downloader app.
 
-**Release builds:** signing with your own keystore comes before any store release; the keystore and password stay out of git. Debug builds are fine for sideloading during development.
+**Release builds:** `node scripts/android.mjs --release` writes a signed `app-release.apk` without source maps. It reads `~/.ultra-iptv/keystore.properties`:
+
+```properties
+storeFile=ultra-iptv-release.jks
+storePassword=...
+keyAlias=ultra-iptv
+keyPassword=...
+```
+
+The key file sits next to it, and neither goes in git. **Back both up:** every update must be signed with this key, or people have to uninstall the app (and lose their playlists) to install it.
+
+**Sharing the APK:** releases go to the public repo `afeefaz/ultra-iptv-releases` as `UltraIPTV.apk`. This link always gets the newest one, so a Downloader code made from it never needs changing:
+
+```
+https://github.com/afeefaz/ultra-iptv-releases/releases/latest/download/UltraIPTV.apk
+```
+
+To publish an update, raise `versionCode` and `versionName` in `apps/android/android/app/build.gradle`, build, then:
+
+```sh
+cp apps/android/android/app/build/outputs/apk/release/app-release.apk UltraIPTV.apk
+gh release create v0.1.1 UltraIPTV.apk --repo afeefaz/ultra-iptv-releases --title "Ultra IPTV 0.1.1" --notes "What changed"
+```
 
 ## Samsung TV (Tizen)
 

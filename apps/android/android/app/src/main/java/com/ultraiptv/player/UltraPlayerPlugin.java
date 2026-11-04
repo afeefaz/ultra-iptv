@@ -1,11 +1,14 @@
 package com.ultraiptv.player;
 
+import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.TextureView;
@@ -49,6 +52,9 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Locale;
@@ -513,5 +519,88 @@ public class UltraPlayerPlugin extends Plugin {
             player.release();
             player = null;
         }
+    }
+
+    private volatile boolean downloadCancelled = false;
+
+    @PluginMethod
+    public void systemUsage(PluginCall call) {
+        ActivityManager.MemoryInfo memory = new ActivityManager.MemoryInfo();
+        ((ActivityManager) getContext().getSystemService(Context.ACTIVITY_SERVICE)).getMemoryInfo(memory);
+        JSObject result = new JSObject();
+        result.put("ramTotal", memory.totalMem);
+        result.put("ramUsed", memory.totalMem - memory.availMem);
+        result.put("appUsed", Debug.getPss() * 1024);
+        call.resolve(result);
+    }
+
+    /** Speed test: reads and discards, so providers without CORS headers and big files are fine. */
+    @PluginMethod
+    public void measureDownload(PluginCall call) {
+        String url = call.getString("url");
+        double seconds = call.getDouble("seconds", 0.0);
+        if (url == null) {
+            call.reject("No URL");
+            return;
+        }
+        downloadCancelled = false;
+        new Thread(() -> {
+            HttpURLConnection connection = null;
+            try {
+                long start = SystemClock.elapsedRealtime();
+                // Followed by hand: HttpURLConnection won't cross between http and https.
+                URL target = new URL(url);
+                for (int hops = 0; ; hops++) {
+                    connection = (HttpURLConnection) target.openConnection();
+                    connection.setInstanceFollowRedirects(false);
+                    connection.setConnectTimeout(15000);
+                    connection.setReadTimeout(15000);
+                    connection.setRequestProperty("Accept-Encoding", "identity");
+                    int code = connection.getResponseCode();
+                    String location = connection.getHeaderField("Location");
+                    if (code < 300 || code >= 400 || location == null || hops >= 5) break;
+                    connection.disconnect();
+                    target = new URL(target, location);
+                }
+                int status = connection.getResponseCode();
+                long began = SystemClock.elapsedRealtime();
+                long bytes = 0;
+                if (status < 400 && seconds > 0) {
+                    byte[] buffer = new byte[64 * 1024];
+                    long lastReport = began;
+                    try (InputStream in = connection.getInputStream()) {
+                        int read;
+                        while (!downloadCancelled && (read = in.read(buffer)) != -1) {
+                            bytes += read;
+                            long time = SystemClock.elapsedRealtime();
+                            if (time - lastReport >= 200) {
+                                lastReport = time;
+                                JSObject progress = new JSObject();
+                                progress.put("bytes", bytes);
+                                progress.put("ms", time - began);
+                                notifyListeners("downloadProgress", progress);
+                            }
+                            if (time - began >= seconds * 1000) break;
+                        }
+                    }
+                }
+                JSObject result = new JSObject();
+                result.put("status", status);
+                result.put("ttfbMs", began - start);
+                result.put("bytes", bytes);
+                result.put("ms", SystemClock.elapsedRealtime() - began);
+                call.resolve(result);
+            } catch (Exception e) {
+                call.reject(e.getClass().getSimpleName());
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+        }).start();
+    }
+
+    @PluginMethod
+    public void cancelDownload(PluginCall call) {
+        downloadCancelled = true;
+        call.resolve();
     }
 }

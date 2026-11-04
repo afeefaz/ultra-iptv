@@ -12,7 +12,7 @@ import { ChannelLogo } from '../components/ChannelLogo';
 import { PinButton } from '../components/PinButton';
 import { Icon, type IconName } from '../components/Icon';
 import { TextField } from '../components/TextField';
-import { makeMatcher } from '../data/categories';
+import { makeMatcher, useHiddenCategories, withoutHidden } from '../data/categories';
 import { cachedLibrary, loadLibrary, type Library } from '../data/libraryCache';
 import { enterLibrary, rememberedSearch, rememberSearch } from '../data/libraryMemory';
 import { FocusButton } from '../components/FocusButton';
@@ -66,8 +66,9 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
   // Already in memory on the way back from full screen, so the first paint has everything.
   const held = cachedLibrary<ChannelRow>(activePlaylist()?.id ?? null, 'live');
   const [library, setLibrary] = createSignal<Library<ChannelRow> | undefined>(held);
+  const { hidden } = useHiddenCategories('live');
   const cats = (): CategoryRow[] => library()?.cats ?? NO_CATEGORIES;
-  const all = (): ChannelRow[] => library()?.rows ?? NO_CHANNELS;
+  const all = createMemo((): ChannelRow[] => withoutHidden(library()?.rows ?? NO_CHANNELS, hidden()));
   const [favKeys, setFavKeys] = createSignal<string[]>(held?.favs ?? []);
   const [recent, setRecent] = createSignal<string[]>(held?.recent ?? []);
   // Starts on the remembered category, so nothing flashes "All" (and resets) on the way back.
@@ -120,13 +121,20 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
       { id: 'fav', name: t('live.favorites'), count: favKeys().length, locked: false, icon: 'star' },
       { id: 'recent', name: t('live.recent'), count: fromKeys(recent()).length, locked: false, icon: 'history' },
       { id: 'all', name: t('live.all'), count: all().length, locked: false, icon: 'grid' },
-      ...cats().map((c) => ({
-        id: c.id,
-        name: c.id === UNCATEGORIZED ? t('live.uncategorized') : c.name,
-        count: c.count,
-        locked: locked.has(c.id),
-      })),
+      ...cats()
+        .filter((c) => hidden().indexOf(c.id) < 0)
+        .map((c) => ({
+          id: c.id,
+          name: c.id === UNCATEGORIZED ? t('live.uncategorized') : c.name,
+          count: c.count,
+          locked: locked.has(c.id),
+        })),
     ];
+  });
+
+  // The open category was hidden in Settings.
+  createEffect(() => {
+    if (hidden().indexOf(category()) >= 0) chooseCategory('all');
   });
 
   const categoryName = (id: string | undefined) => categoryItems().filter((c) => c.id === id)[0]?.name ?? '';
@@ -188,14 +196,14 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
     return all().filter((c) => c.categoryIds.indexOf(id) >= 0);
   }
 
-  const chooseCategory = (id: CategoryId) => {
+  function chooseCategory(id: CategoryId): void {
     if (id === category()) return;
     setCategory(id);
     setChannelQuery('');
     const pid = playlistId();
     if (pid) lastCategory.set(pid, id);
     channelList?.scrollToIndex(0);
-  };
+  }
 
   const openCategory = async (c: CategoryItem) => {
     if (c.locked && !(await ensureUnlocked())) return;
