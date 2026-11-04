@@ -3,10 +3,13 @@ import type { BufferProfile } from '@ultra/platform';
 import { For, Show, type JSX } from 'solid-js';
 import { FocusButton } from '../components/FocusButton';
 import { Icon, type IconName } from '../components/Icon';
+import { CATEGORY_SORTS } from '../data/categories';
 import { lockedCategories, lockedChannels, pinSet, requestPin } from '../data/parental';
 import { activePlaylist } from '../data/playlists';
 import {
   bufferProfile,
+  defaultCatSort,
+  defaultVodSort,
   detailMode,
   hiddenHomeSections,
   HOME_SECTIONS,
@@ -15,6 +18,8 @@ import {
   preferredAudio,
   preferredText,
   setBufferProfile,
+  setDefaultCatSort,
+  setDefaultVodSort,
   setDetailMode,
   setHiddenHomeSections,
   setKeepTitleOpen,
@@ -25,6 +30,7 @@ import {
   streamFormat,
   subtitleSize,
   type DetailMode,
+  type SortBy,
   type SubtitleSize,
 } from '../data/settings';
 import { focusManager, FocusZone } from '../focus';
@@ -94,6 +100,8 @@ function Card(props: { section: Section; aside?: string; children: JSX.Element }
     </section>
   );
 }
+
+const VOD_SORTS: SortBy[] = ['added', 'name', 'rating', 'year'];
 
 export function SettingsScreen(): JSX.Element {
   const platform = usePlatform();
@@ -235,6 +243,34 @@ export function SettingsScreen(): JSX.Element {
                         <span class="option-card-sub">{t(`settings.detail.${m}Sub`)}</span>
                       </span>
                       <Icon name={detailMode() === m ? 'checkCircle' : 'radioOff'} />
+                    </FocusButton>
+                  )}
+                </For>
+              </div>
+              <div class="setting-name setting-gap">{t('settings.defaultSort')}</div>
+              <div class="setting-desc">{t('settings.defaultSortDesc')}</div>
+              <div class="option-cards wrap" style={{ 'margin-top': '0.8rem' }}>
+                <For each={VOD_SORTS}>
+                  {(sort) => (
+                    <FocusButton id={`settings-sort-${sort}`} selected={defaultVodSort() === sort} onSelect={() => setDefaultVodSort(sort)}>
+                      <span class="option-card-text">
+                        <span class="option-card-title">{t(`sort.${sort}`)}</span>
+                      </span>
+                      <Icon name={defaultVodSort() === sort ? 'checkCircle' : 'radioOff'} />
+                    </FocusButton>
+                  )}
+                </For>
+              </div>
+              <div class="setting-name setting-gap">{t('settings.defaultCatSort')}</div>
+              <div class="setting-desc">{t('settings.defaultCatSortDesc')}</div>
+              <div class="option-cards wrap" style={{ 'margin-top': '0.8rem' }}>
+                <For each={CATEGORY_SORTS}>
+                  {(sort) => (
+                    <FocusButton id={`settings-catsort-${sort}`} selected={defaultCatSort() === sort} onSelect={() => setDefaultCatSort(sort)}>
+                      <span class="option-card-text">
+                        <span class="option-card-title">{t(`categories.sort.${sort}`)}</span>
+                      </span>
+                      <Icon name={defaultCatSort() === sort ? 'checkCircle' : 'radioOff'} />
                     </FocusButton>
                   )}
                 </For>

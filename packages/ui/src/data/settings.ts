@@ -36,14 +36,36 @@ export const [preferredAudio, setPreferredAudio] = persisted<string | null>('pla
 export const [preferredText, setPreferredText] = persisted<string | null>('playback.textLang', null);
 
 export type SortBy = 'added' | 'name' | 'rating' | 'year';
-/** Movie and series grids (spec §5). */
-export const [vodSort, setVodSort] = persisted<SortBy>('vod.sort', 'added');
+const [storedVodSort, storeVodSort] = persisted<SortBy>('vod.defaultSort', 'added');
+export const defaultVodSort = storedVodSort;
+/** Movie and series grids (spec §5): starts from the default whenever a library is opened. */
+export const [vodSort, setVodSort] = createSignal<SortBy>(storedVodSort());
 
 export type CategorySort = 'default' | 'az' | 'za' | 'count';
-/** Category rails, per section (Live / Movies / Series). */
-export const [liveCatSort, setLiveCatSort] = persisted<CategorySort>('categories.sort.live', 'default');
-export const [vodCatSort, setVodCatSort] = persisted<CategorySort>('categories.sort.vod', 'default');
-export const [seriesCatSort, setSeriesCatSort] = persisted<CategorySort>('categories.sort.series', 'default');
+const [storedCatSort, storeCatSort] = persisted<CategorySort>('categories.defaultSort', 'default');
+export const defaultCatSort = storedCatSort;
+/** Category rails, per section (Live / Movies / Series); same rule as the grids. */
+export const [liveCatSort, setLiveCatSort] = createSignal<CategorySort>(storedCatSort());
+export const [vodCatSort, setVodCatSort] = createSignal<CategorySort>(storedCatSort());
+export const [seriesCatSort, setSeriesCatSort] = createSignal<CategorySort>(storedCatSort());
+
+/** Back to the defaults chosen in Settings. */
+export function resetSorts(): void {
+  setVodSort(storedVodSort());
+  setLiveCatSort(storedCatSort());
+  setVodCatSort(storedCatSort());
+  setSeriesCatSort(storedCatSort());
+}
+
+export function setDefaultVodSort(sort: SortBy): void {
+  storeVodSort(sort);
+  resetSorts();
+}
+
+export function setDefaultCatSort(sort: CategorySort): void {
+  storeCatSort(sort);
+  resetSorts();
+}
 
 /** Movies and series open as a full page, or inside the grid area with the categories kept. */
 export type DetailMode = 'page' | 'inline';

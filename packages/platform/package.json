@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./web": "./src/web/index.ts",
-    "./android": "./src/android/index.ts"
+    "./android": "./src/android/index.ts",
+    "./tizen": "./src/tizen/index.ts"
   },
   "dependencies": {
     "@capacitor/app": "8.1.2",

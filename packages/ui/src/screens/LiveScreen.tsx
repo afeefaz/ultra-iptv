@@ -1,7 +1,5 @@
 import {
   favoriteKeys,
-  listCategories,
-  listItems,
   log,
   recentKeys,
   UNCATEGORIZED,
@@ -14,7 +12,9 @@ import { ChannelLogo } from '../components/ChannelLogo';
 import { PinButton } from '../components/PinButton';
 import { Icon, type IconName } from '../components/Icon';
 import { TextField } from '../components/TextField';
-import { makeMatcher, normalizeText } from '../data/categories';
+import { makeMatcher } from '../data/categories';
+import { cachedLibrary, loadLibrary, type Library } from '../data/libraryCache';
+import { enterLibrary, rememberedSearch, rememberSearch } from '../data/libraryMemory';
 import { FocusButton } from '../components/FocusButton';
 import { NowNextView } from '../components/NowNextView';
 import { VirtualList, type VirtualListApi } from '../components/VirtualList';
@@ -23,6 +23,7 @@ import { useNowNext } from '../data/epg';
 import { ensureUnlocked, isCategoryLocked, isChannelLocked, lockedCategories, lockedChannels, toggleLock, unlocked } from '../data/parental';
 import {
   claimSurface,
+  videoResolution,
   playbackStatus,
   playChannel,
   playerState,
@@ -49,36 +50,40 @@ interface CategoryItem {
 }
 
 const VIRTUAL = ['fav', 'recent', 'all'];
+const NO_CHANNELS: ChannelRow[] = [];
+const NO_CATEGORIES: CategoryRow[] = [];
 const ZAP_DELAY_MS = 1500;
-const CATEGORY_FOCUS_DELAY_MS = 250;
 // Last category per playlist, kept for the session.
 const lastCategory = new Map<string, CategoryId>();
 // Last channel the cursor was on, per playlist, so coming back lands on it.
 const lastChannelKey = new Map<string, string>();
-// Search text per playlist, so it survives full screen, catch-up and other screens.
-const lastChannelQuery = new Map<string, string>();
 
 /** IB-style three panes (spec §5): categories | channels | preview + info. */
 export function LiveScreen(props: { focusKey?: string }): JSX.Element {
+  enterLibrary('live');
   const playlistId = () => activePlaylist()?.id ?? null;
   const isXtream = () => activePlaylist()?.type === 'xtream';
-  const [cats, setCats] = createSignal<CategoryRow[]>([]);
-  const [all, setAll] = createSignal<ChannelRow[]>([]);
-  const [favKeys, setFavKeys] = createSignal<string[]>([]);
-  const [recent, setRecent] = createSignal<string[]>([]);
+  // Already in memory on the way back from full screen, so the first paint has everything.
+  const held = cachedLibrary<ChannelRow>(activePlaylist()?.id ?? null, 'live');
+  const [library, setLibrary] = createSignal<Library<ChannelRow> | undefined>(held);
+  const cats = (): CategoryRow[] => library()?.cats ?? NO_CATEGORIES;
+  const all = (): ChannelRow[] => library()?.rows ?? NO_CHANNELS;
+  const [favKeys, setFavKeys] = createSignal<string[]>(held?.favs ?? []);
+  const [recent, setRecent] = createSignal<string[]>(held?.recent ?? []);
   // Starts on the remembered category, so nothing flashes "All" (and resets) on the way back.
   const [category, setCategory] = createSignal<CategoryId>(lastCategory.get(activePlaylist()?.id ?? '') ?? 'all');
   const [focused, setFocused] = createSignal<ChannelRow | null>(null);
   const [focusedCategory, setFocusedCategory] = createSignal<CategoryItem | null>(null);
-  const [loading, setLoading] = createSignal(true);
+  const [loading, setLoading] = createSignal(!held);
   const [digits, setDigits] = createSignal('');
   const [toast, setToast] = createSignal('');
   // Jumping to a specific channel (from Home) can't keep a search that might hide it.
-  if (props.focusKey) lastChannelQuery.set(activePlaylist()?.id ?? '', '');
-  const [channelQuery, setChannelQuerySignal] = createSignal(lastChannelQuery.get(activePlaylist()?.id ?? '') ?? '');
+  const searchKey = (id: string | null) => `channels|${id ?? ''}`;
+  if (props.focusKey) rememberSearch(searchKey(activePlaylist()?.id ?? null), '');
+  const [channelQuery, setChannelQuerySignal] = createSignal(rememberedSearch(searchKey(activePlaylist()?.id ?? null)));
   const setChannelQuery = (q: string) => {
     setChannelQuerySignal(q);
-    lastChannelQuery.set(activePlaylist()?.id ?? '', q);
+    rememberSearch(searchKey(activePlaylist()?.id ?? null), q);
   };
   let channelList: VirtualListApi | undefined;
   // Coming back from full screen lands on the playing channel.
@@ -86,8 +91,10 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
   let loadSeq = 0;
 
   const favSet = createMemo(() => new Set(favKeys()));
-  const byKey = createMemo(() => new Map(all().map((c) => [c.key, c] as [string, ChannelRow])));
-  const fromKeys = (keys: string[]) => keys.map((k) => byKey().get(k)).filter((c): c is ChannelRow => !!c);
+  const fromKeys = (keys: string[]) => {
+    const rows = library()?.byKey();
+    return rows ? keys.map((k) => rows.get(k)).filter((c): c is ChannelRow => !!c) : NO_CHANNELS;
+  };
 
   /** A locked category shows nothing until the PIN is entered (spec §5). */
   const categoryHidden = () => !VIRTUAL.includes(category()) && isCategoryLocked(category()) && !unlocked();
@@ -100,12 +107,10 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
     if (categoryHidden()) return [];
     return all().filter((c) => c.categoryIds.indexOf(id) >= 0);
   });
-  // Normalized once per load, so filtering 50,000 names per keystroke stays cheap.
-  const normNames = createMemo(() => new Map(all().map((c) => [c.key, normalizeText(c.name)] as [string, string])));
   const channels = createMemo<ChannelRow[]>(() => {
     const match = makeMatcher(channelQuery());
-    if (!match) return inCategory();
-    const names = normNames();
+    const names = library()?.normNames();
+    if (!match || !names) return inCategory();
     return inCategory().filter((c) => match(names.get(c.key) ?? ''));
   });
 
@@ -134,26 +139,26 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
         setLoading(false);
         return;
       }
-      setLoading(true);
+      if (!cachedLibrary(id, 'live')) setLoading(true);
       const timer = log.time('live', 'catalogue loaded');
       try {
-        const [c, items, favs, rec] = await Promise.all([
-          listCategories(id, 'live'),
-          listItems(id, 'live', null),
+        const [lib, favs, rec] = await Promise.all([
+          loadLibrary<ChannelRow>(id, 'live'),
           favoriteKeys(id, 'live'),
           recentKeys(id, 'live'),
         ]);
         if (seq !== loadSeq) return;
         if (focused()?.playlistId !== id) setFocused(null);
-        setCats(c);
-        setAll(items);
+        lib.favs = favs;
+        lib.recent = rec;
+        setLibrary(lib);
         setFavKeys(favs);
         setRecent(rec);
         const remembered = lastCategory.get(id);
-        setChannelQuerySignal(lastChannelQuery.get(id) ?? '');
+        setChannelQuerySignal(rememberedSearch(searchKey(id)));
         if (pendingFocusKey && !(remembered && channelsIn(remembered).some((ch) => ch.key === pendingFocusKey))) setCategory('all');
         else setCategory(remembered ?? (favs.length ? 'fav' : 'all'));
-        timer.end({ channels: items.length, categories: c.length }, 'debug');
+        timer.end({ channels: lib.rows.length, categories: lib.cats.length }, 'debug');
       } catch (e) {
         log.error('live', 'could not load channels', { error: e });
       } finally {
@@ -183,11 +188,7 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
     return all().filter((c) => c.categoryIds.indexOf(id) >= 0);
   }
 
-  let categoryTimer: ReturnType<typeof setTimeout> | undefined;
-  onCleanup(() => clearTimeout(categoryTimer));
-
   const chooseCategory = (id: CategoryId) => {
-    clearTimeout(categoryTimer);
     if (id === category()) return;
     setCategory(id);
     setChannelQuery('');
@@ -347,13 +348,7 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
                   fixed={categoryItems().slice(0, VIRTUAL.length)}
                   categories={categoryItems().slice(VIRTUAL.length)}
                   selected={category()}
-                  onFocusRow={(c) => {
-                    setFocusedCategory(c);
-                    clearTimeout(categoryTimer);
-                    if (c.id === category()) return;
-                    // Locked categories only open with OK + PIN, never on focus.
-                    if (!c.locked || unlocked()) categoryTimer = setTimeout(() => chooseCategory(c.id), CATEGORY_FOCUS_DELAY_MS);
-                  }}
+                  onFocusRow={(c) => setFocusedCategory(c)}
                   onOpen={(c) => void openCategory(c)}
                 />
               </FocusZone>
@@ -522,6 +517,7 @@ function PreviewBox(): JSX.Element {
       <Show when={playingChannel() && playerState() === 'playing'}>
         <div class="preview-badges">
           <span class="pill pill-live">{t('player.live')}</span>
+          <Show when={videoResolution()}>{(r) => <span class="pill pill-resolution">{r()}</span>}</Show>
         </div>
       </Show>
       <Show when={!playingChannel()}>

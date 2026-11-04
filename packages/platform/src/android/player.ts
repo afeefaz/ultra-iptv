@@ -1,3 +1,4 @@
+import { VIDEO_BEHIND_CLASS } from '../surface';
 import type {
   LoadOptions,
   PlayerAdapter,
@@ -10,9 +11,6 @@ import type {
   VideoRect,
 } from '../types';
 import { UltraPlayer } from './plugin';
-
-/** Class on <html> while video plays full screen under the page (the page must be transparent). */
-export const VIDEO_BEHIND_CLASS = 'video-behind';
 
 const STATES: PlayerState[] = ['idle', 'loading', 'playing', 'paused', 'buffering', 'ended', 'error'];
 

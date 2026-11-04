@@ -1,7 +1,8 @@
 import { log } from '@ultra/core';
-import { createSignal, onCleanup, onMount, Show, type JSX } from 'solid-js';
+import type { Key, Platform } from '@ultra/platform';
+import { createSignal, For, onCleanup, onMount, Show, type JSX } from 'solid-js';
 import { ChannelLogo } from '../components/ChannelLogo';
-import { Icon } from '../components/Icon';
+import { Icon, type IconName } from '../components/Icon';
 import { TrackSheet } from '../components/TrackSheet';
 import { VirtualList } from '../components/VirtualList';
 import { catalog } from '../data/catalog';
@@ -24,6 +25,7 @@ import {
   seekTo,
   togglePause,
   zap,
+  videoResolution,
   zapTo,
 } from '../data/playback';
 import { formatDuration } from '../format';
@@ -37,6 +39,7 @@ const ZAP_DELAY_MS = 1500;
 
 const SEEK_SECONDS = 10;
 const SKIP_SECONDS = 30;
+const PLAY_PAUSE_CONTROL = 2;
 
 /** Full screen: the live player, or the movie/episode/catch-up player. */
 export function PlayerScreen(): JSX.Element {
@@ -58,6 +61,17 @@ function LivePlayer(): JSX.Element {
   const [stats, setStats] = createSignal(false);
   const [digits, setDigits] = createSignal('');
   const [toast, setToast] = createSignal('');
+  const platform = usePlatform();
+  const controls: PlayerControl[] = [
+    { label: () => t('common.back'), icon: () => 'back', run: () => goBack() },
+    { label: () => t('player.prevChannel'), icon: () => 'up', run: () => void zap(-1) },
+    { label: () => t('player.nextChannel'), icon: () => 'down', run: () => void zap(1) },
+    { label: () => t('player.channelList'), icon: () => 'list', run: () => setMiniList(true) },
+    { label: () => t('player.audioSubs'), icon: () => 'subtitles', text: true, run: () => setSheet(true) },
+    ...externalControl(platform),
+  ];
+  /** Index of the button the remote is on; null means the arrows zap as usual. */
+  const [control, setControl] = createSignal<number | null>(null);
   let hideTimer: ReturnType<typeof setTimeout> | undefined;
   let zapTimer: ReturnType<typeof setTimeout> | undefined;
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
@@ -68,7 +82,10 @@ function LivePlayer(): JSX.Element {
   const showOverlay = () => {
     setOverlay(true);
     clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => setOverlay(false), OVERLAY_MS);
+    hideTimer = setTimeout(() => {
+      setOverlay(false);
+      setControl(null);
+    }, OVERLAY_MS);
   };
 
   onMount(() => {
@@ -120,6 +137,7 @@ function LivePlayer(): JSX.Element {
       }
       return false; // let the list/sheet handle navigation and OK
     }
+    if (moveInControls(press.key, controls, control, setControl)) return true;
     if (press.key.indexOf('digit') === 0) {
       setDigits((d) => (d + press.key.slice(5)).slice(-5));
       clearTimeout(zapTimer);
@@ -157,8 +175,11 @@ function LivePlayer(): JSX.Element {
         togglePause();
         return true;
       case 'left':
+        setControl(controls.length - 1);
+        return true;
       case 'right':
-        return true; // just shows the overlay for live
+        setControl(0);
+        return true;
       case 'back':
         if (digits()) {
           setDigits('');
@@ -193,6 +214,7 @@ function LivePlayer(): JSX.Element {
                   {formatClock(clock())}
                 </span>
                 <span class="pill pill-live">{t('player.live')}</span>
+                <Show when={videoResolution()}>{(r) => <span class="pill pill-resolution">{r()}</span>}</Show>
               </div>
             </div>
             <div class="player-bottom">
@@ -232,25 +254,7 @@ function LivePlayer(): JSX.Element {
                   </div>
                 )}
               </Show>
-              <div class="player-controls">
-                <PlayerButton label={t('common.back')} onClick={() => goBack()}>
-                  <Icon name="back" />
-                </PlayerButton>
-                <PlayerButton label={t('player.prevChannel')} onClick={() => void zap(-1)}>
-                  <Icon name="up" />
-                </PlayerButton>
-                <PlayerButton label={t('player.nextChannel')} onClick={() => void zap(1)}>
-                  <Icon name="down" />
-                </PlayerButton>
-                <PlayerButton label={t('player.channelList')} onClick={() => setMiniList(true)}>
-                  <Icon name="list" />
-                </PlayerButton>
-                <PlayerButton label={t('player.audioSubs')} onClick={() => setSheet(true)}>
-                  <Icon name="subtitles" />
-                  <span>{t('player.audioSubs')}</span>
-                </PlayerButton>
-                <ExternalButton />
-              </div>
+              <PlayerControls controls={controls} focused={control()} />
               <Show when={stats()}>
                 <p class="player-stats" dir="ltr">
                   {statsText()}
@@ -346,13 +350,33 @@ function MediaPlayer(): JSX.Element {
   const [overlay, setOverlay] = createSignal(true);
   const [sheet, setSheet] = createSignal(false);
   const [stats, setStats] = createSignal(false);
+  const platform = usePlatform();
+  const controls: PlayerControl[] = [
+    { label: () => t('common.back'), icon: () => 'back', run: () => goBack() },
+    { label: () => t('player.back10'), icon: () => 'replay10', run: () => seekBy(-SEEK_SECONDS) },
+    {
+      label: () => (playerState() === 'paused' ? t('player.play') : t('player.pause')),
+      icon: () => (playerState() === 'paused' ? 'play' : 'pause'),
+      wide: true,
+      run: () => togglePause(),
+    },
+    { label: () => t('player.forward10'), icon: () => 'forward10', run: () => seekBy(SEEK_SECONDS) },
+    { label: () => t('player.audioSubs'), icon: () => 'subtitles', text: true, run: () => setSheet(true) },
+    ...externalControl(platform),
+  ];
+  /** Index of the button the remote is on; null means Left/Right seek and OK pauses. */
+  const [control, setControl] = createSignal<number | null>(null);
   let hideTimer: ReturnType<typeof setTimeout> | undefined;
 
   const showOverlay = () => {
     setOverlay(true);
     clearTimeout(hideTimer);
     // Paused media keeps the overlay up so the position stays visible.
-    hideTimer = setTimeout(() => playerState() !== 'paused' && setOverlay(false), OVERLAY_MS);
+    hideTimer = setTimeout(() => {
+      if (playerState() === 'paused') return;
+      setOverlay(false);
+      setControl(null);
+    }, OVERLAY_MS);
   };
 
   onMount(() => {
@@ -371,6 +395,7 @@ function MediaPlayer(): JSX.Element {
       setSheet(false);
       return true;
     }
+    if (moveInControls(press.key, controls, control, setControl)) return true;
     const status = playbackStatus()?.kind;
     switch (press.key) {
       case 'left':
@@ -400,8 +425,10 @@ function MediaPlayer(): JSX.Element {
       case 'blue':
         setStats(!stats());
         return true;
-      case 'up':
       case 'down':
+        setControl(PLAY_PAUSE_CONTROL);
+        return true;
+      case 'up':
         return true; // just shows the overlay
       case 'back':
       case 'stop':
@@ -530,25 +557,7 @@ function MediaPlayer(): JSX.Element {
                   {statsText()}
                 </p>
               </Show>
-              <div class="player-controls" dir="ltr">
-                <PlayerButton label={t('common.back')} onClick={() => goBack()}>
-                  <Icon name="back" />
-                </PlayerButton>
-                <PlayerButton label={t('player.back10')} onClick={() => seekBy(-SEEK_SECONDS)}>
-                  <Icon name="replay10" />
-                </PlayerButton>
-                <PlayerButton label={playerState() === 'paused' ? t('player.play') : t('player.pause')} wide onClick={() => togglePause()}>
-                  <Icon name={playerState() === 'paused' ? 'play' : 'pause'} />
-                </PlayerButton>
-                <PlayerButton label={t('player.forward10')} onClick={() => seekBy(SEEK_SECONDS)}>
-                  <Icon name="forward10" />
-                </PlayerButton>
-                <PlayerButton label={t('player.audioSubs')} onClick={() => setSheet(true)}>
-                  <Icon name="subtitles" />
-                  <span>{t('player.audioSubs')}</span>
-                </PlayerButton>
-                <ExternalButton />
-              </div>
+              <PlayerControls controls={controls} focused={control()} />
               <p class="player-hint">{t('player.mediaHint')}</p>
             </div>
           </>
@@ -564,21 +573,65 @@ function MediaPlayer(): JSX.Element {
   );
 }
 
-/** Mouse/touch control in the player overlay. Remote keys never focus these; they act directly. */
-function PlayerButton(props: { label: string; wide?: boolean; onClick: () => void; children: JSX.Element }): JSX.Element {
+interface PlayerControl {
+  label: () => string;
+  icon: () => IconName;
+  /** Shows the label beside the icon. */
+  text?: boolean;
+  wide?: boolean;
+  run: () => void;
+}
+
+/**
+ * While the remote is on a button: Left/Right move along the row, OK presses it, Up/Down leave it.
+ * Back isn't handled here, so it always leaves the player.
+ */
+function moveInControls(key: Key, controls: PlayerControl[], control: () => number | null, setControl: (index: number | null) => void): boolean {
+  const at = control();
+  if (at === null) return false;
+  switch (key) {
+    case 'left':
+      setControl(Math.max(0, at - 1));
+      return true;
+    case 'right':
+      setControl(Math.min(controls.length - 1, at + 1));
+      return true;
+    case 'ok':
+      controls[at].run();
+      return true;
+    case 'up':
+    case 'down':
+      setControl(null);
+      return true;
+    default:
+      return false;
+  }
+}
+
+/** The player's buttons, for touch and mouse and (through moveInControls) the remote. */
+function PlayerControls(props: { controls: PlayerControl[]; focused: number | null }): JSX.Element {
   return (
-    <div
-      class="player-button"
-      classList={{ wide: !!props.wide }}
-      role="button"
-      title={props.label}
-      aria-label={props.label}
-      onClick={(e) => {
-        e.stopPropagation();
-        props.onClick();
-      }}
-    >
-      {props.children}
+    <div class="player-controls" dir="ltr">
+      <For each={props.controls}>
+        {(c, i) => (
+          <div
+            class="player-button"
+            classList={{ wide: !!c.wide, 'is-focused': props.focused === i() }}
+            role="button"
+            title={c.label()}
+            aria-label={c.label()}
+            onClick={(e) => {
+              e.stopPropagation();
+              c.run();
+            }}
+          >
+            <Icon name={c.icon()} />
+            <Show when={c.text}>
+              <span>{c.label()}</span>
+            </Show>
+          </div>
+        )}
+      </For>
     </div>
   );
 }
@@ -596,14 +649,7 @@ function PausedPill(): JSX.Element {
 }
 
 /** "Open in another player": only where the platform supports it (Android). */
-function ExternalButton(): JSX.Element {
-  const platform = usePlatform();
-  return (
-    <Show when={platform.openExternal}>
-      <PlayerButton label={t('player.external')} onClick={() => void openInExternalPlayer()}>
-        <Icon name="forward" />
-        <span>{t('player.external')}</span>
-      </PlayerButton>
-    </Show>
-  );
+function externalControl(platform: Platform): PlayerControl[] {
+  if (!platform.openExternal) return [];
+  return [{ label: () => t('player.external'), icon: () => 'forward', text: true, run: () => void openInExternalPlayer() }];
 }

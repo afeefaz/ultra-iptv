@@ -3,6 +3,7 @@ research/
 node_modules/
 dist/
 dist-legacy/
+dist-tizen/
 apps/web/dev/media/
 *.log
 .DS_Store

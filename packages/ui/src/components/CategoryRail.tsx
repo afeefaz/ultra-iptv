@@ -1,5 +1,6 @@
 import type { ContentKind } from '@ultra/core';
 import { createEffect, createMemo, createSignal, on, Show, type JSX } from 'solid-js';
+import { rememberedSearch, rememberSearch } from '../data/libraryMemory';
 import { activePlaylist } from '../data/playlists';
 import { arrangeCategories, CATEGORY_SORTS, categorySort, makeMatcher, normalizeText, usePins } from '../data/categories';
 import { focusManager } from '../focus';
@@ -10,9 +11,6 @@ import { Icon, type IconName } from './Icon';
 import { PickerDialog } from './PickerDialog';
 import { TextField } from './TextField';
 import { VirtualList, type VirtualListApi } from './VirtualList';
-
-// Category search per playlist and section, so it survives going to a player or page and back.
-const lastRailQuery = new Map<string, string>();
 
 export interface RailItem {
   id: string;
@@ -43,13 +41,13 @@ export interface CategoryRailProps {
  * next to the item search pins the open category.
  */
 export function CategoryRail(props: CategoryRailProps): JSX.Element {
-  const railKey = () => `${activePlaylist()?.id ?? ''}|${props.kind}`;
-  const [query, setQuerySignal] = createSignal(lastRailQuery.get(railKey()) ?? '');
+  const railKey = () => `rail|${activePlaylist()?.id ?? ''}|${props.kind}`;
+  const [query, setQuerySignal] = createSignal(rememberedSearch(railKey()));
   const setQuery = (q: string) => {
     setQuerySignal(q);
-    lastRailQuery.set(railKey(), q);
+    rememberSearch(railKey(), q);
   };
-  createEffect(on(railKey, (key) => setQuerySignal(lastRailQuery.get(key) ?? ''), { defer: true }));
+  createEffect(on(railKey, (key) => setQuerySignal(rememberedSearch(key)), { defer: true }));
   const [sortOpen, setSortOpen] = createSignal(false);
   const [sort, setSort] = categorySort(props.kind);
   const { pins, toggle } = usePins(props.kind);

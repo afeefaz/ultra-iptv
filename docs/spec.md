@@ -364,7 +364,7 @@ Develop and test in the browser on the Mac first, then build and sideload one pl
 | 6 | LG log export | Console dump via `ares-inspect` is fine; LG testing comes later |
 | 7 | Default language | **English** on every device; Arabic chosen in Settings |
 
-| 8 | Samsung test TV | **Samsung UE75CU7100 (75" Crystal UHD, 2023)**. 2023 models ship **Tizen 7.0** (web engine about Chromium 94); confirm with `sdb capability` (`platform_version`) when connected in phase 5 |
+| 8 | Samsung test TV | **Samsung UE75CU7100 (75" Crystal UHD, 2023)**. 2023 models ship **Tizen 7.0** (web engine about Chromium 94); `sdb capability` reports `platform_version` 9.0 on this TV |
 
 ### Consequence of #8
 - **The only Samsung test TV is Tizen 7,** so the **Tizen 4 (Chromium 56) floor can't be tested on real hardware.** The legacy bundle is still built for Chrome 53. It's guarded by build-time checks (`es-check`, polyfill audit, the CSS rules in §3.1).

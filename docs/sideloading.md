@@ -114,3 +114,15 @@ The APK is `apps/android/android/app/build/outputs/apk/debug/app-debug.apk` (abo
 - **Without adb:** copy the APK to the device and open it with a file manager (allow *Install unknown apps* for that file manager). On Fire TV, use a downloader app.
 
 **Release builds:** signing with your own keystore comes before any store release; the keystore and password stay out of git. Debug builds are fine for sideloading during development.
+
+## Samsung TV (Tizen)
+
+`pnpm tizen` writes `apps/tizen/dist-tizen/UltraIPTV.wgt`. The package is unsigned: a Samsung TV only
+runs apps signed with a certificate made for that TV, and that takes a Samsung account login.
+
+1. Put the TV in Developer Mode: open **Apps**, press **1 2 3 4 5** on the remote, turn it on, enter
+   the Mac's IP address, then restart the TV fully.
+2. In [Apps2Samsung](https://apps2samsung.madebypatrick.nl), choose the custom `.wgt` option and pick
+   the package. It creates the certificate (sign in when asked), signs the package and installs it.
+
+Apps2Samsung keeps the TV's developer connection while it runs. Quit it before using `sdb`.

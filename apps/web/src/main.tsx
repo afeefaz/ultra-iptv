@@ -7,9 +7,14 @@ import { render } from 'solid-js/web';
 // Capacitor injects its bridge before the page loads, so this is known at start-up.
 const isAndroidApp = !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
 
+// The TV's web runtime defines `tizen` before any page script runs.
+const isTizenApp = 'tizen' in window;
+
 const platformReady: Promise<Platform> = isAndroidApp
   ? import('@ultra/platform/android').then((m) => m.androidPlatform)
-  : Promise.resolve(webPlatform);
+  : isTizenApp
+    ? import('@ultra/platform/tizen').then((m) => m.tizenPlatform)
+    : Promise.resolve(webPlatform);
 
 void platformReady.then((platform) => {
   startLogging(platform);

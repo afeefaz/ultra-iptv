@@ -117,6 +117,7 @@ export function TextField(props: TextFieldProps): JSX.Element {
           value={props.value}
           masked={props.type === 'password'}
           url={props.type === 'url'}
+          docked={props.compact}
           onChange={props.onChange}
           onClose={() => setOpen(false)}
         />

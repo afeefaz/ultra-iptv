@@ -596,8 +596,44 @@ h3 {
   font-size: 1.1rem;
 }
 
-.osk {
-  max-width: 72rem;
+.dialog.osk {
+  box-sizing: border-box;
+  width: 70rem;
+  max-width: 96%;
+}
+
+/* Search: along the bottom, with the list still visible above it. */
+.dialog-backdrop.osk-docked {
+  align-items: flex-end;
+  background: transparent;
+}
+
+.osk-docked .dialog.osk {
+  width: 100%;
+  max-width: none;
+  padding: 0.9rem 2.5rem 0.7rem;
+  border-width: 1px 0 0;
+  border-radius: 1.2rem 1.2rem 0 0;
+}
+
+.osk-docked .osk-title {
+  display: none;
+}
+
+.osk-docked .osk-display {
+  width: 52rem;
+  margin: 0 auto 0.6rem;
+  box-sizing: border-box;
+  padding: 0.45rem 1.1rem;
+  font-size: 1.3rem;
+}
+
+.osk-docked .osk-row {
+  margin-bottom: 0.3rem;
+}
+
+.osk-docked .osk-key {
+  height: 3.1rem;
 }
 
 .osk-title {
@@ -1027,6 +1063,13 @@ h3 {
   border-radius: 0.8rem;
   background: #000;
   color: var(--muted);
+}
+
+.pill-resolution {
+  margin-left: 0.5rem;
+  background: rgba(8, 10, 16, 0.85);
+  color: var(--strong);
+  font-weight: 700;
 }
 
 .preview-badges {
@@ -2298,7 +2341,8 @@ h3 {
   font-weight: 700;
 }
 
-.player-end .pill-live {
+.player-end .pill-live,
+.player-end .pill-resolution {
   padding: 0.5rem 1.2rem;
   font-size: 1.3rem;
 }
@@ -2472,9 +2516,14 @@ h3 {
   font-size: 2.2rem;
 }
 
-.player-button:hover {
+.player-button:hover,
+.player-button.is-focused {
   background: var(--accent);
   color: var(--on-accent);
+}
+
+.player-button.is-focused {
+  box-shadow: 0 0 0 0.2rem var(--strong);
 }
 
 /* Media seek panel */
@@ -3338,6 +3387,67 @@ h3 {
 
 .video-behind .topbar {
   visibility: hidden;
+}
+
+/*
+ * Samsung TVs draw video on a plane under the page, so the Live preview needs a real hole down to
+ * it: everything from the page root to the preview box goes transparent, and shadows repaint the
+ * colours around the box (the pane's fill, and the canvas from a frame at the back of the page).
+ */
+.video-hole,
+.video-hole body {
+  background: transparent;
+}
+
+.video-hole-frame {
+  position: fixed;
+  z-index: -1;
+  box-shadow: 0 0 0 200vmax var(--canvas);
+}
+
+.video-hole .pane-preview {
+  overflow: hidden;
+  background: transparent;
+}
+
+.video-hole .pane-preview > * {
+  position: relative;
+  z-index: 1;
+}
+
+.video-hole .pane-preview > .preview-box {
+  z-index: 0;
+  background: transparent;
+  box-shadow: 0 0 0 200vmax var(--well);
+}
+
+.video-object {
+  position: absolute;
+}
+
+/* AVPlay hands subtitles to the page as text. */
+.video-subs {
+  position: absolute;
+  text-align: center;
+  white-space: pre-line;
+}
+
+.video-subs span {
+  padding: 0.1em 0.4em;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+}
+
+.subs-small .video-subs {
+  font-size: 1.1rem;
+}
+
+.subs-medium .video-subs {
+  font-size: 1.6rem;
+}
+
+.subs-large .video-subs {
+  font-size: 2.2rem;
 }
 
 /* Loading progress */

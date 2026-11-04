@@ -1,6 +1,15 @@
 import type { ErrorInfo, PlaylistRecord } from '@ultra/core';
 import { formatNumber, locale, t } from './i18n';
 
+/** A viewer's name for a picture size. Width decides too, since wide films have short pictures. */
+export function resolutionLabel(width: number, height: number): string {
+  if (width >= 3800 || height >= 2000) return '4K';
+  if (width >= 2500 || height >= 1400) return '1440p';
+  if (width >= 1900 || height >= 1000) return '1080p';
+  if (width >= 1260 || height >= 700) return '720p';
+  return `${height}p`;
+}
+
 export function timeAgo(ms: number): string {
   const diff = Math.max(0, Date.now() - ms);
   const min = Math.floor(diff / 60_000);

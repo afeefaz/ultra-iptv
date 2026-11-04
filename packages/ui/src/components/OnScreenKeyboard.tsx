@@ -11,6 +11,8 @@ export interface OnScreenKeyboardProps {
   masked?: boolean;
   /** Adds a row of URL helpers (http://, .com, :, / …). */
   url?: boolean;
+  /** Along the bottom of the screen with no dimming, so search results stay visible above it. */
+  docked?: boolean;
   onChange: (value: string) => void;
   onClose: () => void;
 }
@@ -60,7 +62,7 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps): JSX.Element {
   const display = () => (props.masked && !reveal() ? '•'.repeat(props.value.length) : props.value);
 
   return (
-    <div class="dialog-backdrop" onClick={(e) => e.target === e.currentTarget && props.onClose()}>
+    <div class="dialog-backdrop" classList={{ 'osk-docked': !!props.docked }} onClick={(e) => e.target === e.currentTarget && props.onClose()}>
       <FocusZone id={props.id} trap>
         <div class="dialog osk" role="dialog" aria-modal="true" aria-label={props.title}>
           <div class="osk-title">{props.title}</div>

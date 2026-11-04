@@ -1,6 +1,7 @@
 import { log, WATCHED_RATIO, type ChannelRow, type MediaRef, type ResolvedStream } from '@ultra/core';
 import { CANNOT_CONNECT, type Platform, type PlayerAdapter, type PlayerError, type PlayerState, type PlayerStats, type PlayerTracks, type Track, type VideoRect } from '@ultra/platform';
 import { createSignal } from 'solid-js';
+import { resolutionLabel } from '../format';
 import { catalog } from './catalog';
 import { ensureUnlocked, isChannelLocked } from './parental';
 import { bufferProfile, preferredAudio, preferredText, setPreferredAudio, setPreferredText, streamFormat } from './settings';
@@ -9,6 +10,7 @@ import { bufferProfile, preferredAudio, preferredText, setPreferredAudio, setPre
 const MAX_ATTEMPTS = 6;
 const SWITCH_CONTAINER_AT = 3;
 const STALL_MS = 15_000;
+const RESOLUTION_POLL_MS = 2000;
 const URL_CACHE_SIZE = 50;
 /** Progress is saved every 10 s and on pause/exit (spec §4.2). */
 const SAVE_EVERY_MS = 10_000;
@@ -96,6 +98,20 @@ const urlCache = new Map<string, ResolvedStream>();
 
 const isActive = () => !!(current() || media());
 
+const [videoSize, setVideoSize] = createSignal<{ width: number; height: number } | null>(null);
+/** The playing picture's resolution ("1080p"), once the player knows it. */
+export const videoResolution = (): string | null => {
+  const size = videoSize();
+  return size ? resolutionLabel(size.width, size.height) : null;
+};
+
+function readVideoSize(): void {
+  if (state() !== 'playing' || !player) return;
+  const { width, height } = player.stats();
+  const size = videoSize();
+  if (width && height && (size?.width !== width || size?.height !== height)) setVideoSize({ width, height });
+}
+
 export function initPlayback(p: Platform, layer: HTMLElement): void {
   if (player) {
     player.attach(layer); // the layer was re-created (hot reload in development)
@@ -108,6 +124,7 @@ export function initPlayback(p: Platform, layer: HTMLElement): void {
   player.on('error', onError);
   player.on('tracks', onTracks);
   player.on('firstFrame', onFirstFrame);
+  setInterval(readVideoSize, RESOLUTION_POLL_MS);
   window.addEventListener('offline', () => {
     if (isActive()) setStatus({ kind: 'offline' });
     log.warn('player', 'network offline');
@@ -385,6 +402,7 @@ function saveProgress(m: MediaItem): void {
 
 function onState(s: PlayerState): void {
   setState(s);
+  if (s === 'loading') setVideoSize(null);
   clearTimeout(stallTimer);
   if (s === 'playing') {
     if (attempt > 0) log.info('player', 'reconnected', { attempts: attempt });
@@ -486,6 +504,7 @@ function onTracks(t: PlayerTracks): void {
 }
 
 function onFirstFrame(): void {
+  readVideoSize();
   const zapMs = Math.round(now() - zapStart);
   setLastZapMs(zapMs);
   const m = media();

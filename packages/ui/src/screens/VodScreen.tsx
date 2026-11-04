@@ -1,7 +1,5 @@
 import {
   favoriteKeys,
-  listCategories,
-  listItems,
   log,
   UNCATEGORIZED,
   type CategoryRow,
@@ -9,13 +7,15 @@ import {
   type SeriesRow,
   type VodRow,
 } from '@ultra/core';
-import { createEffect, createMemo, createSignal, on, onCleanup, Show, type JSX } from 'solid-js';
+import { createEffect, createMemo, createSignal, on, Show, type JSX } from 'solid-js';
 import { CategoryRail } from '../components/CategoryRail';
 import { FocusButton } from '../components/FocusButton';
 import { PinButton } from '../components/PinButton';
 import { Icon } from '../components/Icon';
 import { TextField } from '../components/TextField';
-import { makeMatcher, normalizeText } from '../data/categories';
+import { makeMatcher } from '../data/categories';
+import { cachedLibrary, loadLibrary, type Library } from '../data/libraryCache';
+import { enterLibrary, rememberedSearch, rememberSearch } from '../data/libraryMemory';
 import { PickerDialog } from '../components/PickerDialog';
 import { PosterTile } from '../components/PosterTile';
 import { VirtualGrid, type VirtualGridApi } from '../components/VirtualGrid';
@@ -42,23 +42,27 @@ interface RailItem {
 }
 
 const VIRTUAL = ['continue', 'fav', 'all'];
+const NO_ROWS: Row[] = [];
+const NO_CATEGORIES: CategoryRow[] = [];
+const NO_KEYS = new Map<string, Row>();
 const COLUMNS = 6;
-const CATEGORY_FOCUS_DELAY_MS = 250;
 const SORTS: SortBy[] = ['added', 'name', 'rating', 'year'];
 const lastCategory = new Map<string, string>();
 // Grid position per playlist+kind, so Back from a detail page lands on the same poster.
 const lastGridIndex = new Map<string, number | null>();
 // Title open next to the categories, so it's still open after playing it and coming back.
 const lastOpenId = new Map<string, string | null>();
-// Search text in the open category, so it survives playing a title and coming back.
-const lastQuery = new Map<string, string>();
 
 /** Movies and Series (spec §5): category rail | poster grid, sortable, with "Continue watching". */
 export function VodScreen(props: { kind: Kind }): JSX.Element {
+  enterLibrary(props.kind);
   const playlistId = () => activePlaylist()?.id ?? null;
-  const [cats, setCats] = createSignal<CategoryRow[]>([]);
-  const [all, setAll] = createSignal<Row[]>([]);
-  const [favKeys, setFavKeys] = createSignal<string[]>([]);
+  // Already in memory on the way back from the player or a page, so the first paint has everything.
+  const held = cachedLibrary<Row>(activePlaylist()?.id ?? null, props.kind);
+  const [library, setLibrary] = createSignal<Library<Row> | undefined>(held);
+  const all = (): Row[] => library()?.rows ?? NO_ROWS;
+  const cats = (): CategoryRow[] => library()?.cats ?? NO_CATEGORIES;
+  const [favKeys, setFavKeys] = createSignal<string[]>(held?.favs ?? []);
   // Starts on the remembered category, so nothing flashes "All" (and resets) on the way back.
   const [category, setCategory] = createSignal(lastCategory.get(`${activePlaylist()?.id ?? null}|${props.kind}`) ?? 'all');
   /** Title open inside the grid area (Settings → Browsing → next to categories). */
@@ -69,13 +73,14 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
     setOpenIdSignal(id);
     lastOpenId.set(memoryKey(), id);
   };
-  const [loading, setLoading] = createSignal(true);
+  const [loading, setLoading] = createSignal(!held);
   const [sortOpen, setSortOpen] = createSignal(false);
   const [focused, setFocused] = createSignal<Row | null>(null);
-  const [query, setQuerySignal] = createSignal(lastQuery.get(`${activePlaylist()?.id ?? null}|${props.kind}`) ?? '');
+  const searchKey = () => `items|${activePlaylist()?.id ?? ''}|${props.kind}`;
+  const [query, setQuerySignal] = createSignal(rememberedSearch(searchKey()));
   const setQuery = (q: string) => {
     setQuerySignal(q);
-    lastQuery.set(memoryKey(), q);
+    rememberSearch(searchKey(), q);
     // Positions in the old results mean nothing in the new ones.
     lastGridIndex.set(memoryKey(), null);
     setFocused(null);
@@ -86,7 +91,7 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
 
   const memoryKey = () => `${playlistId()}|${props.kind}`;
   const favSet = createMemo(() => new Set(favKeys()));
-  const byKey = createMemo(() => new Map(all().map((r) => [r.key, r] as [string, Row])));
+  const byKey = () => library()?.byKey() ?? NO_KEYS;
 
   /** Movies by their own progress; series by the most recent episode watched. */
   const continueRows = createMemo<Row[]>(() => {
@@ -113,16 +118,18 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
     if (id === 'continue') return continueRows();
     if (id === 'fav') return favKeys().map((k) => byKey().get(k)).filter((r): r is Row => !!r);
     if (hidden()) return [];
-    const list = id === 'all' ? all().slice() : all().filter((r) => r.categoryIds.indexOf(id) >= 0);
-    return sortRows(list, vodSort(), locale());
+    const lib = library();
+    if (!lib) return NO_ROWS;
+    const sort = vodSort();
+    const lang = locale();
+    return lib.sorted(`${id}|${sort}|${lang}`, () => sortRows(id === 'all' ? lib.rows.slice() : lib.rows.filter((r) => r.categoryIds.indexOf(id) >= 0), sort, lang));
   });
 
-  const normNames = createMemo(() => new Map(all().map((r) => [r.key, normalizeText(r.name)] as [string, string])));
   const items = createMemo<Row[]>(() => {
     const match = makeMatcher(query());
     const list = inCategory();
-    if (!match) return list;
-    const names = normNames();
+    const names = library()?.normNames();
+    if (!match || !names) return list;
     return list.filter((r) => match(names.get(r.key) ?? ''));
   });
 
@@ -145,15 +152,15 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
     on([playlistId, () => versionOf(playlistId())], async ([id]) => {
       const mine = ++seq;
       if (!id) return setLoading(false);
-      setLoading(true);
+      if (!cachedLibrary(id, props.kind)) setLoading(true);
       try {
-        const [c, rows, favs] = await Promise.all([listCategories(id, props.kind), listItems(id, props.kind, null), favoriteKeys(id, props.kind)]);
+        const [lib, favs] = await Promise.all([loadLibrary<Row>(id, props.kind), favoriteKeys(id, props.kind)]);
         if (mine !== seq) return;
-        setCats(c);
-        setAll(rows as Row[]);
+        lib.favs = favs;
+        setLibrary(lib);
         setFavKeys(favs);
         setCategory(lastCategory.get(memoryKey()) ?? 'all');
-        setQuerySignal(lastQuery.get(memoryKey()) ?? '');
+        setQuerySignal(rememberedSearch(searchKey()));
         setOpenIdSignal(detailMode() === 'inline' ? (lastOpenId.get(memoryKey()) ?? null) : null);
         const index = lastGridIndex.get(memoryKey());
         if (index != null) setTimeout(() => grid?.focusIndex(index), 0);
@@ -165,10 +172,7 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
     }),
   );
 
-  let categoryTimer: ReturnType<typeof setTimeout> | undefined;
-  onCleanup(() => clearTimeout(categoryTimer));
   const chooseCategory = (id: string) => {
-    clearTimeout(categoryTimer);
     if (id === category()) return;
     setCategory(id);
     setQuery('');
@@ -251,11 +255,6 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
                   fixed={railItems().slice(0, VIRTUAL.length)}
                   categories={railItems().slice(VIRTUAL.length)}
                   selected={category()}
-                  onFocusRow={(c) => {
-                    clearTimeout(categoryTimer);
-                    if (c.id === category()) return;
-                    if (!c.locked || unlocked()) categoryTimer = setTimeout(() => chooseCategory(c.id), CATEGORY_FOCUS_DELAY_MS);
-                  }}
                   onOpen={async (c) => {
                     if (c.locked && !(await ensureUnlocked())) return;
                     chooseCategory(c.id);
