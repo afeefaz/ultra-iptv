@@ -6,7 +6,7 @@ LG webOS is planned. The design is in `docs/spec.md`.
 
 ## Download
 
-**[Download the latest Android version](https://github.com/afeefaz/ultra-iptv-releases/releases/latest/download/UltraIPTV.apk)**
+**[Download the latest Android version](https://github.com/afeefaz/ultra-iptv/releases/latest/download/UltraIPTV.apk)**
 
 This link always gets the newest version. On Android TV or Fire TV, enter it in the Downloader app.
 Android asks you to allow installs from the app you download with, and Play Protect may warn about an unknown app.
@@ -124,3 +124,7 @@ packages/ui         SolidJS screens, focus/spatial navigation, virtual lists, on
 scripts/            build checks
 docs/               spec, debugging, sideloading
 ```
+
+## License
+
+MIT, see [LICENSE](LICENSE). The Android APK includes a GPL-3.0 audio decoder, so the APK as a whole is under GPL-3.0: see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

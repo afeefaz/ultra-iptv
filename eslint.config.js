@@ -3,7 +3,7 @@ import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
-  { ignores: ['**/node_modules/**', '**/dist/**', '**/dist-legacy/**', '**/dist-tizen/**', 'apks/**', 'research/**', 'apps/*/dev/media/**', 'apps/android/android/**'] },
+  { ignores: ['**/node_modules/**', '**/dist/**', '**/dist-legacy/**', '**/dist-tizen/**', 'apps/*/dev/media/**', 'apps/android/android/**'] },
   js.configs.recommended,
   tseslint.configs.recommended,
   {

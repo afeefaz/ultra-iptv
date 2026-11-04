@@ -124,17 +124,17 @@ keyPassword=...
 
 The key file sits next to it, and neither goes in git. **Back both up:** every update must be signed with this key, or people have to uninstall the app (and lose their playlists) to install it.
 
-**Sharing the APK:** releases go to the public repo `afeefaz/ultra-iptv-releases` as `UltraIPTV.apk`. This link always gets the newest one, so a Downloader code made from it never needs changing:
+**Sharing the APK:** releases go to the public repo `afeefaz/ultra-iptv` as `UltraIPTV.apk`. This link always gets the newest one, so a Downloader code made from it never needs changing:
 
 ```
-https://github.com/afeefaz/ultra-iptv-releases/releases/latest/download/UltraIPTV.apk
+https://github.com/afeefaz/ultra-iptv/releases/latest/download/UltraIPTV.apk
 ```
 
 To publish an update, raise `versionCode` and `versionName` in `apps/android/android/app/build.gradle`, build, then:
 
 ```sh
 cp apps/android/android/app/build/outputs/apk/release/app-release.apk UltraIPTV.apk
-gh release create v0.1.1 UltraIPTV.apk --repo afeefaz/ultra-iptv-releases --title "Ultra IPTV 0.1.1" --notes "What changed"
+gh release create v0.1.1 UltraIPTV.apk --repo afeefaz/ultra-iptv --title "Ultra IPTV 0.1.1" --notes "What changed"
 ```
 
 ## Samsung TV (Tizen)
