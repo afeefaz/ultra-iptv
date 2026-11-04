@@ -25,7 +25,7 @@ export function PickerDialog(props: {
     return true;
   });
   return (
-    <div class="dialog-backdrop">
+    <div class="dialog-backdrop" onClick={(e) => e.target === e.currentTarget && props.onCancel()}>
       <FocusZone id={props.id} trap>
         <div class="dialog picker" role="dialog" aria-modal="true" aria-label={props.title}>
           <h2 class="dialog-title">{props.title}</h2>

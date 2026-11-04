@@ -1,5 +1,5 @@
 import type { ContentKind } from '@ultra/core';
-import { createMemo, createSignal, Show, type JSX } from 'solid-js';
+import { createEffect, createMemo, createSignal, on, Show, type JSX } from 'solid-js';
 import { arrangeCategories, CATEGORY_SORTS, categorySort, makeMatcher, normalizeText, usePins } from '../data/categories';
 import { focusManager } from '../focus';
 import { formatNumber, locale, t } from '../i18n';
@@ -35,7 +35,8 @@ export interface CategoryRailProps {
 
 /**
  * Category column for Live, Movies and Series (spec §5): a search box for category names,
- * sort order, and pinned categories first. Green (F2) or the pin icon pins the focused row.
+ * sort order, and pinned categories first. Green (F2) pins the focused row; the pin button
+ * next to the item search pins the open category.
  */
 export function CategoryRail(props: CategoryRailProps): JSX.Element {
   const [query, setQuery] = createSignal('');
@@ -62,12 +63,23 @@ export function CategoryRail(props: CategoryRailProps): JSX.Element {
   const togglePin = async (c: RailItem | undefined) => {
     if (!c || !canPin(c.id)) return;
     await toggle(c.id);
-    // Remote: keep focus on the same category after it moves. Mouse: leave focus alone,
-    // since focusing a category also opens it.
+    // Keep focus on the same category after it moves (remote; touch pins with the pin button).
     if (focusManager.pointerMode) return;
     const index = items().findIndex((x) => x.id === c.id);
     if (index >= 0) setTimeout(() => list?.focusIndex(index), 0);
   };
+
+  // Coming back to the screen: show the open category where it is in the list, not the top.
+  let shownFor = '';
+  createEffect(
+    on([() => items().length, () => props.selected], ([count, selected]) => {
+      const index = items().findIndex((c) => c.id === selected);
+      if (index < 0 || shownFor === `${selected}|${count}`) return;
+      const first = !shownFor;
+      shownFor = `${selected}|${count}`;
+      setTimeout(() => list?.scrollToIndex(index, first), 0);
+    }),
+  );
 
   useKeys((press) => {
     if (press.key !== 'green') return false;
@@ -110,20 +122,9 @@ export function CategoryRail(props: CategoryRailProps): JSX.Element {
                 <Icon name="lock" />
               </span>
             </Show>
-            <Show when={canPin(c.id)}>
-              <span
-                class="pin-toggle"
-                classList={{ pinned: isPinned(c.id) }}
-                role="button"
-                title={isPinned(c.id) ? t('categories.unpin') : t('categories.pin')}
-                aria-label={isPinned(c.id) ? t('categories.unpin') : t('categories.pin')}
-                // Native listener, so it runs before the row's click (which opens the category).
-                on:click={(e) => {
-                  e.stopPropagation();
-                  void togglePin(c);
-                }}
-              >
-                <Icon name={isPinned(c.id) ? 'pinFill' : 'pin'} />
+            <Show when={isPinned(c.id)}>
+              <span class="pin-mark" aria-label={t('categories.pinned')}>
+                <Icon name="pinFill" />
               </span>
             </Show>
             <span class="list-count">{formatNumber(c.count)}</span>

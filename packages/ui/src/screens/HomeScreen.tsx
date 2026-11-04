@@ -8,6 +8,7 @@ import { formatClock, useNowNext } from '../data/epg';
 import { itemFromProgress, progressRatio, useProgress, watch } from '../data/media';
 import { recentVersion } from '../data/playback';
 import { activePlaylist, playlistsLoaded, refreshing, refreshPlaylist, versionOf } from '../data/playlists';
+import { homeShows } from '../data/settings';
 import { FocusZone } from '../focus';
 import { formatLeft, statusText } from '../format';
 import { formatNumber, t } from '../i18n';
@@ -55,11 +56,13 @@ export function HomeScreen(): JSX.Element {
         <Show when={activePlaylist()} fallback={<Welcome />}>
           {(p) => (
             <FocusZone id="home-main" remember>
-              <Show when={continueRows()[0]} fallback={<WelcomeBackHero />}>
-                {(row) => <ResumeHero row={row()} />}
+              <Show when={homeShows('hero')}>
+                <Show when={continueRows()[0]} fallback={<WelcomeBackHero />}>
+                  {(row) => <ResumeHero row={row()} />}
+                </Show>
               </Show>
 
-              <Show when={continueRows().length > 0}>
+              <Show when={homeShows('continue') && continueRows().length > 0}>
                 <div class="section-head">
                   <h2 class="section-title">
                     {t('home.continue')}
@@ -72,8 +75,10 @@ export function HomeScreen(): JSX.Element {
                 </div>
               </Show>
 
-              <ChannelShelf id="fav" title={t('home.favorites')} channels={favorites()} empty={t('home.noFavorites')} />
-              <Show when={recent().length > 0}>
+              <Show when={homeShows('favorites')}>
+                <ChannelShelf id="fav" title={t('home.favorites')} channels={favorites()} empty={t('home.noFavorites')} />
+              </Show>
+              <Show when={homeShows('recent') && recent().length > 0}>
                 <ChannelShelf id="recent" title={t('home.recent')} channels={recent()} />
               </Show>
 

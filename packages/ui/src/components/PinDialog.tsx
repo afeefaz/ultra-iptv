@@ -121,7 +121,7 @@ function PinDialog(props: { mode: PinMode; onDone: (ok: boolean) => void }): JSX
   onCleanup(() => window.removeEventListener('keydown', onKey, true));
 
   return (
-    <div class="dialog-backdrop">
+    <div class="dialog-backdrop" onClick={(e) => e.target === e.currentTarget && props.onDone(false)}>
       <FocusZone id="pin-dialog" trap>
         <div class="dialog pin-dialog" role="dialog" aria-modal="true" aria-label={title()}>
           <div class="pin-lock">

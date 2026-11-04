@@ -15,6 +15,15 @@ export function TrackSheet(props: { onClose: () => void }): JSX.Element {
   });
   const anySubtitle = () => playerTracks().text.some((x) => x.selected);
   return (
+    <>
+    {/* Tapping beside the sheet closes it (and must not reach the player, which would pause). */}
+    <div
+      class="sheet-backdrop"
+      onClick={(e) => {
+        e.stopPropagation();
+        props.onClose();
+      }}
+    />
     <div class="side-sheet" role="dialog" aria-modal="true" aria-label={t('player.audioSubs')}>
       <FocusZone id="track-sheet" trap>
         <div class="sheet-head">
@@ -77,5 +86,6 @@ export function TrackSheet(props: { onClose: () => void }): JSX.Element {
         </Index>
       </FocusZone>
     </div>
+    </>
   );
 }

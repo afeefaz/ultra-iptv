@@ -13,14 +13,18 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
-        <!-- Shows beside the camera cutout on phones; matches the app canvas. -->
-        <item name="android:windowBackground">@drawable/splash</item>
+        <!-- Must be a colour, not a drawable: Capacitor's SystemBars plugin reads this as a colour
+             value and paints the whole window with it. That paint covers everything outside the
+             page (the camera cutout, and the navigation buttons while the keyboard is open);
+             with a drawable it gets a meaningless see-through value and those areas keep stale
+             pixels. -->
+        <item name="android:windowBackground">@color/app_canvas</item>
     </style>
 
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
-        <item name="windowSplashScreenBackground">#080A10</item>
+        <item name="windowSplashScreenBackground">@color/app_canvas</item>
         <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
     </style>
 </resources>

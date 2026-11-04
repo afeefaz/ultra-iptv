@@ -1,11 +1,14 @@
 import { pickNext, pickWrap, type Candidate, type Direction } from './geometry';
 import { ensureVisible } from './scroll';
 
+/** How an item was chosen: the remote's OK key, or a click/tap. */
+export type SelectSource = 'key' | 'pointer';
+
 export interface FocusableSpec {
   id: string;
   zone: string;
   el: HTMLElement;
-  onSelect?: () => void;
+  onSelect?: (source: SelectSource) => void;
   onFocus?: () => void;
   autofocus?: boolean;
 }
@@ -42,6 +45,8 @@ export class FocusManager {
   /** True while focus is an automatic fallback choice rather than the user's or the app's. */
   private weakFocus = false;
   private reclaim = false;
+  /** Zone of a focused item that just unmounted (e.g. scrolled out of a virtual list). */
+  private lostZone: string | null = null;
   pointerMode = false;
 
   get currentId(): string | null {
@@ -80,7 +85,7 @@ export class FocusManager {
     };
     const onClick = () => {
       this.focus(spec.id, false);
-      spec.onSelect?.();
+      spec.onSelect?.('pointer');
     };
     spec.el.addEventListener('mouseenter', onEnter);
     spec.el.addEventListener('click', onClick);
@@ -94,6 +99,7 @@ export class FocusManager {
       if (this.notified === spec.id) this.notified = null;
       if (this.current === spec.id) {
         this.current = null;
+        this.lostZone = spec.zone;
         this.ensureFocusSoon();
       }
     };
@@ -107,10 +113,15 @@ export class FocusManager {
     if (prev && prev !== next) prev.el.classList.remove(FOCUSED_CLASS);
     this.current = id;
     next.el.classList.add(FOCUSED_CLASS);
-    try {
-      next.el.focus({ preventScroll: true });
-    } catch {
-      next.el.focus();
+    // Never pull DOM focus out of a text box inside the item (a tap there opens the keyboard;
+    // moving focus would close it again).
+    const active = document.activeElement;
+    if (!active || active === next.el || !next.el.contains(active)) {
+      try {
+        next.el.focus({ preventScroll: true });
+      } catch {
+        next.el.focus();
+      }
     }
     if (scroll) ensureVisible(next.el);
     for (let zone: string | undefined = next.zone; zone; zone = this.zones.get(zone)?.parent) {
@@ -152,7 +163,7 @@ export class FocusManager {
   select(): boolean {
     const cur = this.current ? this.items.get(this.current) : undefined;
     if (!cur?.onSelect) return false;
-    cur.onSelect();
+    cur.onSelect('key');
     return true;
   }
 
@@ -179,9 +190,17 @@ export class FocusManager {
       this.ensureTimer = null;
       const reclaimNow = this.reclaim && this.weakFocus;
       this.reclaim = false;
+      const lostZone = this.lostZone;
+      this.lostZone = null;
       const pool = this.eligible().filter((i) => isVisible(i.el));
       const cur = this.current ? this.items.get(this.current) : undefined;
       if (cur && pool.indexOf(cur) >= 0 && !reclaimNow) return;
+      // The focused row scrolled away: stay in the same list rather than jumping elsewhere.
+      const sameZone = lostZone ? firstInReadingOrder(pool.filter((i) => i.zone === lostZone)) : undefined;
+      if (sameZone && this.focus(sameZone.id, false, false)) {
+        this.weakFocus = true;
+        return;
+      }
       this.focusFallback(pool);
     }, 0);
   }
@@ -191,7 +210,8 @@ export class FocusManager {
     const auto = pool.filter((i) => i.autofocus);
     const content = pool.filter((i) => this.inZone(i, CONTENT_ZONE));
     const target = auto[auto.length - 1] ?? firstInReadingOrder(content) ?? firstInReadingOrder(pool);
-    if (!target || !this.focus(target.id)) return false;
+    // No onFocus side effects (like opening a category) for a focus nobody chose.
+    if (!target || !this.focus(target.id, true, false)) return false;
     this.weakFocus = true;
     return true;
   }

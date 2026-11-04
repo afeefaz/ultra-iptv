@@ -18,7 +18,7 @@ Background: `research/findings.md` (IB Player and Hot Player study).
 - **Multiple playlists per device,** each cached separately, switched instantly, never wiped on switch.
 - **Fast:** shown instantly from cache, refreshed in the background, heavy work off the UI thread, quick channel zapping.
 - **Debuggable on every device with local tools only.** Credentials are always redacted and provider hostnames hashed in every log.
-- **Languages:** English and Arabic with full RTL.
+- **Languages:** English and Arabic. The layout stays left to right in both (decided 2026-11-04: Arabic is a translation only; text inside labels still reads right to left).
 - **Oldest supported TVs:** Samsung Tizen 4.0 and LG webOS 4.0 (2018 models).
 
 ### Not in v1
@@ -226,7 +226,7 @@ interface PlayerAdapter {
 - **RTL:** the module mirrors left/right.
 - **Focus visibility:** the focused item always has a high-contrast ring/fill. Icon buttons have `aria-label`s.
 - **Virtualised lists and grids** (`@tanstack/solid-virtual`, or a small in-house windowing component if it doesn't run on Chrome 53). Budget: smooth scrolling with 50k channels and 20k VOD items on a 2018 TV.
-- **i18n:** English and Arabic from the first screen; `dir` switches with the language. **The default language is English on every device**, whatever the device language; Arabic is chosen in Settings → Appearance. Numbers and times are formatted per locale. Channel names stay as the provider sends them, with bidi isolation.
+- **i18n:** English and Arabic from the first screen; the layout direction stays left to right in both (the RTL stylesheet mirror is kept but unused). **The default language is English on every device**, whatever the device language; Arabic is chosen in Settings → Appearance. Numbers and times are formatted per locale. Channel names stay as the provider sends them, with bidi isolation.
 - **Form factors:** one responsive layout. Input mode toggles focus rings, hover and gestures; on phones the three panes collapse into stacked navigation.
 
 ## 6. Data model and caching

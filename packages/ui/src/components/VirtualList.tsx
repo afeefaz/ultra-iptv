@@ -4,7 +4,8 @@ import { useKeys } from '../keys';
 
 export interface VirtualListApi {
   focusIndex(index: number): void;
-  scrollToIndex(index: number): void;
+  /** `center`: put the row in the middle (restoring a position) rather than just in view. */
+  scrollToIndex(index: number, center?: boolean): void;
   focusedIndex(): number | null;
 }
 
@@ -59,11 +60,12 @@ export function VirtualList<T>(props: VirtualListProps<T>): JSX.Element {
   };
 
   const api: VirtualListApi = {
-    scrollToIndex(index) {
+    scrollToIndex(index, center) {
       if (!scroller) return;
       const h = rowPx();
       const top = index * h;
-      if (top < scroller.scrollTop) scroller.scrollTop = top;
+      if (center) scroller.scrollTop = Math.max(0, top - (scroller.clientHeight - h) / 2);
+      else if (top < scroller.scrollTop) scroller.scrollTop = top;
       else if (top + h > scroller.scrollTop + scroller.clientHeight) scroller.scrollTop = top + h - scroller.clientHeight;
       setScrollTop(scroller.scrollTop);
     },
@@ -142,7 +144,9 @@ export function VirtualList<T>(props: VirtualListProps<T>): JSX.Element {
 function Row<T>(p: { index: number; id: string; top: number; height: number; item: () => T; list: VirtualListProps<T> }): JSX.Element {
   const ref = useFocusable({
     id: p.id,
-    autofocus: p.index === p.list.autofocusIndex,
+    get autofocus() {
+      return p.index === p.list.autofocusIndex;
+    },
     onSelect: () => {
       const item = p.item();
       if (item !== undefined) p.list.onSelect?.(item, p.index);

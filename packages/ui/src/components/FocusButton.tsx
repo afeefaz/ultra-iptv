@@ -12,7 +12,13 @@ export interface FocusButtonProps {
 }
 
 export function FocusButton(props: FocusButtonProps): JSX.Element {
-  const ref = useFocusable({ id: props.id, autofocus: props.autofocus, onSelect: () => props.onSelect?.() });
+  const ref = useFocusable({
+    id: props.id,
+    get autofocus() {
+      return props.autofocus;
+    },
+    onSelect: () => props.onSelect?.(),
+  });
   return (
     <div
       ref={ref}

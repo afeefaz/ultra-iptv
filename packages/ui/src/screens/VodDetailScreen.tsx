@@ -18,8 +18,19 @@ interface Version {
   category: string;
 }
 
+export interface DetailProps {
+  id: string;
+  /** Shown inside the Movies/Series grid area instead of as a page (Settings → Browsing). */
+  embedded?: boolean;
+  /** Opens another title (versions, "More in"); defaults to navigating to its page. */
+  onOpen?: (id: string) => void;
+  /** Embedded only: back to the grid. */
+  onClose?: () => void;
+}
+
 /** Movie page (spec §5): details, Play / Resume / Start over, favourite, other versions. */
-export function VodDetailScreen(props: { id: string }): JSX.Element {
+export function VodDetailScreen(props: DetailProps): JSX.Element {
+  const openOther = (id: string) => (props.onOpen ? props.onOpen(id) : navigate({ name: 'vod-detail', id }));
   const [row, setRow] = createSignal<VodRow | null | undefined>(undefined);
   const [info, setInfo] = createSignal<(VodInfo & { ext?: string }) | null>(null);
   const [infoLoading, setInfoLoading] = createSignal(false);
@@ -81,7 +92,7 @@ export function VodDetailScreen(props: { id: string }): JSX.Element {
   const poster = () => info()?.poster ?? row()?.logo;
 
   return (
-    <div class="screen detail">
+    <div class="screen detail" classList={{ embedded: !!props.embedded }}>
       <Show when={info()?.backdrop}>
         {(src) => (
           <div class="detail-backdrop">
@@ -94,6 +105,13 @@ export function VodDetailScreen(props: { id: string }): JSX.Element {
           {(r) => (
             <>
               <div class="crumbs">
+                <Show when={props.onClose}>
+                  <FocusZone id="detail-back">
+                    <FocusButton id="detail-back" class="chip-button back-chip" label={t('common.back')} onSelect={() => props.onClose!()}>
+                      <Icon name="back" />
+                    </FocusButton>
+                  </FocusZone>
+                </Show>
                 <Icon name="movie" />
                 <span class="accent">{t('tab.movies')}</span>
                 <Show when={categoryName()}>
@@ -226,7 +244,7 @@ export function VodDetailScreen(props: { id: string }): JSX.Element {
                   <div class="shelf version-cards">
                     <For each={versions()}>
                       {(v) => (
-                        <FocusButton id={`detail-v-${v.row.id}`} onSelect={() => navigate({ name: 'vod-detail', id: v.row.id })}>
+                        <FocusButton id={`detail-v-${v.row.id}`} onSelect={() => openOther(v.row.id)}>
                           <div class="version-title">
                             <bdi>{v.row.name}</bdi>
                           </div>
@@ -249,7 +267,7 @@ export function VodDetailScreen(props: { id: string }): JSX.Element {
                   <div class="shelf">
                     <For each={more()}>
                       {(m) => (
-                        <FocusButton id={`detail-m-${m.id}`} class="poster-card" onSelect={() => navigate({ name: 'vod-detail', id: m.id })}>
+                        <FocusButton id={`detail-m-${m.id}`} class="poster-card" onSelect={() => openOther(m.id)}>
                           <PosterTile title={m.name} poster={m.logo} year={m.year} rating={m.rating} progress={progressRatio(progress().get(`vod|${m.key}`))} />
                         </FocusButton>
                       )}

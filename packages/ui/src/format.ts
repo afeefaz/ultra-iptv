@@ -54,12 +54,6 @@ export function countsText(p: PlaylistRecord): string {
   });
 }
 
-/** Compact counts for the top bar: "300 ch · 200 mov". */
-export function shortCounts(p: PlaylistRecord): string {
-  const c = p.counts ?? {};
-  return t('status.short', { live: formatNumber(c.live ?? 0), vod: formatNumber(c.vod ?? 0) });
-}
-
 export function statusText(p: PlaylistRecord, isRefreshing: boolean): string {
   if (isRefreshing) return t('status.refreshing');
   if (p.lastError) return t('status.failed', { message: errorText(p.lastError) });

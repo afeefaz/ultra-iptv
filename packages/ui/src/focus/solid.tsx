@@ -1,5 +1,5 @@
 import { createContext, onCleanup, onMount, useContext, type JSX } from 'solid-js';
-import { FocusManager, type ZoneSpec } from './manager';
+import { FocusManager, type SelectSource, type ZoneSpec } from './manager';
 
 export const focusManager = new FocusManager();
 
@@ -21,7 +21,7 @@ export function FocusZone(props: Omit<ZoneSpec, 'parent'> & { children: JSX.Elem
 
 export interface FocusableOptions {
   id: string;
-  onSelect?: () => void;
+  onSelect?: (source: SelectSource) => void;
   onFocus?: () => void;
   autofocus?: boolean;
 }
@@ -36,8 +36,11 @@ export function useFocusable(opts: FocusableOptions): (el: HTMLElement) => void 
       id: opts.id,
       zone,
       el,
-      autofocus: opts.autofocus,
-      onSelect: () => opts.onSelect?.(),
+      // Read live: a list's "selected" row changes after it mounts.
+      get autofocus() {
+        return !!opts.autofocus;
+      },
+      onSelect: (source) => opts.onSelect?.(source),
       onFocus: () => opts.onFocus?.(),
     });
     onCleanup(off);

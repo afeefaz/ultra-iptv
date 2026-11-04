@@ -47,10 +47,20 @@ export interface TestResult {
 
 export interface RefreshProgress {
   playlistId: string;
-  kind: ContentKind;
-  count: number;
+  /** Weighted steps finished out of `total` (downloads and saves), for a percentage. */
+  done: number;
+  total: number;
+  /** What just finished: a download, or a section saved (`kind` + `count`). */
+  step: 'download' | 'saved';
+  kind?: ContentKind;
+  count?: number;
   stats?: WriteStats;
 }
+
+/** Step weights: big lists take longer to download and save than logins and category lists. */
+const W = { small: 1, list: 4, save: 3 };
+const XTREAM_TOTAL = W.small * 4 + W.list * 3 + W.save * 3;
+const M3U_TOTAL = W.list * 3 + W.save * 3;
 
 export interface RefreshResult {
   playlistId: string;
@@ -209,6 +219,8 @@ export class PlaylistService {
       type: record.type,
       server: secret.server,
       username: secret.username,
+      // Shown in the edit form as plain text (the user's choice: IPTV logins aren't treated as secrets in the UI).
+      password: secret.password,
       m3uUrl: secret.m3uUrl,
       userAgent: record.userAgent,
       refreshHours: record.refreshHours,
@@ -497,20 +509,27 @@ export class PlaylistService {
     const partial: ContentKind[] = [];
     let account: AccountInfo | undefined = record.account;
     let error: ErrorInfo | undefined;
+    const total = record.type === 'xtream' ? XTREAM_TOTAL : M3U_TOTAL;
+    let done = 0;
+    const step = (weight: number) => {
+      done += weight;
+      this.hooks.progress({ playlistId: id, done: Math.min(done, total), total, step: 'download' });
+    };
     try {
       const secret = await this.secret(id);
       const write = async <K extends ContentKind>(kind: K, built: Built<K>) => {
         const stats = await writeKind(db, id, kind, built);
         counts[kind] = built.items.length;
         this.searchCache.delete(id);
-        this.hooks.progress({ playlistId: id, kind, count: built.items.length, stats });
+        done += W.save;
+        this.hooks.progress({ playlistId: id, done: Math.min(done, total), total, step: 'saved', kind, count: built.items.length, stats });
         this.hooks.changed(id, [kind]);
         log.info('playlist', `${kind} saved`, { playlist: id, items: built.items.length, ...flatStats(stats) });
       };
       if (record.type === 'xtream') {
-        account = await this.refreshXtream(id, secret, record.userAgent, write, partial);
+        account = await this.refreshXtream(id, secret, record.userAgent, write, partial, step);
       } else {
-        await this.refreshM3u(id, secret, record.userAgent, write);
+        await this.refreshM3u(id, secret, record.userAgent, write, step);
       }
     } catch (e) {
       error = toErrorInfo(e);
@@ -539,16 +558,18 @@ export class PlaylistService {
     userAgent: string | undefined,
     write: <K extends ContentKind>(kind: K, built: Built<K>) => Promise<void>,
     partial: ContentKind[],
+    step: (weight: number) => void,
   ): Promise<AccountInfo> {
     const api = this.xtream(secret, userAgent);
     const limit = createLimiter(3);
-    const login = limit(() => api.login());
-    const liveCats = limit(api.liveCategories);
-    const live = limit(api.liveStreams);
-    const vodCats = limit(api.vodCategories);
-    const vod = limit(api.vodStreams);
-    const seriesCats = limit(api.seriesCategories);
-    const series = limit(api.series);
+    const counted = <T>(weight: number, p: Promise<T>) => p.then((v) => (step(weight), v));
+    const login = counted(W.small, limit(() => api.login()));
+    const liveCats = counted(W.small, limit(api.liveCategories));
+    const live = counted(W.list, limit(api.liveStreams));
+    const vodCats = counted(W.small, limit(api.vodCategories));
+    const vod = counted(W.list, limit(api.vodStreams));
+    const seriesCats = counted(W.small, limit(api.seriesCategories));
+    const series = counted(W.list, limit(api.series));
     // Avoid unhandled rejections for requests still queued when login fails.
     for (const p of [liveCats, live, vodCats, vod, seriesCats, series]) p.catch(() => undefined);
 
@@ -574,6 +595,7 @@ export class PlaylistService {
     secret: PlaylistSecret,
     userAgent: string | undefined,
     write: <K extends ContentKind>(kind: K, built: Built<K>) => Promise<void>,
+    step: (weight: number) => void,
   ): Promise<void> {
     const entries: M3uEntry[] = [];
     const parser = new M3uParser((e) => entries.push(e));
@@ -582,6 +604,7 @@ export class PlaylistService {
       timeoutMs: 120_000,
     });
     parser.end();
+    step(W.list * 3);
     if (!parser.sawHeader && entries.length === 0) {
       throw new AppError({ code: 'format', message: 'This address did not return an M3U playlist' });
     }

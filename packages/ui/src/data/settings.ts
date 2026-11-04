@@ -44,3 +44,13 @@ export type CategorySort = 'default' | 'az' | 'za' | 'count';
 export const [liveCatSort, setLiveCatSort] = persisted<CategorySort>('categories.sort.live', 'default');
 export const [vodCatSort, setVodCatSort] = persisted<CategorySort>('categories.sort.vod', 'default');
 export const [seriesCatSort, setSeriesCatSort] = persisted<CategorySort>('categories.sort.series', 'default');
+
+/** Movies and series open as a full page, or inside the grid area with the categories kept. */
+export type DetailMode = 'page' | 'inline';
+export const [detailMode, setDetailMode] = persisted<DetailMode>('vod.detailMode', 'page');
+
+/** Home sections the user can hide; "Explore library" always shows. */
+export type HomeSection = 'hero' | 'continue' | 'favorites' | 'recent';
+export const HOME_SECTIONS: HomeSection[] = ['hero', 'continue', 'favorites', 'recent'];
+export const [hiddenHomeSections, setHiddenHomeSections] = persisted<HomeSection[]>('home.hidden', []);
+export const homeShows = (section: HomeSection): boolean => hiddenHomeSections().indexOf(section) < 0;

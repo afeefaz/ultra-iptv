@@ -20,5 +20,5 @@ export type { SearchDoc, SearchResults } from './catalog/search';
 export type { RefreshProgress, RefreshResult, TestResult } from './catalog/service';
 export { fillUrl } from './catalog/stream-creds';
 export { normalizeText } from './catalog/hash';
-export { AppError, setFetch, toErrorInfo } from './net/http';
+export { AppError, setFallbackFetch, setFetch, toErrorInfo } from './net/http';
 export { parseXtreamUrl } from './sources/xtream';

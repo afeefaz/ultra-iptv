@@ -1,10 +1,11 @@
 import { log, parseXtreamUrl, type PlaylistInput, type PlaylistType, type TestResult } from '@ultra/core';
-import { createSignal, For, onMount, Show, type JSX } from 'solid-js';
+import { createSignal, For, onCleanup, onMount, Show, type JSX } from 'solid-js';
 import { FocusButton } from '../components/FocusButton';
+import { LoadingCard } from '../components/LoadingProgress';
 import { Icon } from '../components/Icon';
 import { TextField } from '../components/TextField';
 import { catalog } from '../data/catalog';
-import { playlists, refreshPlaylist, reloadPlaylists, setActivePlaylist } from '../data/playlists';
+import { refreshPlaylist, reloadPlaylists, setActivePlaylist } from '../data/playlists';
 import { FocusZone } from '../focus';
 import { formatDate, errorText } from '../format';
 import { formatNumber, t } from '../i18n';
@@ -30,7 +31,12 @@ export function PlaylistFormScreen(props: { id?: string }): JSX.Element {
   const [advanced, setAdvanced] = createSignal(false);
   const [phase, setPhase] = createSignal<Phase>('idle');
   const [message, setMessage] = createSignal<{ kind: 'ok' | 'error' | 'info'; text: string } | null>(null);
+  /** New playlist being loaded: the form shows its progress, then opens Live TV. */
+  const [loadingId, setLoadingId] = createSignal<string | null>(null);
+  /** Set once a new playlist is saved, so retrying after a failed load updates it (no duplicate). */
+  let savedId: string | undefined;
   const editing = !!props.id;
+  onCleanup(() => setLoadingId(null));
 
   onMount(async () => {
     if (!props.id) return;
@@ -40,6 +46,7 @@ export function PlaylistFormScreen(props: { id?: string }): JSX.Element {
       setName(data.name);
       setServer(data.server ?? '');
       setUsername(data.username ?? '');
+      setPassword(data.password ?? '');
       setM3uUrl(data.m3uUrl ?? '');
       setUserAgent(data.userAgent ?? '');
       setRefreshHours(data.refreshHours ?? 12);
@@ -66,7 +73,7 @@ export function PlaylistFormScreen(props: { id?: string }): JSX.Element {
   };
 
   const input = (): PlaylistInput => ({
-    id: props.id,
+    id: props.id ?? savedId,
     name: name(),
     type: type(),
     server: server(),
@@ -83,16 +90,30 @@ export function PlaylistFormScreen(props: { id?: string }): JSX.Element {
     setPhase('testing');
     setMessage(null);
     try {
-      const result: TestResult = await catalog().call('testPlaylist', input());
-      setMessage({ kind: 'ok', text: describe(result) });
+      const tested: TestResult = await catalog().call('testPlaylist', input());
+      setMessage({ kind: 'ok', text: describe(tested) });
       setPhase('saving');
       const record = await catalog().call('savePlaylist', input());
       await reloadPlaylists();
-      const first = playlists().length === 1;
-      if (first || !editing) setActivePlaylist(record.id);
-      void refreshPlaylist(record.id);
-      if (first) openRoot({ name: 'live' });
-      else goBack();
+      if (editing) {
+        void refreshPlaylist(record.id);
+        goBack();
+        return;
+      }
+      savedId = record.id;
+      setActivePlaylist(record.id);
+      setLoadingId(record.id);
+      const loaded = await refreshPlaylist(record.id);
+      // Still on this screen (Back leaves the load running in the background).
+      if (loadingId() !== record.id) return;
+      if (loaded && loaded.ok) {
+        openRoot({ name: 'live' });
+        return;
+      }
+      // Saved, but the catalogue didn't load: show why; "Test & save" retries.
+      setLoadingId(null);
+      setPhase('idle');
+      setMessage({ kind: 'error', text: errorText(loaded?.error ?? { code: 'network', message: '' }) });
     } catch (e) {
       log.warn('playlist', 'test or save failed', { error: e });
       setMessage({ kind: 'error', text: errorText(e) });
@@ -110,7 +131,8 @@ export function PlaylistFormScreen(props: { id?: string }): JSX.Element {
       </div>
       <h1 class="screen-title">{editing ? t('form.editTitle') : t('form.addTitle')}</h1>
       <p class="form-sub">{t('form.subtitle')}</p>
-      <div class="form-layout">
+      <Show when={loadingId()}>{(id) => <LoadingCard playlistId={id()} />}</Show>
+      <div class="form-layout" style={{ display: loadingId() ? 'none' : undefined }}>
         <FocusZone id="playlist-form" remember>
           <div class="form">
             <div class="segmented type-tabs" role="radiogroup">
@@ -159,15 +181,7 @@ export function PlaylistFormScreen(props: { id?: string }): JSX.Element {
               </div>
               <div class="field-card field-pair">
                 <TextField id="form-user" label={t('form.username')} value={username()} onChange={setUsername} />
-                <TextField
-                  id="form-pass"
-                  label={t('form.password')}
-                  type="password"
-                  value={password()}
-                  onChange={setPassword}
-                  hint={editing ? t('form.passwordKeep') : undefined}
-                  onSubmit={() => void testAndSave()}
-                />
+                <TextField id="form-pass" label={t('form.password')} value={password()} onChange={setPassword} onSubmit={() => void testAndSave()} />
               </div>
             </Show>
 

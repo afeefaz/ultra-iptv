@@ -3,6 +3,7 @@ import { createEffect, createMemo, createSignal, For, on, Show, type JSX } from 
 import { FocusButton } from '../components/FocusButton';
 import { Icon } from '../components/Icon';
 import { VirtualList, type VirtualListApi } from '../components/VirtualList';
+import type { DetailProps } from './VodDetailScreen';
 import { catalog } from '../data/catalog';
 import { episodeItem, episodeKey, episodesOf, progressRatio, resumePosition, useProgress, watch, type EpisodeEntry } from '../data/media';
 import { activePlaylist } from '../data/playlists';
@@ -11,7 +12,7 @@ import { errorText, formatDuration } from '../format';
 import { formatNumber, t } from '../i18n';
 
 /** Series page (spec §5): season tabs, episodes with per-episode progress, "Continue". */
-export function SeriesDetailScreen(props: { id: string }): JSX.Element {
+export function SeriesDetailScreen(props: DetailProps): JSX.Element {
   const [row, setRow] = createSignal<SeriesRow | null | undefined>(undefined);
   const [info, setInfo] = createSignal<SeriesInfo | null>(null);
   const [error, setError] = createSignal('');
@@ -108,7 +109,7 @@ export function SeriesDetailScreen(props: { id: string }): JSX.Element {
   const poster = () => info()?.poster ?? row()?.logo;
 
   return (
-    <div class="screen detail">
+    <div class="screen detail" classList={{ embedded: !!props.embedded }}>
       <Show when={info()?.backdrop}>
         {(src) => (
           <div class="detail-backdrop">
@@ -121,6 +122,13 @@ export function SeriesDetailScreen(props: { id: string }): JSX.Element {
           {(r) => (
             <>
               <div class="crumbs">
+                <Show when={props.onClose}>
+                  <FocusZone id="detail-back">
+                    <FocusButton id="detail-back" class="chip-button back-chip" label={t('common.back')} onSelect={() => props.onClose!()}>
+                      <Icon name="back" />
+                    </FocusButton>
+                  </FocusZone>
+                </Show>
                 <Icon name="series" />
                 <span class="accent">{t('tab.series')}</span>
                 <span class="sep">/</span>

@@ -1,4 +1,4 @@
-import { listPlaylists, log, type PlaylistRecord, type RefreshResult } from '@ultra/core';
+import { listPlaylists, log, type ContentKind, type PlaylistRecord, type RefreshResult } from '@ultra/core';
 import { createSignal } from 'solid-js';
 import { catalog, onCatalogEvent } from './catalog';
 
@@ -9,6 +9,15 @@ const [playlists, setPlaylists] = createSignal<PlaylistRecord[]>([]);
 const [loaded, setLoaded] = createSignal(false);
 const [activeIdSignal, setActiveIdSignal] = createSignal<string | null>(readActive());
 const [refreshing, setRefreshing] = createSignal<Record<string, boolean>>({});
+/** Loading progress of running refreshes (spec §5: the user sees what is happening). */
+export interface LoadProgress {
+  /** 0–100. */
+  percent: number;
+  saved: Partial<Record<ContentKind, number>>;
+}
+const [loadProgress, setLoadProgress] = createSignal<Record<string, LoadProgress>>({});
+export { loadProgress };
+
 /** Bumped whenever a playlist's catalogue changes; screens re-query on it. */
 const [catalogVersion, setCatalogVersion] = createSignal<Record<string, number>>({});
 
@@ -52,6 +61,7 @@ export function isStale(p: PlaylistRecord): boolean {
 /** Background refresh (spec §6): cached data stays on screen while this runs. */
 export async function refreshPlaylist(id: string): Promise<RefreshResult | null> {
   setRefreshing((r) => ({ ...r, [id]: true }));
+  setLoadProgress((p) => ({ ...p, [id]: { percent: 0, saved: {} } }));
   try {
     return await catalog().call('refresh', id);
   } catch (e) {
@@ -59,6 +69,11 @@ export async function refreshPlaylist(id: string): Promise<RefreshResult | null>
     return null;
   } finally {
     setRefreshing((r) => ({ ...r, [id]: false }));
+    setLoadProgress((p) => {
+      const next = { ...p };
+      delete next[id];
+      return next;
+    });
     void reloadPlaylists();
   }
 }
@@ -70,6 +85,15 @@ export function startPlaylists(): void {
   if (started) return;
   started = true;
   onCatalogEvent((e) => {
+    if (e.event === 'progress') {
+      const { playlistId, done, total, kind, count } = e.progress;
+      setLoadProgress((p) => {
+        const prev = p[playlistId] ?? { percent: 0, saved: {} };
+        const saved = kind && count !== undefined ? { ...prev.saved, [kind]: count } : prev.saved;
+        return { ...p, [playlistId]: { percent: Math.round((done / total) * 100), saved } };
+      });
+      return;
+    }
     if (e.event !== 'changed') return;
     // Only catalogue writes bump the version; favourites/metadata changes just reload the list.
     if (e.playlistId && e.kinds.length) bump(e.playlistId);

@@ -15,10 +15,52 @@ export function toErrorInfo(e: unknown): ErrorInfo {
 
 type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 let fetchImpl: FetchFn = (url, init) => fetch(url, init);
+let fallbackImpl: FetchFn | null = null;
+/** Origins that only work through the fallback; they skip the first attempt from then on. */
+const fallbackOrigins = new Set<string>();
 
-/** Platforms with native HTTP (Android, phase 4) and tests replace the transport here. */
+/** Tests replace the transport here. */
 export function setFetch(fn: FetchFn): void {
   fetchImpl = fn;
+}
+
+/**
+ * Platforms with native HTTP (Android) set it as a fallback: the page's own `fetch` is much faster
+ * (streams straight into the worker), so it's tried first, and native HTTP is used for providers
+ * that block browser requests (CORS) or when the connection fails.
+ */
+export function setFallbackFetch(fn: FetchFn | null): void {
+  fallbackImpl = fn;
+  fallbackOrigins.clear();
+}
+
+function originOf(url: string): string {
+  const m = /^[a-z]+:\/\/[^/]+/i.exec(url);
+  return m ? m[0].toLowerCase() : '';
+}
+
+/** Primary transport, then the fallback for failures without an HTTP answer. */
+async function send(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const origin = originOf(url);
+  if (fallbackImpl && fallbackOrigins.has(origin)) return sendFallback(url, init);
+  try {
+    return await fetchImpl(url, init);
+  } catch (e) {
+    if (!fallbackImpl || (init.signal && init.signal.aborted)) throw e;
+    log.info('net', 'using native HTTP for this server', { url: origin, timeoutMs });
+    fallbackOrigins.add(origin);
+    return sendFallback(url, init);
+  }
+}
+
+/** Native HTTP can hit a stale pooled connection ("unexpected end of stream"): retry once. */
+async function sendFallback(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fallbackImpl!(url, init);
+  } catch (e) {
+    if (init.signal && init.signal.aborted) throw e;
+    return fallbackImpl!(url, init);
+  }
 }
 
 export interface GetOptions {
@@ -40,7 +82,7 @@ async function request(url: string, opts: GetOptions): Promise<Response> {
   });
   try {
     const res = await Promise.race([
-      fetchImpl(url, { headers: opts.headers, signal: controller?.signal, credentials: 'omit', cache: 'no-store' }),
+      send(url, { headers: opts.headers, signal: controller?.signal, credentials: 'omit', cache: 'no-store' }, timeoutMs),
       timeout,
     ]);
     if (!res.ok) {

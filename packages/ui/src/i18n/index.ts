@@ -21,7 +21,8 @@ function savedLocale(): Locale {
 const [locale, setLocaleSignal] = createSignal<Locale>(savedLocale());
 export { locale };
 
-export const direction = () => (locale() === 'ar' ? 'rtl' : 'ltr');
+/** Layout direction: always left to right. Arabic is a translation only (the user's choice); text inside labels still reads right to left. */
+export const direction = (): 'ltr' | 'rtl' => 'ltr';
 
 export function applyLocaleToDocument(): void {
   document.documentElement.lang = locale();

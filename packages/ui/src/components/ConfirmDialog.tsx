@@ -20,7 +20,7 @@ export function ConfirmDialog(props: ConfirmDialogProps): JSX.Element {
     return true;
   });
   return (
-    <div class="dialog-backdrop">
+    <div class="dialog-backdrop" onClick={(e) => e.target === e.currentTarget && props.onCancel()}>
       <FocusZone id={props.id} trap>
         <div class="dialog" role="alertdialog" aria-modal="true">
           <p class="dialog-message">{props.message}</p>

@@ -1,5 +1,6 @@
-import { createSignal, Show, type JSX } from 'solid-js';
+import { createSignal, onCleanup, onMount, Show, type JSX } from 'solid-js';
 import { useFocusable } from '../focus';
+import { ensureVisible } from '../focus/scroll';
 import { direction, t } from '../i18n';
 import { usePlatform } from '../platform-context';
 import { OnScreenKeyboard } from './OnScreenKeyboard';
@@ -28,15 +29,34 @@ export function TextField(props: TextFieldProps): JSX.Element {
   const [open, setOpen] = createSignal(false);
   const [reveal, setReveal] = createSignal(false);
   let input: HTMLInputElement | undefined;
+  let box: HTMLDivElement | undefined;
+
+  // Phones: the page shrinks when the keyboard opens; keep the box being typed in visible.
+  onMount(() => {
+    const reveal = () => {
+      if (input && box && document.activeElement === input) ensureVisible(box, 40);
+    };
+    const onFocus = () => setTimeout(reveal, 350);
+    window.addEventListener('resize', reveal);
+    input?.addEventListener('focus', onFocus);
+    onCleanup(() => {
+      window.removeEventListener('resize', reveal);
+      input?.removeEventListener('focus', onFocus);
+    });
+  });
   const osk = platform.textInput === 'osk';
   const masked = () => props.type === 'password' && !reveal();
 
   const ref = useFocusable({
     id: props.id,
-    autofocus: props.autofocus,
-    onSelect: () => {
+    get autofocus() {
+      return props.autofocus;
+    },
+    onSelect: (source) => {
       if (osk) setOpen(true);
       else if (input && document.activeElement !== input) input.focus();
+      // A tap on the field that already has the keyboard: leave it alone.
+      else if (source === 'pointer') return;
       // OK / the keyboard's Done key inside the field: submit, or just leave the field so the
       // remote moves between fields again (Android TV keeps the D-pad in a focused input).
       else if (props.onSubmit) props.onSubmit();
@@ -52,7 +72,12 @@ export function TextField(props: TextFieldProps): JSX.Element {
         </label>
       </Show>
       <div class="field-row">
-        <div ref={ref} class="btn field-box" classList={{ 'is-empty': !props.value }}>
+        <div
+          ref={(el) => {
+            box = el;
+            ref(el);
+          }}
+          class="btn field-box" classList={{ 'is-empty': !props.value }}>
           <Show
             when={!osk}
             fallback={

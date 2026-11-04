@@ -15,6 +15,7 @@ import android.view.WindowManager;
 import android.widget.FrameLayout;
 
 import androidx.annotation.OptIn;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.media3.common.C;
 import androidx.media3.common.Format;
@@ -210,6 +211,10 @@ public class UltraPlayerPlugin extends Plugin {
             View webView = getBridge().getWebView();
             float density = webView.getResources().getDisplayMetrics().density;
             mode = next;
+            // True black beside full-screen video (the strip at the camera cutout), so the
+            // picture's black bars have no visible edge; the app's canvas colour otherwise.
+            getActivity().getWindow().getDecorView().setBackgroundColor(
+                "behind".equals(next) ? Color.BLACK : ContextCompat.getColor(getContext(), R.color.app_canvas));
             if ("hidden".equals(next)) {
                 container.setVisibility(View.GONE);
             } else if ("behind".equals(next)) {

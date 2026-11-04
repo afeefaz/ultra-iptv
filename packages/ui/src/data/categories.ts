@@ -1,5 +1,5 @@
 import { categoryPins, log, normalizeText, type ContentKind } from '@ultra/core';
-import { createEffect, createSignal, on, type Accessor } from 'solid-js';
+import { createEffect, createRoot, createSignal, on, type Accessor } from 'solid-js';
 import { catalog } from './catalog';
 import { activePlaylist } from './playlists';
 import {
@@ -20,27 +20,41 @@ export function categorySort(kind: ContentKind): [Accessor<CategorySort>, (v: Ca
   return [liveCatSort, setLiveCatSort];
 }
 
+// Pins are shared state per section: the category list and the pin button stay in sync.
+const pinStores: Partial<Record<ContentKind, { pins: Accessor<string[]>; set: (v: string[] | ((p: string[]) => string[])) => void }>> = {};
+
+function pinStore(kind: ContentKind) {
+  let store = pinStores[kind];
+  if (store) return store;
+  store = createRoot(() => {
+    const [pins, set] = createSignal<string[]>([]);
+    createEffect(
+      on(
+        () => activePlaylist()?.id,
+        (id) => {
+          if (!id) return set([]);
+          categoryPins(id, kind).then(set, (e) => log.warn('categories', 'could not load pins', { error: e }));
+        },
+      ),
+    );
+    return { pins, set };
+  });
+  pinStores[kind] = store;
+  return store;
+}
+
 /** Pinned category ids of the active playlist for one section, plus a toggle. */
 export function usePins(kind: ContentKind): { pins: Accessor<string[]>; toggle: (categoryId: string) => Promise<boolean> } {
-  const [pins, setPins] = createSignal<string[]>([]);
-  createEffect(
-    on(
-      () => activePlaylist()?.id,
-      (id) => {
-        if (!id) return setPins([]);
-        categoryPins(id, kind).then(setPins, (e) => log.warn('categories', 'could not load pins', { error: e }));
-      },
-    ),
-  );
+  const store = pinStore(kind);
   const toggle = async (categoryId: string) => {
     const id = activePlaylist()?.id;
     if (!id) return false;
     const pinned = await catalog().call('togglePin', id, kind, categoryId);
-    setPins((p) => (pinned ? p.concat(categoryId) : p.filter((c) => c !== categoryId)));
+    store.set((p) => (pinned ? p.concat(categoryId) : p.filter((c) => c !== categoryId)));
     log.debug('categories', pinned ? 'pinned' : 'unpinned', { kind });
     return pinned;
   };
-  return { pins, toggle };
+  return { pins: store.pins, toggle };
 }
 
 /** Pinned categories first (in pin order), then the rest in the chosen order. */

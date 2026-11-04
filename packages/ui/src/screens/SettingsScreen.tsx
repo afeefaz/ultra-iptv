@@ -7,15 +7,22 @@ import { lockedCategories, lockedChannels, pinSet, requestPin } from '../data/pa
 import { activePlaylist } from '../data/playlists';
 import {
   bufferProfile,
+  detailMode,
+  hiddenHomeSections,
+  HOME_SECTIONS,
+  homeShows,
   preferredAudio,
   preferredText,
   setBufferProfile,
+  setDetailMode,
+  setHiddenHomeSections,
   setPreferredAudio,
   setPreferredText,
   setStreamFormat,
   setSubtitleSize,
   streamFormat,
   subtitleSize,
+  type DetailMode,
   type SubtitleSize,
 } from '../data/settings';
 import { focusManager, FocusZone } from '../focus';
@@ -42,6 +49,8 @@ const SECTIONS: Section[] = [
   { id: 'general', icon: 'language', title: 'settings.language', first: () => `settings-lang-${locale()}` },
   { id: 'playback', icon: 'tune', title: 'settings.playback', first: () => `settings-format-${streamFormat()}` },
   { id: 'subtitles', icon: 'subtitles', title: 'settings.subtitles', first: () => `settings-subsize-${subtitleSize()}` },
+  { id: 'browsing', icon: 'grid', title: 'settings.browsing', first: () => `settings-detail-${detailMode()}` },
+  { id: 'home', icon: 'layers', title: 'settings.home', first: () => 'settings-home-hero' },
   { id: 'parental', icon: 'shield', title: 'settings.parental', first: () => (pinSet() ? 'settings-pin-change' : 'settings-pin-set') },
   { id: 'playlists', icon: 'playlist', title: 'settings.playlists', first: () => 'settings-playlists' },
   { id: 'about', icon: 'info', title: 'settings.about', first: () => 'settings-about' },
@@ -209,6 +218,46 @@ export function SettingsScreen(): JSX.Element {
                     {t('settings.forget')}
                   </FocusButton>
                 </Show>
+              </div>
+            </Card>
+
+            <Card section={section('browsing')}>
+              <div class="setting-name">{t('settings.detailMode')}</div>
+              <div class="setting-desc">{t('settings.detailModeDesc')}</div>
+              <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
+                <For each={['page', 'inline'] as DetailMode[]}>
+                  {(m) => (
+                    <FocusButton id={`settings-detail-${m}`} selected={detailMode() === m} onSelect={() => setDetailMode(m)}>
+                      <span class="option-card-text">
+                        <span class="option-card-title">{t(`settings.detail.${m}`)}</span>
+                        <span class="option-card-sub">{t(`settings.detail.${m}Sub`)}</span>
+                      </span>
+                      <Icon name={detailMode() === m ? 'checkCircle' : 'radioOff'} />
+                    </FocusButton>
+                  )}
+                </For>
+              </div>
+            </Card>
+
+            <Card section={section('home')} aside={t('settings.homeAside')}>
+              <div class="option-cards wrap">
+                <For each={HOME_SECTIONS}>
+                  {(h) => (
+                    <FocusButton
+                      id={`settings-home-${h}`}
+                      selected={homeShows(h)}
+                      onSelect={() =>
+                        setHiddenHomeSections(homeShows(h) ? hiddenHomeSections().concat(h) : hiddenHomeSections().filter((x) => x !== h))
+                      }
+                    >
+                      <span class="option-card-text">
+                        <span class="option-card-title">{t(`settings.homeSection.${h}`)}</span>
+                        <span class="option-card-sub">{homeShows(h) ? t('settings.shown') : t('settings.hidden')}</span>
+                      </span>
+                      <Icon name={homeShows(h) ? 'checkCircle' : 'radioOff'} />
+                    </FocusButton>
+                  )}
+                </For>
               </div>
             </Card>
 

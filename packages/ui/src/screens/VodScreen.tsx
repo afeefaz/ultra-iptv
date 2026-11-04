@@ -12,6 +12,7 @@ import {
 import { createEffect, createMemo, createSignal, on, onCleanup, Show, type JSX } from 'solid-js';
 import { CategoryRail } from '../components/CategoryRail';
 import { FocusButton } from '../components/FocusButton';
+import { PinButton } from '../components/PinButton';
 import { Icon } from '../components/Icon';
 import { TextField } from '../components/TextField';
 import { makeMatcher, normalizeText } from '../data/categories';
@@ -22,12 +23,14 @@ import { catalog } from '../data/catalog';
 import { ensureUnlocked, isCategoryLocked, lockedCategories, unlocked } from '../data/parental';
 import { progressRatio, useProgress } from '../data/media';
 import { activePlaylist, refreshing, versionOf } from '../data/playlists';
-import { setVodSort, vodSort, type SortBy } from '../data/settings';
-import { FocusZone } from '../focus';
+import { detailMode, setVodSort, vodSort, type SortBy } from '../data/settings';
+import { focusManager, FocusZone } from '../focus';
 import { formatLeft, statusText } from '../format';
 import { formatNumber, locale, t } from '../i18n';
 import { useKeys } from '../keys';
 import { navigate } from '../nav';
+import { SeriesDetailScreen } from './SeriesDetailScreen';
+import { VodDetailScreen } from './VodDetailScreen';
 
 type Kind = 'vod' | 'series';
 type Row = VodRow | SeriesRow;
@@ -45,6 +48,8 @@ const SORTS: SortBy[] = ['added', 'name', 'rating', 'year'];
 const lastCategory = new Map<string, string>();
 // Grid position per playlist+kind, so Back from a detail page lands on the same poster.
 const lastGridIndex = new Map<string, number | null>();
+// Title open next to the categories, so it's still open after playing it and coming back.
+const lastOpenId = new Map<string, string | null>();
 
 /** Movies and Series (spec §5): category rail | poster grid, sortable, with "Continue watching". */
 export function VodScreen(props: { kind: Kind }): JSX.Element {
@@ -52,7 +57,16 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
   const [cats, setCats] = createSignal<CategoryRow[]>([]);
   const [all, setAll] = createSignal<Row[]>([]);
   const [favKeys, setFavKeys] = createSignal<string[]>([]);
-  const [category, setCategory] = createSignal('all');
+  // Starts on the remembered category, so nothing flashes "All" (and resets) on the way back.
+  const [category, setCategory] = createSignal(lastCategory.get(`${activePlaylist()?.id ?? null}|${props.kind}`) ?? 'all');
+  /** Title open inside the grid area (Settings → Browsing → next to categories). */
+  const [openId, setOpenIdSignal] = createSignal<string | null>(
+    detailMode() === 'inline' ? (lastOpenId.get(`${activePlaylist()?.id ?? null}|${props.kind}`) ?? null) : null,
+  );
+  const setOpenId = (id: string | null) => {
+    setOpenIdSignal(id);
+    lastOpenId.set(memoryKey(), id);
+  };
   const [loading, setLoading] = createSignal(true);
   const [sortOpen, setSortOpen] = createSignal(false);
   const [focused, setFocused] = createSignal<Row | null>(null);
@@ -147,14 +161,23 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
     if (id === category()) return;
     setCategory(id);
     setQuery('');
+    // An open title stays open (Back shows the new category's grid).
     lastCategory.set(memoryKey(), id);
     lastGridIndex.set(memoryKey(), null);
     grid?.scrollToIndex(0);
   };
 
   const open = (row: Row) => {
+    if (detailMode() === 'inline') return setOpenId(row.id);
     if (props.kind === 'vod') navigate({ name: 'vod-detail', id: row.id });
     else navigate({ name: 'series-detail', id: row.id });
+  };
+
+  /** Back from a title shown in the grid area: the grid returns on the same poster. */
+  const closeInline = () => {
+    setOpenId(null);
+    const index = lastGridIndex.get(memoryKey());
+    setTimeout(() => grid?.focusIndex(index ?? 0), 0);
   };
 
   const toggleFavorite = async (row: Row | null) => {
@@ -165,7 +188,11 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
   };
 
   useKeys((press) => {
-    if (press.key === 'yellow') {
+    if (press.key === 'back' && openId()) {
+      closeInline();
+      return true;
+    }
+    if (press.key === 'yellow' && !openId()) {
       void toggleFavorite(focused());
       return true;
     }
@@ -213,71 +240,88 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
                   categories={railItems().slice(VIRTUAL.length)}
                   selected={category()}
                   onFocusRow={(c) => {
-                    lastGridIndex.set(memoryKey(), null);
                     clearTimeout(categoryTimer);
+                    if (c.id === category()) return;
                     if (!c.locked || unlocked()) categoryTimer = setTimeout(() => chooseCategory(c.id), CATEGORY_FOCUS_DELAY_MS);
                   }}
                   onOpen={async (c) => {
                     if (c.locked && !(await ensureUnlocked())) return;
                     chooseCategory(c.id);
-                    setTimeout(() => grid?.focusIndex(0), 0);
+                    // Remote: move into the grid. Touch: stay put (the finger is free to go anywhere).
+                    if (!focusManager.pointerMode) setTimeout(() => grid?.focusIndex(0), 0);
                   }}
                 />
               </FocusZone>
               <FocusZone id="vod-grid" remember>
                 <div class="pane pane-grid">
-                  <div class="pane-tools">
-                    <TextField
-                      id="vgrid-search"
-                      compact
-                      label={t('search.inCategory', { name: railItems().filter((c) => c.id === category())[0]?.name ?? '' })}
-                      value={query()}
-                      onChange={setQuery}
-                    />
-                    <span class="pill count">{t('vod.titles', { n: formatNumber(items().length) })}</span>
-                    <FocusButton id="vod-sort" class="sort-chip" onSelect={() => setSortOpen(true)}>
-                      <span>{t('vod.sort', { by: t(`sort.${vodSort()}`) })}</span>
-                      <Icon name="down" />
-                    </FocusButton>
-                  </div>
-                  <FocusStrip row={focused()} kind={props.kind} progress={focused() ? progress().get(`vod|${focused()!.key}`) : undefined} />
-                  <VirtualGrid
-                    id="vgrid"
-                    label={t(props.kind === 'vod' ? 'tab.movies' : 'tab.series')}
-                    items={items()}
-                    columns={COLUMNS}
-                    rowHeight={23}
-                    ref={(api) => (grid = api)}
-                    onFocusItem={(row, index) => {
-                      setFocused(row);
-                      lastGridIndex.set(memoryKey(), index);
-                    }}
-                    onSelect={open}
-                    empty={
-                      <p class="hint pane-empty">
-                        {loading() || isRefreshing()
-                          ? t('vod.loading')
-                          : hidden()
-                            ? t('live.lockedCategory')
-                            : category() === 'fav'
-                              ? t('vod.emptyFav')
-                              : category() === 'continue'
-                                ? t('vod.emptyContinue')
-                                : t('vod.empty')}
-                      </p>
-                    }
-                    renderItem={(row) => (
-                      <PosterTile
-                        title={row.name}
-                        poster={row.logo}
-                        year={row.year}
-                        rating={row.rating}
-                        progress={progressOf(row)}
-                        watched={props.kind === 'vod' && !!progress().get(`vod|${row.key}`)?.watched}
-                        favorite={favSet().has(row.key)}
+                  <Show
+                    when={openId()}
+                    fallback={
+                      <>
+                      <div class="pane-tools">
+                        <TextField
+                          id="vgrid-search"
+                          compact
+                          label={t('search.inCategory', { name: railItems().filter((c) => c.id === category())[0]?.name ?? '' })}
+                          value={query()}
+                          onChange={setQuery}
+                        />
+                        <PinButton id="vod-pin" kind={props.kind} categoryId={category()} pinnable={VIRTUAL.indexOf(category()) < 0} />
+                        <span class="pill count">{t('vod.titles', { n: formatNumber(items().length) })}</span>
+                        <FocusButton id="vod-sort" class="sort-chip" onSelect={() => setSortOpen(true)}>
+                          <span>{t('vod.sort', { by: t(`sort.${vodSort()}`) })}</span>
+                          <Icon name="down" />
+                        </FocusButton>
+                      </div>
+                      <FocusStrip row={focused()} kind={props.kind} progress={focused() ? progress().get(`vod|${focused()!.key}`) : undefined} />
+                      <VirtualGrid
+                        id="vgrid"
+                        label={t(props.kind === 'vod' ? 'tab.movies' : 'tab.series')}
+                        items={items()}
+                        columns={COLUMNS}
+                        rowHeight={23}
+                        ref={(api) => (grid = api)}
+                        onFocusItem={(row, index) => {
+                          setFocused(row);
+                          lastGridIndex.set(memoryKey(), index);
+                        }}
+                        onSelect={open}
+                        empty={
+                          <p class="hint pane-empty">
+                            {loading() || isRefreshing()
+                              ? t('vod.loading')
+                              : hidden()
+                                ? t('live.lockedCategory')
+                                : category() === 'fav'
+                                  ? t('vod.emptyFav')
+                                  : category() === 'continue'
+                                    ? t('vod.emptyContinue')
+                                    : t('vod.empty')}
+                          </p>
+                        }
+                        renderItem={(row) => (
+                          <PosterTile
+                            title={row.name}
+                            poster={row.logo}
+                            year={row.year}
+                            rating={row.rating}
+                            progress={progressOf(row)}
+                            watched={props.kind === 'vod' && !!progress().get(`vod|${row.key}`)?.watched}
+                            favorite={favSet().has(row.key)}
+                          />
+                        )}
                       />
-                    )}
-                  />
+                      </>
+                    }
+                  >
+                    {(id) =>
+                      props.kind === 'vod' ? (
+                        <VodDetailScreen id={id()} embedded onOpen={setOpenId} onClose={closeInline} />
+                      ) : (
+                        <SeriesDetailScreen id={id()} embedded onOpen={setOpenId} onClose={closeInline} />
+                      )
+                    }
+                  </Show>
                 </div>
               </FocusZone>
             </div>

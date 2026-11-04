@@ -3,6 +3,7 @@ import type { KeyPress, Platform } from '@ultra/platform';
 import { createEffect, createSignal, For, Match, on, onCleanup, onMount, Show, Switch, type JSX } from 'solid-js';
 import { FocusButton } from './components/FocusButton';
 import { Icon } from './components/Icon';
+import { LoadingLine } from './components/LoadingProgress';
 import { PickerDialog } from './components/PickerDialog';
 import { PinHost } from './components/PinDialog';
 import { VideoLayer } from './components/VideoLayer';
@@ -13,7 +14,7 @@ import { playingPlaylistId, stopPlayback } from './data/playback';
 import { activePlaylist, playlists, setActivePlaylist, startPlaylists } from './data/playlists';
 import { DebugScreen } from './debug/DebugScreen';
 import { CONTENT_ZONE, focusManager, FocusZone } from './focus';
-import { countsText, shortCounts } from './format';
+import { countsText } from './format';
 import { applyLocaleToDocument, direction, locale, t } from './i18n';
 import { dispatchKey } from './keys';
 import { currentRoute, goBack, navigate, switchTab, tabOf, TABS, type Route, type Tab } from './nav';
@@ -127,6 +128,7 @@ export function App(props: { platform: Platform }): JSX.Element {
             </div>
           </header>
         </FocusZone>
+        <LoadingLine />
         <FocusZone id={CONTENT_ZONE}>
           <main class="content">
             <Switch>
@@ -204,7 +206,6 @@ function PlaylistSwitcher(): JSX.Element {
         <span class="playlist-chip-name">
           <bdi>{activePlaylist()?.name ?? t('playlists.none')}</bdi>
         </span>
-        <Show when={activePlaylist()}>{(p) => <span class="playlist-chip-counts">{shortCounts(p())}</span>}</Show>
         <Icon name="down" />
       </FocusButton>
       <Show when={open()}>

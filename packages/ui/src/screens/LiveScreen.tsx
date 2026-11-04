@@ -11,6 +11,7 @@ import {
 import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, type JSX } from 'solid-js';
 import { CategoryRail } from '../components/CategoryRail';
 import { ChannelLogo } from '../components/ChannelLogo';
+import { PinButton } from '../components/PinButton';
 import { Icon, type IconName } from '../components/Icon';
 import { TextField } from '../components/TextField';
 import { makeMatcher, normalizeText } from '../data/categories';
@@ -52,6 +53,8 @@ const ZAP_DELAY_MS = 1500;
 const CATEGORY_FOCUS_DELAY_MS = 250;
 // Last category per playlist, kept for the session.
 const lastCategory = new Map<string, CategoryId>();
+// Last channel the cursor was on, per playlist, so coming back lands on it.
+const lastChannelKey = new Map<string, string>();
 
 /** IB-style three panes (spec §5): categories | channels | preview + info. */
 export function LiveScreen(props: { focusKey?: string }): JSX.Element {
@@ -61,7 +64,8 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
   const [all, setAll] = createSignal<ChannelRow[]>([]);
   const [favKeys, setFavKeys] = createSignal<string[]>([]);
   const [recent, setRecent] = createSignal<string[]>([]);
-  const [category, setCategory] = createSignal<CategoryId>('all');
+  // Starts on the remembered category, so nothing flashes "All" (and resets) on the way back.
+  const [category, setCategory] = createSignal<CategoryId>(lastCategory.get(activePlaylist()?.id ?? '') ?? 'all');
   const [focused, setFocused] = createSignal<ChannelRow | null>(null);
   const [focusedCategory, setFocusedCategory] = createSignal<CategoryItem | null>(null);
   const [loading, setLoading] = createSignal(true);
@@ -70,7 +74,7 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
   const [channelQuery, setChannelQuery] = createSignal('');
   let channelList: VirtualListApi | undefined;
   // Coming back from full screen lands on the playing channel.
-  let pendingFocusKey = props.focusKey ?? playingChannel()?.key;
+  let pendingFocusKey = props.focusKey ?? playingChannel()?.key ?? lastChannelKey.get(activePlaylist()?.id ?? '');
   let loadSeq = 0;
 
   const favSet = createMemo(() => new Set(favKeys()));
@@ -186,7 +190,8 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
   const openCategory = async (c: CategoryItem) => {
     if (c.locked && !(await ensureUnlocked())) return;
     chooseCategory(c.id);
-    setTimeout(() => channelList?.focusIndex(0), 0);
+    // Remote: move into the channels. Touch: stay put.
+    if (!focusManager.pointerMode) setTimeout(() => channelList?.focusIndex(0), 0);
   };
 
   /** OK on a channel plays it in the preview; OK on the playing channel goes full screen. */
@@ -336,6 +341,7 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
                   onFocusRow={(c) => {
                     setFocusedCategory(c);
                     clearTimeout(categoryTimer);
+                    if (c.id === category()) return;
                     // Locked categories only open with OK + PIN, never on focus.
                     if (!c.locked || unlocked()) categoryTimer = setTimeout(() => chooseCategory(c.id), CATEGORY_FOCUS_DELAY_MS);
                   }}
@@ -352,6 +358,7 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
                       value={channelQuery()}
                       onChange={setChannelQuery}
                     />
+                    <PinButton id="live-pin" kind="live" categoryId={category()} pinnable={VIRTUAL.indexOf(category()) < 0} />
                   </div>
                   <VirtualList
                     id="lch"
@@ -360,7 +367,10 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
                     rowHeight={isXtream() ? 3.9 : 3.4}
                     ref={(api) => (channelList = api)}
                     rowClass={(c) => (playingChannel()?.key === c.key ? 'list-item channel-row is-selected' : 'list-item channel-row')}
-                    onFocusRow={(c) => setFocused(c)}
+                    onFocusRow={(c) => {
+                      setFocused(c);
+                      lastChannelKey.set(c.playlistId, c.key);
+                    }}
                     onSelect={(c) => void selectChannel(c)}
                     empty={
                       <p class="hint pane-empty">

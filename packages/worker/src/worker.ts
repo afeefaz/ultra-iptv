@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 // Catalogue worker (spec §3): fetches and parses playlists, diffs and writes IndexedDB, searches.
 // Built as a classic (non-module) worker without polyfills: keep to Chrome 53 built-ins here.
-import { AppError, log, logging, setFetch, toErrorInfo } from '@ultra/core';
+import { log, logging, setFallbackFetch, toErrorInfo } from '@ultra/core';
 import { PlaylistService } from '@ultra/core/service';
 import type { FromWorker, HttpReplyMessage, Method, ToWorker, WorkerApi } from './protocol';
 
@@ -31,7 +31,8 @@ function nativeFetch(url: string, init?: RequestInit): Promise<Response> {
     post({ event: 'http', reqId, url, headers: init?.headers as Record<string, string> | undefined, timeoutMs: NATIVE_TIMEOUT_MS });
   }).then((reply) => {
     if (reply.error !== undefined || reply.status === undefined) {
-      throw new AppError({ code: 'network', message: reply.error || 'Network error' });
+      // Plain Error: the HTTP layer classifies it (and retries once) like a fetch failure.
+      throw new Error(reply.error || 'Network error');
     }
     return new Response(reply.body ?? '', { status: reply.status });
   });
@@ -41,7 +42,7 @@ const api: WorkerApi = {
   async init({ saltHex, keepHosts, logLevel, nativeHttp }) {
     logging.configureWorker(saltHex, keepHosts);
     log.setLevel(logLevel);
-    if (nativeHttp) setFetch(nativeFetch);
+    if (nativeHttp) setFallbackFetch(nativeFetch);
     await service.init();
   },
   async setLogLevel(level) {

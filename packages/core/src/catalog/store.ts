@@ -28,8 +28,16 @@ export async function writeKind<K extends ContentKind>(
   const store = tx.objectStore(kind);
   const favStore = tx.objectStore('favorites');
 
-  await categories.delete(categoryRange(playlistId, kind));
-  for (const c of built.categories) await categories.put(c);
+  // Requests are queued without awaiting each one: one IndexedDB round trip per row made a
+  // 50,000-row first load take tens of seconds on phones. Errors still abort the transaction.
+  const pending: Array<Promise<unknown>> = [];
+  // Failures surface through Promise.all below (and abort the transaction); don't report them twice.
+  const track = (p: Promise<unknown>) => {
+    p.catch(() => undefined);
+    pending.push(p);
+  };
+  track(categories.delete(categoryRange(playlistId, kind)));
+  for (const c of built.categories) track(categories.put(c));
 
   const existing = new Map<string, string>();
   for (const row of (await store.getAll(playlistRange(playlistId))) as Array<{ id: string; sig: string }>) {
@@ -45,23 +53,24 @@ export async function writeKind<K extends ContentKind>(
       continue;
     }
     // The generic store type can't follow K through the union; rows are built for this kind.
-    await (store.put as (value: unknown) => Promise<unknown>)(item);
+    track((store.put as (value: unknown) => Promise<unknown>)(item));
     if (sig === undefined) stats.added++;
     else stats.updated++;
   }
   for (const id of Array.from(existing.keys())) {
     if (fresh.has(id)) continue;
-    await store.delete([playlistId, id]);
+    track(store.delete([playlistId, id]));
     stats.removed++;
   }
 
   const favorites = await favStore.index('byPlaylistKind').getAll([playlistId, kind]);
   const rematch: Rematch = rematchFavorites(favorites, built.items);
   for (const { from, to } of rematch.moved) {
-    await favStore.delete([from.playlistId, from.kind, from.key]);
-    await favStore.put(to);
+    track(favStore.delete([from.playlistId, from.kind, from.key]));
+    track(favStore.put(to));
   }
   stats.favorites = { moved: rematch.moved.length, lost: rematch.lost.length };
+  await Promise.all(pending);
   await tx.done;
   return stats;
 }

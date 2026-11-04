@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The canvas colour of the page (see :root in styles.css). -->
+    <color name="app_canvas">#080A10</color>
+</resources>

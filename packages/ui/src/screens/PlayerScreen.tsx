@@ -265,6 +265,13 @@ function LivePlayer(): JSX.Element {
         <PausedPill />
       </Show>
       <Show when={miniList()}>
+        <div
+          class="sheet-backdrop"
+          onClick={(e) => {
+            e.stopPropagation();
+            setMiniList(false);
+          }}
+        />
         <MiniChannelList onPick={() => setMiniList(false)} />
       </Show>
       <Show when={sheet()}>
@@ -405,10 +412,44 @@ function MediaPlayer(): JSX.Element {
     }
   });
 
+  /** Position under the finger/mouse while dragging the seek bar (seconds), else null. */
+  const [dragAt, setDragAt] = createSignal<number | null>(null);
+  const shownTime = () => dragAt() ?? playbackPosition().current;
   const ratio = () => {
     const p = playbackPosition();
-    return p.duration ? Math.min(1, p.current / p.duration) : 0;
+    return p.duration ? Math.min(1, shownTime() / p.duration) : 0;
   };
+
+  // Touch and mouse events (Chrome 53 has no pointer events). Seeks once, on release.
+  let bar: HTMLSpanElement | undefined;
+  const timeAt = (clientX: number) => {
+    const d = playbackPosition().duration;
+    if (!bar || !d) return null;
+    const r = bar.getBoundingClientRect();
+    return Math.max(0, Math.min(1, (clientX - r.left) / r.width)) * d;
+  };
+  const dragStart = (clientX: number) => {
+    showOverlay();
+    setDragAt(timeAt(clientX));
+  };
+  const dragMove = (clientX: number) => {
+    if (dragAt() === null) return;
+    showOverlay();
+    setDragAt(timeAt(clientX));
+  };
+  const dragEnd = () => {
+    const at = dragAt();
+    setDragAt(null);
+    if (at !== null) seekTo(at);
+  };
+  const onMouseMove = (e: MouseEvent) => dragMove(e.clientX);
+  const onMouseUp = () => dragAt() !== null && dragEnd();
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('mouseup', onMouseUp);
+  onCleanup(() => {
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('mouseup', onMouseUp);
+  });
 
   return (
     <div
@@ -446,28 +487,37 @@ function MediaPlayer(): JSX.Element {
               <div class="seek-panel" dir="ltr">
                 <div class="seek-head">
                   <span>
-                    <span class="seek-now">{formatDuration(playbackPosition().current)}</span>
+                    <span class="seek-now">{formatDuration(shownTime())}</span>
                     <span class="seek-total">/ {playbackPosition().duration ? formatDuration(playbackPosition().duration) : '--:--'}</span>
                     <Show when={playbackPosition().duration}>
                       <span class="pill">{t('player.watchedPct', { n: formatNumber(Math.round(ratio() * 100)) })}</span>
                     </Show>
                   </span>
                   <Show when={playbackPosition().duration}>
-                    <span class="seek-remaining">−{formatDuration(playbackPosition().duration - playbackPosition().current)}</span>
+                    <span class="seek-remaining">−{formatDuration(playbackPosition().duration - shownTime())}</span>
                   </Show>
                 </div>
                 <div class="seek-row">
                   <span
                     class="progress seek-bar"
+                    classList={{ dragging: dragAt() !== null }}
+                    ref={(el) => (bar = el)}
                     role="slider"
                     aria-valuemin={0}
                     aria-valuemax={Math.round(playbackPosition().duration)}
-                    aria-valuenow={Math.round(playbackPosition().current)}
-                    onClick={(e) => {
-                      const r = e.currentTarget.getBoundingClientRect();
-                      const d = playbackPosition().duration;
-                      if (d && r.width) seekTo(((e.clientX - r.left) / r.width) * d);
+                    aria-valuenow={Math.round(shownTime())}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      dragStart(e.clientX);
                     }}
+                    onTouchStart={(e) => dragStart(e.touches[0].clientX)}
+                    onTouchMove={(e) => {
+                      e.preventDefault();
+                      dragMove(e.touches[0].clientX);
+                    }}
+                    onTouchEnd={() => dragEnd()}
+                    onTouchCancel={() => setDragAt(null)}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <span class="progress-fill" style={{ width: `${Math.round(ratio() * 1000) / 10}%` }}>
                       <span class="seek-handle" />

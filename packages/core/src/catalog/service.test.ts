@@ -43,7 +43,7 @@ beforeEach(() => {
   events = [];
   service = new PlaylistService({
     changed: (id, kinds) => events.push(`changed:${id}:${kinds.join(',')}`),
-    progress: (p) => events.push(`progress:${p.kind}:${p.count}`),
+    progress: (p) => events.push(p.step === 'saved' ? `progress:${p.kind}:${p.count}` : `step:${p.done}/${p.total}`),
     secrets: () => undefined,
   });
 });
@@ -73,6 +73,10 @@ describe('PlaylistService (Xtream)', () => {
     expect(result).toMatchObject({ ok: true, counts: { live: 300, vod: 200, series: 60 } });
     expect(maxActive).toBe(3);
     expect(events.filter((e) => e.startsWith('progress'))[0]).toBe('progress:live:300');
+    // Percentage steps only go up and end at 100 %.
+    const steps = events.filter((e) => e.startsWith('step') || e.startsWith('progress'));
+    expect(steps.length).toBe(10);
+    expect(events.filter((e) => e.startsWith('step')).every((e, i, all) => i === 0 || Number(e.split(/[:/]/)[1]) > Number(all[i - 1].split(/[:/]/)[1]))).toBe(true);
     expect(await listItems(rec.id, 'live', null)).toHaveLength(300);
     expect((await listCategories(rec.id, 'live')).length).toBe(12);
     expect((await listPlaylists())[0]).toMatchObject({ counts: { live: 300 }, account: { status: 'Active' } });
