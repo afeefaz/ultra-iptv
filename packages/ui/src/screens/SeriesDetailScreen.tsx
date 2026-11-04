@@ -1,5 +1,6 @@
 import { favoriteKeys, getItem, log, type SeriesInfo, type SeriesRow } from '@ultra/core';
 import { createEffect, createMemo, createSignal, For, on, Show, type JSX } from 'solid-js';
+import { BackButton } from '../components/BackButton';
 import { FocusButton } from '../components/FocusButton';
 import { Icon } from '../components/Icon';
 import { VirtualList, type VirtualListApi } from '../components/VirtualList';
@@ -122,13 +123,7 @@ export function SeriesDetailScreen(props: DetailProps): JSX.Element {
           {(r) => (
             <>
               <div class="crumbs">
-                <Show when={props.onClose}>
-                  <FocusZone id="detail-back">
-                    <FocusButton id="detail-back" class="chip-button back-chip" label={t('common.back')} onSelect={() => props.onClose!()}>
-                      <Icon name="back" />
-                    </FocusButton>
-                  </FocusZone>
-                </Show>
+                <BackButton onBack={props.onClose} />
                 <Icon name="series" />
                 <span class="accent">{t('tab.series')}</span>
                 <span class="sep">/</span>

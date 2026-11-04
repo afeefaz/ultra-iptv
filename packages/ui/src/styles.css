@@ -3460,15 +3460,47 @@ h3 {
   font-size: 2.4rem;
 }
 
-.crumbs .back-chip {
-  margin-right: 0.9rem;
-  padding: 0.3rem 0.7rem;
+.back-chip {
+  position: relative;
+  flex-shrink: 0;
+  margin-right: 1.2rem;
+  padding: 0.5rem 1.1rem 0.5rem 0.8rem;
+  font-size: 1.1rem;
   letter-spacing: 0;
+  text-transform: none;
 }
 
-.crumbs .back-chip .icon {
+.crumbs .back-chip .icon,
+.back-chip .icon {
   margin: 0;
   color: inherit;
+}
+
+/* Bigger tap area than the button looks: the UI scales down a lot on phones. */
+.back-chip:after {
+  content: '';
+  position: absolute;
+  top: -0.8rem;
+  right: -0.6rem;
+  bottom: -0.8rem;
+  left: -1.2rem;
+}
+
+.title-with-back {
+  display: flex;
+  align-items: center;
+}
+
+.title-with-back .screen-title {
+  margin: 0;
+}
+
+.about .title-with-back {
+  margin-bottom: 1rem;
+}
+
+.setting-gap {
+  margin-top: 1.3rem;
 }
 
 .option-cards.wrap {

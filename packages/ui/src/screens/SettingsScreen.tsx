@@ -11,11 +11,13 @@ import {
   hiddenHomeSections,
   HOME_SECTIONS,
   homeShows,
+  keepTitleOpen,
   preferredAudio,
   preferredText,
   setBufferProfile,
   setDetailMode,
   setHiddenHomeSections,
+  setKeepTitleOpen,
   setPreferredAudio,
   setPreferredText,
   setStreamFormat,
@@ -237,6 +239,23 @@ export function SettingsScreen(): JSX.Element {
                   )}
                 </For>
               </div>
+              <Show when={detailMode() === 'inline'}>
+                <div class="setting-name setting-gap">{t('settings.keepOpen')}</div>
+                <div class="setting-desc">{t('settings.keepOpenDesc')}</div>
+                <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
+                  <For each={[true, false]}>
+                    {(keep) => (
+                      <FocusButton id={`settings-keep-${keep}`} selected={keepTitleOpen() === keep} onSelect={() => setKeepTitleOpen(keep)}>
+                        <span class="option-card-text">
+                          <span class="option-card-title">{t(keep ? 'settings.keepOpen.on' : 'settings.keepOpen.off')}</span>
+                          <span class="option-card-sub">{t(keep ? 'settings.keepOpen.onSub' : 'settings.keepOpen.offSub')}</span>
+                        </span>
+                        <Icon name={keepTitleOpen() === keep ? 'checkCircle' : 'radioOff'} />
+                      </FocusButton>
+                    )}
+                  </For>
+                </div>
+              </Show>
             </Card>
 
             <Card section={section('home')} aside={t('settings.homeAside')}>

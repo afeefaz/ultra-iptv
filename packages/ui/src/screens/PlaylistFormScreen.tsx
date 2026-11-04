@@ -1,5 +1,6 @@
 import { log, parseXtreamUrl, type PlaylistInput, type PlaylistType, type TestResult } from '@ultra/core';
 import { createSignal, For, onCleanup, onMount, Show, type JSX } from 'solid-js';
+import { BackButton } from '../components/BackButton';
 import { FocusButton } from '../components/FocusButton';
 import { LoadingCard } from '../components/LoadingProgress';
 import { Icon } from '../components/Icon';
@@ -124,6 +125,7 @@ export function PlaylistFormScreen(props: { id?: string }): JSX.Element {
   return (
     <div class="screen form-screen">
       <div class="crumbs">
+        <BackButton />
         <Icon name="playlist" />
         <span class="accent">{t('settings.playlists')}</span>
         <span class="sep">/</span>

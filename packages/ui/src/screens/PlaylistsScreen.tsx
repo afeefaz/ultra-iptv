@@ -1,6 +1,7 @@
 import type { PlaylistRecord } from '@ultra/core';
 import { createSignal, For, Show, type JSX } from 'solid-js';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { BackButton } from '../components/BackButton';
 import { FocusButton } from '../components/FocusButton';
 import { catalog } from '../data/catalog';
 import { activePlaylist, playlists, refreshing, refreshPlaylist, reloadPlaylists, setActivePlaylist } from '../data/playlists';
@@ -26,7 +27,10 @@ export function PlaylistsScreen(): JSX.Element {
   return (
     <div class="screen playlists">
       <div class="screen-header-row">
-        <h1 class="screen-title">{t('playlists.title')}</h1>
+        <div class="title-with-back">
+          <BackButton />
+          <h1 class="screen-title">{t('playlists.title')}</h1>
+        </div>
         <FocusZone id="playlists-top">
           <FocusButton id="playlists-add" class="btn-primary" autofocus={playlists().length === 0} onSelect={() => navigate({ name: 'playlist-form' })}>
             + {t('playlists.add')}

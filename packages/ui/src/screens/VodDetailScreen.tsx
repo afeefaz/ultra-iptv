@@ -1,5 +1,6 @@
 import { favoriteKeys, getItem, listCategories, listItems, log, versionKey, type VodInfo, type VodRow } from '@ultra/core';
 import { createEffect, createMemo, createSignal, For, on, Show, type JSX } from 'solid-js';
+import { BackButton } from '../components/BackButton';
 import { FocusButton } from '../components/FocusButton';
 import { Icon } from '../components/Icon';
 import { PosterTile, qualityOf } from '../components/PosterTile';
@@ -105,13 +106,7 @@ export function VodDetailScreen(props: DetailProps): JSX.Element {
           {(r) => (
             <>
               <div class="crumbs">
-                <Show when={props.onClose}>
-                  <FocusZone id="detail-back">
-                    <FocusButton id="detail-back" class="chip-button back-chip" label={t('common.back')} onSelect={() => props.onClose!()}>
-                      <Icon name="back" />
-                    </FocusButton>
-                  </FocusZone>
-                </Show>
+                <BackButton onBack={props.onClose} />
                 <Icon name="movie" />
                 <span class="accent">{t('tab.movies')}</span>
                 <Show when={categoryName()}>

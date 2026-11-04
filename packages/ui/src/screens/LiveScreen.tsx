@@ -55,6 +55,8 @@ const CATEGORY_FOCUS_DELAY_MS = 250;
 const lastCategory = new Map<string, CategoryId>();
 // Last channel the cursor was on, per playlist, so coming back lands on it.
 const lastChannelKey = new Map<string, string>();
+// Search text per playlist, so it survives full screen, catch-up and other screens.
+const lastChannelQuery = new Map<string, string>();
 
 /** IB-style three panes (spec §5): categories | channels | preview + info. */
 export function LiveScreen(props: { focusKey?: string }): JSX.Element {
@@ -71,7 +73,13 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
   const [loading, setLoading] = createSignal(true);
   const [digits, setDigits] = createSignal('');
   const [toast, setToast] = createSignal('');
-  const [channelQuery, setChannelQuery] = createSignal('');
+  // Jumping to a specific channel (from Home) can't keep a search that might hide it.
+  if (props.focusKey) lastChannelQuery.set(activePlaylist()?.id ?? '', '');
+  const [channelQuery, setChannelQuerySignal] = createSignal(lastChannelQuery.get(activePlaylist()?.id ?? '') ?? '');
+  const setChannelQuery = (q: string) => {
+    setChannelQuerySignal(q);
+    lastChannelQuery.set(activePlaylist()?.id ?? '', q);
+  };
   let channelList: VirtualListApi | undefined;
   // Coming back from full screen lands on the playing channel.
   let pendingFocusKey = props.focusKey ?? playingChannel()?.key ?? lastChannelKey.get(activePlaylist()?.id ?? '');
@@ -142,6 +150,7 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
         setFavKeys(favs);
         setRecent(rec);
         const remembered = lastCategory.get(id);
+        setChannelQuerySignal(lastChannelQuery.get(id) ?? '');
         if (pendingFocusKey && !(remembered && channelsIn(remembered).some((ch) => ch.key === pendingFocusKey))) setCategory('all');
         else setCategory(remembered ?? (favs.length ? 'fav' : 'all'));
         timer.end({ channels: items.length, categories: c.length }, 'debug');

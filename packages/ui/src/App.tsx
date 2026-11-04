@@ -17,7 +17,7 @@ import { CONTENT_ZONE, focusManager, FocusZone } from './focus';
 import { countsText } from './format';
 import { applyLocaleToDocument, direction, locale, t } from './i18n';
 import { dispatchKey } from './keys';
-import { currentRoute, goBack, navigate, switchTab, tabOf, TABS, type Route, type Tab } from './nav';
+import { currentRoute, goBack, navigate, onBackNavigated, switchTab, tabOf, TABS, type Route, type Tab } from './nav';
 import { PlatformContext } from './platform-context';
 import { AboutScreen } from './screens/AboutScreen';
 import { CatchupScreen } from './screens/CatchupScreen';
@@ -38,6 +38,7 @@ const focusByRoute = new Map<string, string>();
 export function App(props: { platform: Platform }): JSX.Element {
   applyLocaleToDocument();
   setCatalogPlatform(props.platform);
+  onBackNavigated(restoreFocus);
 
   const stopFocusTracking = focusManager.onChange((id) => {
     if (id && focusManager.isInZone(id, CONTENT_ZONE)) focusByRoute.set(currentRoute().name, id);
@@ -74,7 +75,6 @@ export function App(props: { platform: Platform }): JSX.Element {
           props.platform.exit?.();
           return !!props.platform.exit;
         }
-        restoreFocus(currentRoute());
         return true;
       default:
         return false;

@@ -1,5 +1,6 @@
 import { log } from '@ultra/core';
 import type { JSX } from 'solid-js';
+import { BackButton } from '../components/BackButton';
 import { FocusButton } from '../components/FocusButton';
 import { FocusZone } from '../focus';
 import { t } from '../i18n';
@@ -26,7 +27,10 @@ export function AboutScreen(): JSX.Element {
 
   return (
     <div class="screen about">
-      <h1 class="screen-title">{t('about.title')}</h1>
+      <div class="title-with-back">
+        <BackButton />
+        <h1 class="screen-title">{t('about.title')}</h1>
+      </div>
       <FocusZone id="about">
         <FocusButton id="about-version" class="list-item" autofocus onSelect={onVersion}>
           <span class="list-label">{t('about.version', { version: __APP_VERSION__ })}</span>

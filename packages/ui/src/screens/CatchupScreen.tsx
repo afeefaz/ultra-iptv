@@ -1,5 +1,6 @@
 import { getItem, log, type ChannelRow, type EpgEntry } from '@ultra/core';
 import { createEffect, createMemo, createSignal, For, on, Show, type JSX } from 'solid-js';
+import { BackButton } from '../components/BackButton';
 import { ChannelLogo } from '../components/ChannelLogo';
 import { FocusButton } from '../components/FocusButton';
 import { Icon } from '../components/Icon';
@@ -106,6 +107,7 @@ export function CatchupScreen(props: { channelId: string }): JSX.Element {
           {(ch) => (
             <>
               <div class="catchup-header">
+                <BackButton />
                 <ChannelLogo src={ch().logo} name={ch().name} large />
                 <div>
                   <h1 class="screen-title">{t('catchup.title', { channel: ch().name })}</h1>

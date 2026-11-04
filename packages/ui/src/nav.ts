@@ -65,6 +65,13 @@ export function switchTab(tab: Tab): void {
   openRoot({ name: tab } as Route);
 }
 
+let afterBack: ((route: Route) => void) | null = null;
+
+/** Runs after any Back navigation (key or button), e.g. to restore focus. */
+export function onBackNavigated(fn: (route: Route) => void): void {
+  afterBack = fn;
+}
+
 /** Returns false at the root so the caller can decide (e.g. exit dialog on TVs later). */
 export function goBack(): boolean {
   const s = stack();
@@ -75,5 +82,6 @@ export function goBack(): boolean {
     setStack(s.slice(0, -1));
   }
   log.debug('nav', 'back', { route: currentRoute().name });
+  afterBack?.(currentRoute());
   return true;
 }

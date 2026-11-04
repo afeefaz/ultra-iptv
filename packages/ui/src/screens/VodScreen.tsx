@@ -23,7 +23,7 @@ import { catalog } from '../data/catalog';
 import { ensureUnlocked, isCategoryLocked, lockedCategories, unlocked } from '../data/parental';
 import { progressRatio, useProgress } from '../data/media';
 import { activePlaylist, refreshing, versionOf } from '../data/playlists';
-import { detailMode, setVodSort, vodSort, type SortBy } from '../data/settings';
+import { detailMode, keepTitleOpen, setVodSort, vodSort, type SortBy } from '../data/settings';
 import { focusManager, FocusZone } from '../focus';
 import { formatLeft, statusText } from '../format';
 import { formatNumber, locale, t } from '../i18n';
@@ -50,6 +50,8 @@ const lastCategory = new Map<string, string>();
 const lastGridIndex = new Map<string, number | null>();
 // Title open next to the categories, so it's still open after playing it and coming back.
 const lastOpenId = new Map<string, string | null>();
+// Search text in the open category, so it survives playing a title and coming back.
+const lastQuery = new Map<string, string>();
 
 /** Movies and Series (spec §5): category rail | poster grid, sortable, with "Continue watching". */
 export function VodScreen(props: { kind: Kind }): JSX.Element {
@@ -70,7 +72,14 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
   const [loading, setLoading] = createSignal(true);
   const [sortOpen, setSortOpen] = createSignal(false);
   const [focused, setFocused] = createSignal<Row | null>(null);
-  const [query, setQuery] = createSignal('');
+  const [query, setQuerySignal] = createSignal(lastQuery.get(`${activePlaylist()?.id ?? null}|${props.kind}`) ?? '');
+  const setQuery = (q: string) => {
+    setQuerySignal(q);
+    lastQuery.set(memoryKey(), q);
+    // Positions in the old results mean nothing in the new ones.
+    lastGridIndex.set(memoryKey(), null);
+    setFocused(null);
+  };
   const progress = useProgress();
   let grid: VirtualGridApi | undefined;
   let seq = 0;
@@ -144,6 +153,8 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
         setAll(rows as Row[]);
         setFavKeys(favs);
         setCategory(lastCategory.get(memoryKey()) ?? 'all');
+        setQuerySignal(lastQuery.get(memoryKey()) ?? '');
+        setOpenIdSignal(detailMode() === 'inline' ? (lastOpenId.get(memoryKey()) ?? null) : null);
         const index = lastGridIndex.get(memoryKey());
         if (index != null) setTimeout(() => grid?.focusIndex(index), 0);
       } catch (e) {
@@ -161,7 +172,8 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
     if (id === category()) return;
     setCategory(id);
     setQuery('');
-    // An open title stays open (Back shows the new category's grid).
+    // Settings → Browsing: an open title stays (Back shows the new category), or closes now.
+    if (!keepTitleOpen()) setOpenId(null);
     lastCategory.set(memoryKey(), id);
     lastGridIndex.set(memoryKey(), null);
     grid?.scrollToIndex(0);
@@ -248,7 +260,7 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
                     if (c.locked && !(await ensureUnlocked())) return;
                     chooseCategory(c.id);
                     // Remote: move into the grid. Touch: stay put (the finger is free to go anywhere).
-                    if (!focusManager.pointerMode) setTimeout(() => grid?.focusIndex(0), 0);
+                    if (!focusManager.pointerMode && !openId()) setTimeout(() => grid?.focusIndex(0), 0);
                   }}
                 />
               </FocusZone>

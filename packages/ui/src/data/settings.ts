@@ -48,6 +48,8 @@ export const [seriesCatSort, setSeriesCatSort] = persisted<CategorySort>('catego
 /** Movies and series open as a full page, or inside the grid area with the categories kept. */
 export type DetailMode = 'page' | 'inline';
 export const [detailMode, setDetailMode] = persisted<DetailMode>('vod.detailMode', 'page');
+/** Next to categories: choosing another category keeps the open title (or closes it). */
+export const [keepTitleOpen, setKeepTitleOpen] = persisted<boolean>('vod.keepTitleOpen', true);
 
 /** Home sections the user can hide; "Explore library" always shows. */
 export type HomeSection = 'hero' | 'continue' | 'favorites' | 'recent';
