@@ -1,7 +1,17 @@
 # Ultra IPTV
 
-Free IPTV player for Samsung Tizen, LG webOS, Android (phone, TV, Fire TV) and the web.
-No backend, no accounts, no ads. See `docs/spec.md`.
+A free IPTV player for Android phones, Android TV, Fire TV, Samsung TVs and the web, with English and Arabic.
+No backend, no accounts, no ads. It doesn't include any channels or content: you add your own IPTV playlist.
+LG webOS is planned. The design is in `docs/spec.md`.
+
+## Download
+
+**[Download the latest Android version](https://github.com/afeefaz/ultra-iptv-releases/releases/latest/download/UltraIPTV.apk)**
+
+This link always gets the newest version. On Android TV or Fire TV, enter it in the Downloader app.
+Android asks you to allow installs from the app you download with, and Play Protect may warn about an unknown app.
+
+For Samsung TVs, see [docs/sideloading.md](docs/sideloading.md).
 
 ## Setup
 

@@ -1,5 +1,5 @@
 /*
- * "Cinematic 10-foot" design (design/stitch-brief.md, Stitch DESIGN.md), built for Chrome 53
+ * "Cinematic 10-foot" design, built for Chrome 53
  * (spec §3.1): flexbox only (no grid, no flex `gap`), no logical properties, no blur.
  * Write LTR physical properties; postcss-rtlcss generates the [dir="rtl"] mirror.
  * Everything is in rem; 1rem = 16px at 1920px wide, so TV and phone layouts scale with width.

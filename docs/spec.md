@@ -1,7 +1,6 @@
 # Ultra IPTV: product and technical spec (v0.3)
 
 Status: **all decisions recorded (§12), waiting for approval before any app code is written.**
-Background: `research/findings.md` (IB Player and Hot Player study).
 
 ## 1. Goals
 
@@ -14,7 +13,7 @@ Background: `research/findings.md` (IB Player and Hot Player study).
   - LG webOS (`.ipk`)
   - Android phone + Android TV + Fire TV (one APK, Capacitor)
   - the web (development and direct-reachable playback)
-- **IB Player-style UI** (layout and flow only; no copied assets, code or branding).
+- **Remote-first UI:** categories, channels and a preview side by side.
 - **Multiple playlists per device,** each cached separately, switched instantly, never wiped on switch.
 - **Fast:** shown instantly from cache, refreshed in the background, heavy work off the UI thread, quick channel zapping.
 - **Debuggable on every device with local tools only.** Credentials are always redacted and provider hostnames hashed in every log.
@@ -161,7 +160,7 @@ interface PlayerAdapter {
 | Tizen | write to the `downloads` virtual root (`filesystem.write` privilege), then `sdb pull` |
 | webOS | no user file system for web apps: export prints the log in numbered chunks to the console, captured with `ares-inspect` / `ares-log` (see `docs/debugging.md`) |
 
-## 5. UI (IB Player-style)
+## 5. UI
 
 ### Shell and Home
 - **Top tab bar:** Home · Live · Movies · Series · Search, with the playlist switcher and Settings on the right. Visible on every content screen, so any section is one key press away.

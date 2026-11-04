@@ -58,7 +58,7 @@ const lastCategory = new Map<string, CategoryId>();
 // Last channel the cursor was on, per playlist, so coming back lands on it.
 const lastChannelKey = new Map<string, string>();
 
-/** IB-style three panes (spec §5): categories | channels | preview + info. */
+/** Three panes (spec §5): categories | channels | preview + info. */
 export function LiveScreen(props: { focusKey?: string }): JSX.Element {
   enterLibrary('live');
   const playlistId = () => activePlaylist()?.id ?? null;

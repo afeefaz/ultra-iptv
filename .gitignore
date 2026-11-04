@@ -1,14 +1,31 @@
-apks/
-research/
+# Dependencies
 node_modules/
+
+# Build output
 dist/
 dist-legacy/
 dist-tizen/
+*.apk
+*.aab
+*.wgt
+
+# Signing keys and secrets
 *.jks
 *.keystore
+*.p12
 keystore.properties
-apps/web/dev/media/
-*.log
-.DS_Store
+.env
+.env.*
 
-design/current-ui/
+# Generated test media (scripts/make-test-media.mjs)
+apps/web/dev/media/
+
+# Private research, never published
+apks/
+research/
+
+# Editors and system files
+.idea/
+.vscode/
+.DS_Store
+*.log
