@@ -30,7 +30,7 @@ import {
 } from '../data/playback';
 import { formatDuration } from '../format';
 import { formatNumber, t } from '../i18n';
-import { useKeys } from '../keys';
+import { useKeyBarrier, useKeys } from '../keys';
 import { usePlatform } from '../platform-context';
 import { goBack } from '../nav';
 
@@ -51,6 +51,7 @@ const SCRUB_STEPS = [
 
 /** Full screen: the live player, or the movie/episode/catch-up player. */
 export function PlayerScreen(): JSX.Element {
+  useKeyBarrier();
   return (
     <Show when={playingMedia()} fallback={<LivePlayer />}>
       <MediaPlayer />

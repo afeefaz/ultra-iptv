@@ -1,4 +1,4 @@
-import { favoriteKeys, listItems, log, perf, recentKeys, type ChannelRow, type ProgressRow, type VodInfo } from '@ultra/core';
+import { favoriteKeys, itemsByKeys, log, perf, recentKeys, type ChannelRow, type ProgressRow, type VodInfo } from '@ultra/core';
 import { createEffect, createMemo, createSignal, For, on, Show, type JSX } from 'solid-js';
 import { ChannelLogo } from '../components/ChannelLogo';
 import { FocusButton } from '../components/FocusButton';
@@ -8,7 +8,7 @@ import { formatClock, useNowNext } from '../data/epg';
 import { itemFromProgress, progressRatio, useProgress, watch } from '../data/media';
 import { recentVersion } from '../data/playback';
 import { activePlaylist, playlistsLoaded, refreshing, refreshPlaylist, versionOf } from '../data/playlists';
-import { homeShows } from '../data/settings';
+import { guideOnEveryRow, homeShows } from '../data/settings';
 import { FocusZone } from '../focus';
 import { formatLeft, statusText } from '../format';
 import { formatNumber, t } from '../i18n';
@@ -42,12 +42,13 @@ export function HomeScreen(): JSX.Element {
         setRecent([]);
         return;
       }
-      const all = await listItems(id, 'live', null);
+      const [favs, recs] = await Promise.all([
+        itemsByKeys(id, 'live', favKeys.slice(0, MAX_CHANNELS)),
+        itemsByKeys(id, 'live', recKeys.slice(0, MAX_CHANNELS)),
+      ]);
       perf.mark('startup.homeData');
-      const byKey = new Map(all.map((c) => [c.key, c] as [string, ChannelRow]));
-      const pick = (keys: string[]) => keys.map((k) => byKey.get(k)).filter((c): c is ChannelRow => !!c).slice(0, MAX_CHANNELS);
-      setFavorites(pick(favKeys));
-      setRecent(pick(recKeys));
+      setFavorites(favs);
+      setRecent(recs);
     }),
   );
 
@@ -128,7 +129,7 @@ function ResumeHero(props: { row: ProgressRow }): JSX.Element {
     const row = props.row;
     if (row.kind === 'episode' && row.seriesId) return navigate({ name: 'series-detail', id: row.seriesId });
     if (row.ref.t === 'movie') return navigate({ name: 'vod-detail', id: row.ref.id });
-    const match = (await listItems(row.playlistId, 'vod', null)).filter((r) => r.key === row.key)[0];
+    const [match] = await itemsByKeys(row.playlistId, 'vod', [row.key]);
     if (match) navigate({ name: 'vod-detail', id: match.id });
   };
   return (
@@ -266,7 +267,7 @@ function ChannelShelf(props: { id: string; title: string; channels: ChannelRow[]
 
 /** Channel with what's on now (Xtream guide) and how long it has left. */
 function ChannelCard(props: { id: string; channel: ChannelRow }): JSX.Element {
-  const epg = useNowNext(() => (props.channel.stream.t === 'x' ? props.channel.id : null));
+  const epg = useNowNext(() => (guideOnEveryRow() && props.channel.stream.t === 'x' ? props.channel.id : null));
   return (
     <FocusButton id={props.id} class="channel-card" onSelect={() => openRoot({ name: 'live', focusKey: props.channel.key })}>
       <div class="channel-card-head">

@@ -1,5 +1,5 @@
 import type { AccountInfo } from '../catalog/model';
-import { AppError, getJson, type GetOptions } from '../net/http';
+import { AppError, getJson, getText, parseJson, type GetOptions } from '../net/http';
 
 export interface XtreamCreds {
   server: string;
@@ -182,7 +182,16 @@ export class XtreamApi {
   }
 
   private async list<T>(action: string): Promise<T[]> {
-    const res = await getJson<unknown>(this.url(action), this.opts);
+    return this.parseList<T>(action, await this.rawList(action));
+  }
+
+  /** A list as the server sent it, so a refresh can tell it hasn't changed before parsing it. */
+  rawList(action: string): Promise<string> {
+    return getText(this.url(action), this.opts);
+  }
+
+  parseList<T>(action: string, text: string): T[] {
+    const res = parseJson<unknown>(this.url(action), text);
     if (Array.isArray(res)) return res as T[];
     if (res && typeof res === 'object') {
       // Rejected logins come back as a user_info object instead of a list.

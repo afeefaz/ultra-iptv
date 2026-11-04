@@ -1,6 +1,7 @@
 // Read-only queries used by the UI thread. All writes go through the worker (catalog/service.ts).
 import { perf } from '../perf/perf';
 import { openUltraDb, playlistRange } from './db';
+import { readSnapshot, type LibrarySnapshot } from './store';
 import {
   catKey,
   hiddenCategoriesKey,
@@ -26,6 +27,11 @@ export async function listCategories(playlistId: string, kind: ContentKind): Pro
   return rows.sort((a, b) => a.order - b.order);
 }
 
+/** The fast copy of a whole section (see store.ts), or null if it hasn't been written yet. */
+export async function librarySnapshot(playlistId: string, kind: ContentKind): Promise<LibrarySnapshot | null> {
+  return perf.timed(`db.snapshot.${kind}`, async () => readSnapshot(await openUltraDb(), playlistId, kind));
+}
+
 const byNumber = (a: { num?: number; name: string }, b: { num?: number; name: string }) =>
   (a.num ?? 0) - (b.num ?? 0) || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
 
@@ -46,6 +52,15 @@ export async function listItems<K extends ContentKind>(
   ) as unknown as Array<KindRows[K]>;
   span.end({ rows: rows.length });
   return perf.timedSync(`db.sortItems.${kind}`, () => rows.sort(byNumber as (a: KindRows[K], b: KindRows[K]) => number));
+}
+
+/** A few items by their stable keys, in that order, without reading the whole catalogue. */
+export async function itemsByKeys<K extends 'live' | 'vod'>(playlistId: string, kind: K, keys: string[]): Promise<KindRows[K][]> {
+  const db = await openUltraDb();
+  const span = perf.span(`db.itemsByKeys.${kind}`);
+  const rows = await Promise.all(keys.map((key) => db.getFromIndex(kind as 'live', 'byKey', [playlistId, key])));
+  span.end({ rows: rows.length });
+  return rows.filter((r) => !!r) as unknown as KindRows[K][];
 }
 
 /** Most recently played first. */

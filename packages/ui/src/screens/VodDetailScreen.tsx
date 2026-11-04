@@ -1,4 +1,4 @@
-import { favoriteKeys, getItem, listCategories, listItems, log, versionKey, type VodInfo, type VodRow } from '@ultra/core';
+import { favoriteKeys, getItem, log, type VodInfo, type VodRow } from '@ultra/core';
 import { createEffect, createMemo, createSignal, For, on, Show, type JSX } from 'solid-js';
 import { BackButton } from '../components/BackButton';
 import { FocusButton } from '../components/FocusButton';
@@ -11,8 +11,6 @@ import { FocusZone } from '../focus';
 import { formatDuration, formatLeft, timeAgo } from '../format';
 import { formatNumber, t } from '../i18n';
 import { navigate } from '../nav';
-
-const MORE_LIMIT = 16;
 
 interface Version {
   row: VodRow;
@@ -56,17 +54,19 @@ export function VodDetailScreen(props: DetailProps): JSX.Element {
           .then(() => setInfoLoading(false));
       }
       // Same title in other categories (language / quality variants), and more from its category.
-      const [rows, cats] = await Promise.all([listItems(pid, 'vod', null), listCategories(pid, 'vod')]);
-      const catName = new Map(cats.map((c) => [c.id, c.name] as [string, string]));
-      setCategoryName(catName.get(r.categoryIds[0]) ?? '');
-      const vk = versionKey(r.name);
-      setVersions(
-        rows
-          .filter((o) => o.key !== r.key && versionKey(o.name) === vk)
-          .slice(0, 12)
-          .map((o) => ({ row: o, category: o.categoryIds.map((c) => catName.get(c) ?? '').join(' · ') })),
-      );
-      setMore(rows.filter((o) => o.key !== r.key && o.categoryIds[0] === r.categoryIds[0] && versionKey(o.name) !== vk).slice(0, MORE_LIMIT));
+      // In the worker: this page must not freeze while it looks through every movie.
+      setVersions([]);
+      setMore([]);
+      catalog()
+        .call('vodMore', pid, id)
+        .then((r) => {
+          if (props.id !== id) return;
+          setCategoryName(r.category);
+          setMore(r.more);
+        }, (e) => log.warn('vod', 'more failed', { error: e }));
+      catalog()
+        .call('vodVersions', pid, id)
+        .then((v) => props.id === id && setVersions(v), (e) => log.warn('vod', 'versions failed', { error: e }));
     }),
   );
 

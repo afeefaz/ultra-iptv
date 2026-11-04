@@ -1,4 +1,5 @@
-import { listCategories, listItems, perf, type CategoryRow, type ContentKind } from '@ultra/core';
+import { librarySnapshot, listCategories, listItems, log, perf, type CategoryRow, type ContentKind } from '@ultra/core';
+import { catalog } from './catalog';
 import { normalizeText } from './categories';
 import { versionOf } from './playlists';
 
@@ -62,7 +63,25 @@ export async function loadLibrary<R extends { key: string; name: string }>(playl
   if (held) return held;
   const version = versionOf(playlistId);
   const span = perf.span(`library.load.${kind}`);
-  const [cats, rows] = await Promise.all([listCategories(playlistId, kind), listItems(playlistId, kind, null)]);
+  const snapshot = await librarySnapshot(playlistId, kind);
+  let cats: CategoryRow[];
+  let rows: unknown[];
+  if (snapshot) {
+    perf.count('cache.snapshot.hit');
+    cats = JSON.parse(snapshot.categories) as CategoryRow[];
+    rows = [];
+    for (const chunk of snapshot.chunks) {
+      rows = rows.concat(perf.timedSync('library.parseChunk', () => JSON.parse(chunk) as unknown[]));
+      // Lets key presses and painting through between chunks.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+  } else {
+    perf.count('cache.snapshot.miss');
+    [cats, rows] = await Promise.all([listCategories(playlistId, kind), listItems(playlistId, kind, null)]);
+    catalog()
+      .call('ensureSnapshot', playlistId, kind)
+      .catch((e) => log.warn('library', 'could not save the fast copy', { error: e }));
+  }
   span.end({ rows: rows.length });
   const library = new Library<R>(version, cats, rows as unknown as R[]);
   // Only the active playlist stays in memory.

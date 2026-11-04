@@ -75,6 +75,9 @@ export const [detailMode, setDetailMode] = persisted<DetailMode>('vod.detailMode
 /** Next to categories: choosing another category keeps the open title (or closes it). */
 export const [keepTitleOpen, setKeepTitleOpen] = persisted<boolean>('vod.keepTitleOpen', true);
 
+/** Programme names on every channel row (a guide request per row), or only the selected channel. */
+export const [guideOnEveryRow, setGuideOnEveryRow] = persisted<boolean>('live.guideOnEveryRow', true);
+
 export const MIN_TEXT_SCALE = 70;
 export const MAX_TEXT_SCALE = 150;
 export const TEXT_SCALE_STEP = 5;

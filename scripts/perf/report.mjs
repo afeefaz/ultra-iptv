@@ -82,6 +82,9 @@ table('Main thread blocked (long tasks: total, count)', [
   ['Series, first open', blocked('series.firstOpen')],
 ]);
 table('Database and memory cache', [
+  ['Load all channels', stat('live.firstOpen', 'library.load.live')],
+  ['Load all movies', stat('movies.firstOpen', 'library.load.vod')],
+  ['Load all series', stat('series.firstOpen', 'library.load.series')],
   ['Read all channels', stat('live.firstOpen', 'db.listItems.live')],
   ['Read all movies', stat('movies.firstOpen', 'db.listItems.vod')],
   ['Read all series', stat('series.firstOpen', 'db.listItems.series')],
@@ -115,6 +118,9 @@ table('Playback', [
 ]);
 table('Network and catalogue refresh', [
   ['Speed test', (r) => r.steps.speedTest?.value?.split(' | ')[0]?.replace('Mbps', ' Mbps ')],
+  ['Guide requests (Live, open category)', (r) => fmt(r.steps['live.openCategory']?.worker?.stats?.['net.total.get_short_epg']?.count ?? 0)],
+  ['Guide requests (Live, search)', (r) => fmt(r.steps['live.search']?.worker?.stats?.['net.total.get_short_epg']?.count ?? 0)],
+  ['Lists unchanged on refresh', (r) => fmt(Object.keys(r.steps['catalogue.refresh']?.worker?.counters ?? {}).filter((k) => k.startsWith('refresh.unchanged.')).length)],
   ['Full refresh', stat('catalogue.refresh', 'refresh.total', 'p50Ms', 'worker')],
   ['Live list: first byte', stat('catalogue.refresh', 'net.ttfb.get_live_streams', 'p50Ms', 'worker')],
   ['Live list: download', stat('catalogue.refresh', 'net.total.get_live_streams', 'p50Ms', 'worker')],

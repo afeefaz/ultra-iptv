@@ -1,10 +1,12 @@
 import type { ContentKind } from '@ultra/core';
-import { For, Show, type JSX } from 'solid-js';
-import { loadProgress, playlists, refreshing } from '../data/playlists';
+import { createSignal, For, onCleanup, Show, type JSX } from 'solid-js';
+import { loadProgress, playlists, playlistsLoaded, refreshing } from '../data/playlists';
 import { formatNumber, t } from '../i18n';
 import { Icon } from './Icon';
 
 const KINDS: ContentKind[] = ['live', 'vod', 'series'];
+/** Longer than a normal launch on the slowest TV: only a database update takes this long. */
+const UPDATING_AFTER_MS = 6000;
 
 /** Slim bar under the top bar while any playlist is loading (spec §5). */
 export function LoadingLine(): JSX.Element {
@@ -12,7 +14,16 @@ export function LoadingLine(): JSX.Element {
     const r = refreshing();
     return playlists().filter((p) => r[p.id])[0];
   };
+  const [waited, setWaited] = createSignal(false);
+  const timer = setTimeout(() => setWaited(true), UPDATING_AFTER_MS);
+  onCleanup(() => clearTimeout(timer));
   return (
+    <>
+    <Show when={waited() && !playlistsLoaded()}>
+      <div class="loading-line" role="status">
+        <span class="loading-line-text">{t('loading.updating')}</span>
+      </div>
+    </Show>
     <Show when={running()}>
       {(p) => (
         <div class="loading-line" role="status">
@@ -25,6 +36,7 @@ export function LoadingLine(): JSX.Element {
         </div>
       )}
     </Show>
+    </>
   );
 }
 

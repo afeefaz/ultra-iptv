@@ -39,7 +39,7 @@ export function VirtualGrid<T>(props: VirtualGridProps<T>): JSX.Element {
 
   const rows = createMemo(() => {
     const h = rowPx();
-    const over = props.overscan ?? 2;
+    const over = props.overscan ?? 1;
     const first = Math.max(0, Math.floor(scrollTop() / h) - over);
     const last = Math.min(rowCount() - 1, Math.ceil((scrollTop() + viewport()) / h) + over);
     const out: number[] = [];

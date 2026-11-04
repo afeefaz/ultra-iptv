@@ -63,6 +63,8 @@ export interface Platform {
   textInput: 'osk' | 'native';
   /** One player per app, reused for every channel (spec §4.2). */
   createPlayer(): PlayerAdapter;
+  /** Slow graphics: leave out animations, which repaint a whole poster or panel per frame. */
+  reducedEffects?: boolean;
   /** Whether `auto` stream format should pick HLS (browsers) over raw TS (TVs play TS natively). */
   prefersHls: boolean;
   /**

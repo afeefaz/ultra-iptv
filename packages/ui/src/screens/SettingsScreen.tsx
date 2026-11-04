@@ -12,6 +12,8 @@ import {
   defaultCatSort,
   defaultVodSort,
   detailMode,
+  guideOnEveryRow,
+  setGuideOnEveryRow,
   hiddenHomeSections,
   HOME_SECTIONS,
   homeShows,
@@ -337,6 +339,21 @@ export function SettingsScreen(): JSX.Element {
                         <span class="option-card-title">{t(`categories.sort.${sort}`)}</span>
                       </span>
                       <Icon name={defaultCatSort() === sort ? 'checkCircle' : 'radioOff'} />
+                    </FocusButton>
+                  )}
+                </For>
+              </div>
+              <div class="setting-name setting-gap">{t('settings.guideRows')}</div>
+              <div class="setting-desc">{t('settings.guideRowsDesc')}</div>
+              <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
+                <For each={[true, false]}>
+                  {(every) => (
+                    <FocusButton id={`settings-guide-${every}`} selected={guideOnEveryRow() === every} onSelect={() => setGuideOnEveryRow(every)}>
+                      <span class="option-card-text">
+                        <span class="option-card-title">{t(every ? 'settings.guideRows.every' : 'settings.guideRows.selected')}</span>
+                        <span class="option-card-sub">{t(every ? 'settings.guideRows.everySub' : 'settings.guideRows.selectedSub')}</span>
+                      </span>
+                      <Icon name={guideOnEveryRow() === every ? 'checkCircle' : 'radioOff'} />
                     </FocusButton>
                   )}
                 </For>

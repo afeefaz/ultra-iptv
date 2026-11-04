@@ -1,6 +1,6 @@
 {
   "name": "@ultra/platform",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -10,6 +10,7 @@
     "./tizen": "./src/tizen/index.ts"
   },
   "dependencies": {
+    "@ultra/core": "workspace:*",
     "@capacitor/app": "8.1.2",
     "@capacitor/core": "8.5.3",
     "hls.js": "1.7.3",

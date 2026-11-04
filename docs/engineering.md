@@ -24,14 +24,17 @@ packages/platform  One adapter per platform: player, keys, files, device info
 packages/core   No UI: catalogue, sources, network, logging, tracing, encryption
 ```
 
-Dependencies only point downward: `ui` → `worker`, `platform`, `core`. `core` imports none of them. `platform` doesn't import `ui`.
+Dependencies only point downward: `ui` → `worker`, `platform` → `core`. `core` imports none of them.
 
 **Data flow**
 
 - **The worker owns writes.** Network fetching, parsing and every database write go through `catalog().call(...)`. Adding a call means updating `WorkerApi` in `protocol.ts` and the map in `worker.ts`.
-- **The page may read directly** through `core/catalog/queries.ts`, but big reads block it, so go through `data/libraryCache.ts`.
+- **The page may read directly** through `core/catalog/queries.ts`, but big reads block it. Whole libraries go through `data/libraryCache.ts`, which uses a JSON copy of each section instead of reading rows one by one.
+- **Screens stay alive under the player.** Returning from it doesn't rebuild them, so they react to the route (`currentRoute()`) rather than relying on being remounted, and `useKeyBarrier` stops them getting keys.
 - **Device settings** live in `data/settings.ts` (`persisted`). Catalogue data lives in IndexedDB. Secrets are encrypted in the `secrets` store and never reach logs.
 - **Playback** goes through the single `PlayerAdapter`, via `data/playback.ts`. Screens claim the video surface; they never touch a player.
+
+**Changing the database:** raise `DB_VERSION` in `core/catalog/db.ts`. Adding an index rebuilds it over every row at the next launch: two indexes took about 30 s on the Samsung TV, during which nothing loads, and closing the app restarts the work. So add indexes rarely, and only for a measured reason.
 
 **Adding a platform ability:** add an optional member to `Platform` in `platform/src/types.ts`, implement it per adapter, and have the UI handle its absence (`platform.download ?? fetchDownload`, or hide the feature).
 

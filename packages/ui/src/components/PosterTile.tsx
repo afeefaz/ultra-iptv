@@ -1,5 +1,7 @@
-import { createEffect, createSignal, on, Show, type JSX } from 'solid-js';
+import { createEffect, createSignal, on, onCleanup, Show, type JSX } from 'solid-js';
 import { Icon } from './Icon';
+
+const POSTER_SETTLE_MS = 120;
 
 export interface PosterTileProps {
   title: string;
@@ -15,11 +17,15 @@ export interface PosterTileProps {
 /** 2:3 cover, rating, title, year and quality tag (layout only; focus is on the parent). */
 export function PosterTile(props: PosterTileProps): JSX.Element {
   const [failed, setFailed] = createSignal(false);
+  // Posters scrolled past never load: each one is a request and a decode.
+  const [settled, setSettled] = createSignal(false);
+  const settle = setTimeout(() => setSettled(true), POSTER_SETTLE_MS);
+  onCleanup(() => clearTimeout(settle));
   createEffect(on(() => props.poster, () => setFailed(false), { defer: true }));
   return (
     <div class="poster">
       <div class="poster-art">
-        <Show when={props.poster && !failed()} fallback={<span class="poster-initial">{props.title.slice(0, 1)}</span>}>
+        <Show when={props.poster && !failed() && settled()} fallback={<span class="poster-initial">{props.title.slice(0, 1)}</span>}>
           <img src={props.poster} alt="" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
         </Show>
         <Show when={props.rating}>

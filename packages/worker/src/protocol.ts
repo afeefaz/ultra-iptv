@@ -7,6 +7,7 @@ import type {
   ProgressRow,
   SeriesInfo,
   VodInfo,
+  VodRow,
   ResolvedStream,
   StreamFormat,
   StreamRef,
@@ -47,11 +48,14 @@ export interface WorkerApi {
   clearPin(current: string): Promise<void>;
   mediaUrl(playlistId: string, ref: MediaRef, preferHls: boolean): Promise<ResolvedStream>;
   vodInfo(playlistId: string, vodId: string): Promise<VodInfo & { ext?: string }>;
+  vodVersions(playlistId: string, id: string): Promise<Array<{ row: VodRow; category: string }>>;
+  vodMore(playlistId: string, id: string): Promise<{ category: string; more: VodRow[] }>;
   seriesInfo(playlistId: string, seriesId: string): Promise<SeriesInfo>;
   catchupListings(playlistId: string, streamId: string, days: number): Promise<EpgEntry[]>;
   togglePin(playlistId: string, kind: ContentKind, categoryId: string): Promise<boolean>;
   setHiddenCategories(playlistId: string, kind: ContentKind, categoryIds: string[]): Promise<void>;
   speedTargets(playlistId: string): Promise<SpeedTargets>;
+  ensureSnapshot(playlistId: string, kind: ContentKind): Promise<void>;
   perfSnapshot(): Promise<PerfSnapshot>;
   perfReset(): Promise<void>;
   saveProgress(row: ProgressRow): Promise<void>;

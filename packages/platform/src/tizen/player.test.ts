@@ -216,7 +216,6 @@ describe('AvPlayPlayer', () => {
     t.state.listener.onstreamcompleted!();
     expect(t.states[t.states.length - 1]).toBe('ended');
     t.player.stop();
-    expect(t.calls).toContain('stop');
     expect(t.calls).toContain('close');
     expect(t.states[t.states.length - 1]).toBe('idle');
     expect(t.player.position()).toEqual({ current: 0, duration: 0 });

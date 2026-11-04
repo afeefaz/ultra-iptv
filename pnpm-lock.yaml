@@ -108,6 +108,9 @@ importers:
       '@capacitor/core':
         specifier: 8.5.3
         version: 8.5.3
+      '@ultra/core':
+        specifier: workspace:*
+        version: link:../core
       hls.js:
         specifier: 1.7.3
         version: 1.7.3

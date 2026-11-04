@@ -47,6 +47,19 @@ export interface NowNext {
 }
 
 /** Picks the current and next programme at `at`, after shifting by `offsetHours`. */
+const EPG_MAX_AGE_MS = 6 * 3600_000;
+
+/**
+ * Whether stored guide data can still answer "what's on now and next". A guide barely changes once
+ * published, and every refetch is one request per channel, so it's only fetched again when it runs
+ * out, or after a few hours (which also covers channels with no guide at all).
+ */
+export function epgIsFresh(items: Array<{ stop: number }>, fetchedAt: number, now: number): boolean {
+  if (now - fetchedAt >= EPG_MAX_AGE_MS) return false;
+  if (!items.length) return true;
+  return now < items[Math.max(0, items.length - 2)].stop;
+}
+
 export function nowNext(items: EpgEntry[], at: number, offsetHours = 0): NowNext {
   const shift = offsetHours * 3600_000;
   for (let i = 0; i < items.length; i++) {

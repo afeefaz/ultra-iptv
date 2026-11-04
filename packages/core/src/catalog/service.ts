@@ -9,13 +9,16 @@ import { M3uParser, type M3uEntry } from '../sources/m3u';
 import { normalizeServer, parseXtreamUrl, XtreamApi, type XtreamCreds } from '../sources/xtream';
 import { buildM3u, buildXtreamLive, buildXtreamSeries, buildXtreamVod, type Built } from './build';
 import { openUltraDb, playlistRange } from './db';
-import { parseSeriesInfo, parseVodInfo } from './details';
-import { parseShortEpg } from './epg';
+import { parseSeriesInfo, parseVodInfo, versionKey } from './details';
+import { listCategories, listItems } from './queries';
+import { epgIsFresh, parseShortEpg } from './epg';
 import { hash64 } from './hash';
 import {
+  catKey,
   CONTENT_KINDS,
   maskUser,
   hiddenCategoriesKey,
+  listHashKey,
   pinsKey,
   type AccountInfo,
   type ContentKind,
@@ -26,6 +29,7 @@ import {
   type ProgressRow,
   type SeriesInfo,
   type VodInfo,
+  type VodRow,
   type ErrorInfo,
   type FavoriteRow,
   type PlaylistInput,
@@ -36,7 +40,7 @@ import {
   type StreamRef,
 } from './model';
 import { SearchIndex, type SearchDoc, type SearchResults } from './search';
-import { deletePlaylistData, writeKind, type WriteStats } from './store';
+import { deletePlaylistData, readSnapshot, writeKind, writeSnapshot, type WriteStats } from './store';
 import { dominantPair } from './stream-creds';
 import { resolveLiveStream, resolveMedia, type ResolvedStream } from './stream-url';
 
@@ -62,6 +66,10 @@ export interface RefreshProgress {
 
 /** Step weights: big lists take longer to download and save than logins and category lists. */
 const SPEED_MOVIES = 3;
+/** Raise when parsing or building rows changes, so the next refresh rebuilds everything. */
+const LIST_HASH_VERSION = 1;
+const MAX_VERSIONS = 12;
+const MAX_MORE = 16;
 const W = { small: 1, list: 4, save: 3 };
 const XTREAM_TOTAL = W.small * 4 + W.list * 3 + W.save * 3;
 const M3U_TOTAL = W.list * 3 + W.save * 3;
@@ -92,7 +100,6 @@ const DEFAULT_REFRESH_HOURS = 12;
 const M3U_TEST_ENTRIES = 25;
 /** The form's Test step should fail fast; refreshes keep the longer default. */
 const TEST_TIMEOUT_MS = 15_000;
-const EPG_MAX_AGE_MS = 30 * 60_000;
 const EPG_KEEP_MS = 7 * 24 * 3600_000;
 const MAX_RECENT = 30;
 const PIN_KEY = 'parental.pin';
@@ -107,6 +114,7 @@ export class PlaylistService {
   private readonly box = new SecretBox(openUltraDb);
   private readonly running = new Map<string, Promise<RefreshResult>>();
   private readonly searchCache = new Map<string, SearchIndex>();
+  private readonly versionIndexes = new Map<string, Promise<Map<string, string[]>>>();
   private readonly epgInflight = new Map<string, Promise<EpgEntry[]>>();
   private readonly epgLimit = createLimiter(3);
   private lastRecentAt = 0;
@@ -235,6 +243,7 @@ export class PlaylistService {
   async remove(id: string): Promise<void> {
     await deletePlaylistData(await openUltraDb(), id);
     this.searchCache.delete(id);
+    this.versionIndexes.delete(id);
     log.info('playlist', 'deleted', { playlist: id });
     this.hooks.changed(id, CONTENT_KINDS);
   }
@@ -330,9 +339,11 @@ export class PlaylistService {
     const db = await openUltraDb();
     const cached = await db.get('epg', [playlistId, streamId]);
     const now = Date.now();
-    if (cached && now - cached.fetchedAt < EPG_MAX_AGE_MS && !(cached.items.length && now >= cached.items[0].stop)) {
+    if (cached && epgIsFresh(cached.items, cached.fetchedAt, now)) {
+      perf.count('cache.epg.hit');
       return cached.items;
     }
+    perf.count('cache.epg.miss');
     const key = playlistId + '|' + streamId;
     let pending = this.epgInflight.get(key);
     if (!pending) {
@@ -363,6 +374,70 @@ export class PlaylistService {
   /** URL for a movie, episode, M3U VOD item or catch-up programme. */
   async mediaUrl(playlistId: string, ref: MediaRef, preferHls: boolean): Promise<ResolvedStream> {
     return resolveMedia(ref, await this.secret(playlistId), preferHls, Date.now());
+  }
+
+  /** Writes the fast copy of a section if it's missing (first launch after an update). */
+  async ensureSnapshot(playlistId: string, kind: ContentKind): Promise<void> {
+    if (!(await readSnapshot(await openUltraDb(), playlistId, kind))) await this.saveSnapshot(playlistId, kind);
+  }
+
+  private async saveSnapshot(playlistId: string, kind: ContentKind): Promise<void> {
+    const [cats, rows] = await Promise.all([listCategories(playlistId, kind), listItems(playlistId, kind, null)]);
+    await writeSnapshot(await openUltraDb(), playlistId, kind, cats, rows);
+  }
+
+  /** Same title in other categories. The first call reads every movie, here off the main thread. */
+  async vodVersions(playlistId: string, id: string): Promise<Array<{ row: VodRow; category: string }>> {
+    const db = await openUltraDb();
+    const row = await db.get('vod', [playlistId, id]);
+    if (!row) return [];
+    const index = await this.versionIndexFor(playlistId);
+    const ids = (index.get(versionKey(row.name)) ?? []).filter((other) => other !== id).slice(0, MAX_VERSIONS);
+    if (!ids.length) return [];
+    const names = await this.categoryNames(playlistId);
+    const rows = await Promise.all(ids.map((other) => db.get('vod', [playlistId, other])));
+    return rows
+      .filter((r): r is VodRow => !!r)
+      .map((r) => ({ row: r, category: r.categoryIds.map((c) => names.get(c) ?? '').join(' · ') }));
+  }
+
+  /** Other movies from the same category: only that category is read. */
+  async vodMore(playlistId: string, id: string): Promise<{ category: string; more: VodRow[] }> {
+    const db = await openUltraDb();
+    const row = await db.get('vod', [playlistId, id]);
+    const categoryId = row?.categoryIds[0];
+    if (!row || !categoryId) return { category: '', more: [] };
+    const rows = await db.getAllFromIndex('vod', 'byCat', catKey(playlistId, categoryId), MAX_MORE + MAX_VERSIONS);
+    const vk = versionKey(row.name);
+    return {
+      category: (await this.categoryNames(playlistId)).get(categoryId) ?? '',
+      more: rows.filter((o) => o.key !== row.key && versionKey(o.name) !== vk).slice(0, MAX_MORE),
+    };
+  }
+
+  private async categoryNames(playlistId: string): Promise<Map<string, string>> {
+    const cats = await listCategories(playlistId, 'vod');
+    return new Map(cats.map((c) => [c.id, c.name] as [string, string]));
+  }
+
+  private versionIndexFor(playlistId: string): Promise<Map<string, string[]>> {
+    let index = this.versionIndexes.get(playlistId);
+    if (!index) {
+      index = perf.timed('worker.versionIndex', async () => {
+        const rows = await (await openUltraDb()).getAll('vod', playlistRange(playlistId));
+        const out = new Map<string, string[]>();
+        for (const r of rows) {
+          const vk = versionKey(r.name);
+          const ids = out.get(vk);
+          if (ids) ids.push(r.id);
+          else out.set(vk, [r.id]);
+        }
+        return out;
+      });
+      this.versionIndexes.set(playlistId, index);
+      index.catch(() => this.versionIndexes.delete(playlistId));
+    }
+    return index;
   }
 
   vodInfo(playlistId: string, vodId: string): Promise<VodInfo & { ext?: string }> {
@@ -550,15 +625,22 @@ export class PlaylistService {
       const secret = await this.secret(id);
       const write = async <K extends ContentKind>(kind: K, built: Built<K>) => {
         const stats = await perf.timed(`refresh.write.${kind}`, () => writeKind(db, id, kind, built), { items: built.items.length });
+        await perf.timed(`refresh.snapshot.${kind}`, () => this.saveSnapshot(id, kind));
         counts[kind] = built.items.length;
         this.searchCache.delete(id);
+        if (kind === 'vod') this.versionIndexes.delete(id);
         done += W.save;
         this.hooks.progress({ playlistId: id, done: Math.min(done, total), total, step: 'saved', kind, count: built.items.length, stats });
         this.hooks.changed(id, [kind]);
         log.info('playlist', `${kind} saved`, { playlist: id, items: built.items.length, ...flatStats(stats) });
       };
+      const unchanged = (kind: ContentKind) => {
+        void this.ensureSnapshot(id, kind);
+        done += W.save;
+        this.hooks.progress({ playlistId: id, done: Math.min(done, total), total, step: 'saved', kind, count: record.counts?.[kind] ?? 0 });
+      };
       if (record.type === 'xtream') {
-        account = await this.refreshXtream(id, secret, record.userAgent, write, partial, step);
+        account = await this.refreshXtream(id, secret, record.userAgent, write, unchanged, partial, step);
       } else {
         await this.refreshM3u(id, secret, record.userAgent, write, step);
       }
@@ -589,42 +671,69 @@ export class PlaylistService {
     secret: PlaylistSecret,
     userAgent: string | undefined,
     write: <K extends ContentKind>(kind: K, built: Built<K>) => Promise<void>,
+    unchanged: (kind: ContentKind) => void,
     partial: ContentKind[],
     step: (weight: number) => void,
   ): Promise<AccountInfo> {
     const api = this.xtream(secret, userAgent);
+    const db = await openUltraDb();
     const limit = createLimiter(3);
-    const counted = <T>(weight: number, p: Promise<T>) => p.then((v) => (step(weight), v));
-    const login = counted(W.small, limit(() => api.login()));
-    const liveCats = counted(W.small, limit(api.liveCategories));
-    const live = counted(W.list, limit(api.liveStreams));
-    const vodCats = counted(W.small, limit(api.vodCategories));
-    const vod = counted(W.list, limit(api.vodStreams));
-    const seriesCats = counted(W.small, limit(api.seriesCategories));
-    const series = counted(W.list, limit(api.series));
-    // Avoid unhandled rejections for requests still queued when login fails.
-    for (const p of [liveCats, live, vodCats, vod, seriesCats, series]) p.catch(() => undefined);
+    const fetched = (weight: number, action: string) => {
+      const p = limit(() => api.rawList(action)).then((text) => (step(weight), text));
+      // Avoid unhandled rejections for requests still queued when login fails.
+      p.catch(() => undefined);
+      return p;
+    };
+    const login = limit(() => api.login()).then((v) => (step(W.small), v));
+    const liveCats = fetched(W.small, 'get_live_categories');
+    const live = fetched(W.list, 'get_live_streams');
+    const vodCats = fetched(W.small, 'get_vod_categories');
+    const vod = fetched(W.list, 'get_vod_streams');
+    const seriesCats = fetched(W.small, 'get_series_categories');
+    const series = fetched(W.list, 'get_series');
+
+    /** A list identical to the last refresh skips parsing and saving, and keeps what's in memory. */
+    const apply = async <K extends ContentKind>(
+      kind: K,
+      cats: Promise<string>,
+      items: Promise<string>,
+      build: (catsText: string, itemsText: string) => Built<K>,
+    ) => {
+      const [catsText, itemsText] = [await cats, await items];
+      const hash = perf.timedSync(`refresh.hash.${kind}`, () => `${LIST_HASH_VERSION}|${hash64(catsText)}|${hash64(itemsText)}`);
+      const key = listHashKey(id, kind);
+      if ((await db.get('settings', key)) === hash) {
+        perf.count(`refresh.unchanged.${kind}`);
+        unchanged(kind);
+        return;
+      }
+      await write(kind, perf.timedSync(`refresh.build.${kind}`, () => build(catsText, itemsText)));
+      await db.put('settings', hash, key);
+    };
 
     const account = await login;
-    const liveLists = [await liveCats, await live] as const;
-    await write('live', perf.timedSync('refresh.build.live', () => buildXtreamLive(id, liveLists[0], liveLists[1])));
-    const rest = async <K extends ContentKind>(kind: K, run: () => Promise<Built<K>>) => {
+    await apply('live', liveCats, live, (c, i) =>
+      buildXtreamLive(id, api.parseList('get_live_categories', c), api.parseList('get_live_streams', i)),
+    );
+    const rest = async (kind: ContentKind, run: () => Promise<void>) => {
       try {
-        await write(kind, await run());
+        await run();
       } catch (e) {
         partial.push(kind);
         log.warn('playlist', `${kind} failed`, { playlist: id, error: toErrorInfo(e) });
       }
     };
     await Promise.all([
-      rest('vod', async () => {
-        const [cats, items] = [await vodCats, await vod];
-        return perf.timedSync('refresh.build.vod', () => buildXtreamVod(id, cats, items));
-      }),
-      rest('series', async () => {
-        const [cats, items] = [await seriesCats, await series];
-        return perf.timedSync('refresh.build.series', () => buildXtreamSeries(id, cats, items));
-      }),
+      rest('vod', () =>
+        apply('vod', vodCats, vod, (c, i) =>
+          buildXtreamVod(id, api.parseList('get_vod_categories', c), api.parseList('get_vod_streams', i)),
+        ),
+      ),
+      rest('series', () =>
+        apply('series', seriesCats, series, (c, i) =>
+          buildXtreamSeries(id, api.parseList('get_series_categories', c), api.parseList('get_series', i)),
+        ),
+      ),
     ]);
     return account;
   }

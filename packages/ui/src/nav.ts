@@ -29,6 +29,13 @@ export const currentRoute = (): Route => {
   return s[s.length - 1];
 };
 
+/** The screen to show: the player opens on top of whatever was there, which stays alive under it. */
+export const screenRoute = (): Route => {
+  const s = stack();
+  for (let i = s.length - 1; i >= 0; i--) if (s[i].name !== 'player') return s[i];
+  return s[0];
+};
+
 /** The tab a route belongs to, for highlighting the top bar. */
 export function tabOf(route: Route): Tab {
   switch (route.name) {

@@ -3,6 +3,7 @@ import { createSignal } from 'solid-js';
 import { catalog, onCatalogEvent } from './catalog';
 
 const ACTIVE_KEY = 'ultraiptv.activePlaylist';
+const REFRESH_AFTER_LAUNCH_MS = 15_000;
 const HOUR = 3600_000;
 
 const [playlists, setPlaylists] = createSignal<PlaylistRecord[]>([]);
@@ -102,7 +103,12 @@ export function startPlaylists(): void {
   });
   void reloadPlaylists().then(() => {
     const active = activePlaylist();
-    if (active && isStale(active)) void refreshPlaylist(active.id);
+    if (!active || !isStale(active)) return;
+    // Launch comes first: what's stored is fine to show for a few more seconds.
+    setTimeout(() => {
+      const current = activePlaylist();
+      if (current && isStale(current)) void refreshPlaylist(current.id);
+    }, active.lastSync ? REFRESH_AFTER_LAUNCH_MS : 0);
   });
 }
 

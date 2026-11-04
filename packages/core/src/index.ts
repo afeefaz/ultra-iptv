@@ -13,6 +13,8 @@ export {
   listProgress,
   recentKeys,
   categoryPins,
+  itemsByKeys,
+  librarySnapshot,
   hiddenCategories,
 } from './catalog/queries';
 export { versionKey } from './catalog/details';

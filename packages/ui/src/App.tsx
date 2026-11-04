@@ -21,7 +21,7 @@ import { CONTENT_ZONE, focusManager, FocusZone } from './focus';
 import { countsText } from './format';
 import { applyLocaleToDocument, direction, locale, t } from './i18n';
 import { dispatchKey } from './keys';
-import { currentRoute, goBack, navigate, onBackNavigated, switchTab, tabOf, TABS, type Route, type Tab } from './nav';
+import { currentRoute, goBack, navigate, onBackNavigated, screenRoute, switchTab, tabOf, TABS, type Route, type Tab } from './nav';
 import { PlatformContext } from './platform-context';
 import { AboutScreen } from './screens/AboutScreen';
 import { CatchupScreen } from './screens/CatchupScreen';
@@ -47,6 +47,7 @@ export function App(props: { platform: Platform }): JSX.Element {
   applyLocaleToDocument();
   setCatalogPlatform(props.platform);
   onBackNavigated(restoreFocus);
+  if (props.platform.reducedEffects) document.documentElement.classList.add('reduced-effects');
 
   let scaled = false;
   createRenderEffect(() => {
@@ -169,53 +170,55 @@ export function App(props: { platform: Platform }): JSX.Element {
         <LoadingLine />
         <FocusZone id={CONTENT_ZONE}>
           <main class="content">
-            <Switch>
-              <Match when={currentRoute().name === 'home'}>
-                <HomeScreen />
-              </Match>
-              <Match when={currentRoute().name === 'live' && currentRoute()} keyed>
-                {(r) => <LiveScreen focusKey={(r as { focusKey?: string }).focusKey} />}
-              </Match>
-              <Match when={currentRoute().name === 'player'}>
-                <PlayerScreen />
-              </Match>
-              <Match when={currentRoute().name === 'movies'}>
-                <VodScreen kind="vod" />
-              </Match>
-              <Match when={currentRoute().name === 'series'}>
-                <VodScreen kind="series" />
-              </Match>
-              <Match when={currentRoute().name === 'vod-detail' && currentRoute()} keyed>
-                {(r) => <VodDetailScreen id={(r as { id: string }).id} />}
-              </Match>
-              <Match when={currentRoute().name === 'series-detail' && currentRoute()} keyed>
-                {(r) => <SeriesDetailScreen id={(r as { id: string }).id} />}
-              </Match>
-              <Match when={currentRoute().name === 'catchup' && currentRoute()} keyed>
-                {(r) => <CatchupScreen channelId={(r as { channelId: string }).channelId} />}
-              </Match>
-              <Match when={currentRoute().name === 'settings'}>
-                <SettingsScreen />
-              </Match>
-              <Match when={currentRoute().name === 'hidden-categories' && currentRoute()} keyed>
-                {(r) => <HiddenCategoriesScreen kind={(r as { kind: ContentKind }).kind} />}
-              </Match>
-              <Match when={currentRoute().name === 'playlists'}>
-                <PlaylistsScreen />
-              </Match>
-              <Match when={currentRoute().name === 'playlist-form' && currentRoute()} keyed>
-                {(r) => <PlaylistFormScreen id={(r as { id?: string }).id} />}
-              </Match>
-              <Match when={currentRoute().name === 'about'}>
-                <AboutScreen />
-              </Match>
-              <Match when={currentRoute().name === 'debug'}>
-                <DebugScreen />
-              </Match>
-              <Match when={true}>
-                <PlaceholderScreen tab={tabOf(currentRoute())} />
-              </Match>
-            </Switch>
+            <div class="screen-host" style={{ display: currentRoute().name === 'player' ? 'none' : undefined }}>
+              <Switch>
+                <Match when={screenRoute().name === 'home'}>
+                  <HomeScreen />
+                </Match>
+                <Match when={screenRoute().name === 'live' && screenRoute()} keyed>
+                  {(r) => <LiveScreen focusKey={(r as { focusKey?: string }).focusKey} />}
+                </Match>
+                <Match when={screenRoute().name === 'movies'}>
+                  <VodScreen kind="vod" />
+                </Match>
+                <Match when={screenRoute().name === 'series'}>
+                  <VodScreen kind="series" />
+                </Match>
+                <Match when={screenRoute().name === 'vod-detail' && screenRoute()} keyed>
+                  {(r) => <VodDetailScreen id={(r as { id: string }).id} />}
+                </Match>
+                <Match when={screenRoute().name === 'series-detail' && screenRoute()} keyed>
+                  {(r) => <SeriesDetailScreen id={(r as { id: string }).id} />}
+                </Match>
+                <Match when={screenRoute().name === 'catchup' && screenRoute()} keyed>
+                  {(r) => <CatchupScreen channelId={(r as { channelId: string }).channelId} />}
+                </Match>
+                <Match when={screenRoute().name === 'settings'}>
+                  <SettingsScreen />
+                </Match>
+                <Match when={screenRoute().name === 'hidden-categories' && screenRoute()} keyed>
+                  {(r) => <HiddenCategoriesScreen kind={(r as { kind: ContentKind }).kind} />}
+                </Match>
+                <Match when={screenRoute().name === 'playlists'}>
+                  <PlaylistsScreen />
+                </Match>
+                <Match when={screenRoute().name === 'playlist-form' && screenRoute()} keyed>
+                  {(r) => <PlaylistFormScreen id={(r as { id?: string }).id} />}
+                </Match>
+                <Match when={screenRoute().name === 'about'}>
+                  <AboutScreen />
+                </Match>
+                <Match when={screenRoute().name === 'debug'}>
+                  <DebugScreen />
+                </Match>
+                <Match when={true}>
+                  <PlaceholderScreen tab={tabOf(screenRoute())} />
+                </Match>
+              </Switch>
+            </div>
+            <Show when={currentRoute().name === 'player'}>
+              <PlayerScreen />
+            </Show>
           </main>
         </FocusZone>
         <VideoLayer />

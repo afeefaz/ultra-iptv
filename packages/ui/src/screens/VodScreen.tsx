@@ -136,8 +136,9 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
   const items = createMemo<Row[]>(() => {
     const match = makeMatcher(query());
     const list = inCategory();
+    if (!match) return list;
     const names = library()?.normNames();
-    if (!match || !names) return list;
+    if (!names) return list;
     return perf.timedSync('filter.items', () => list.filter((r) => match(names.get(r.key) ?? '')));
   });
 

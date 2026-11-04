@@ -4,6 +4,10 @@ import { catalog } from './catalog';
 import { activePlaylist } from './playlists';
 
 const MAX_PARALLEL = 3;
+/** Rows passed while scrolling never ask: only a row still on screen after this does. */
+const ROW_SETTLE_MS = 300;
+/** The same for the channel under the cursor, which is worth asking about sooner. */
+const SELECTED_SETTLE_MS = 150;
 
 // Results per `${playlistId}|${streamId}`; the worker keeps the persistent cache (spec §7).
 const entries = new Map<string, EpgEntry[]>();
@@ -63,8 +67,9 @@ export function cancelEpg(playlistId: string, streamId: string): void {
   queue.splice(queue.indexOf(key), 1);
 }
 
+/** Out of programmes to show. The worker decides whether that means asking the provider. */
 function isStale(items: EpgEntry[]): boolean {
-  return items.length > 0 && Date.now() >= items[0].stop;
+  return items.length > 0 && Date.now() >= items[Math.max(0, items.length - 2)].stop;
 }
 
 /** Reactive now/next for one channel of the active playlist (Xtream only; M3U has no EPG in v1). */
@@ -73,8 +78,11 @@ export function useNowNext(streamId: Accessor<string | null | undefined>, priori
   createEffect(
     on([() => playlist()?.id, () => playlist()?.type, streamId], ([pid, type, sid]) => {
       if (!pid || !sid || type !== 'xtream') return;
-      requestEpg(pid, sid, priority);
-      onCleanup(() => cancelEpg(pid, sid));
+      const settle = setTimeout(() => requestEpg(pid, sid, priority), priority ? SELECTED_SETTLE_MS : ROW_SETTLE_MS);
+      onCleanup(() => {
+        clearTimeout(settle);
+        cancelEpg(pid, sid);
+      });
     }),
   );
   return createMemo(() => {

@@ -13,6 +13,7 @@ import { ChannelLogo } from '../components/ChannelLogo';
 import { PinButton } from '../components/PinButton';
 import { Icon, type IconName } from '../components/Icon';
 import { TextField } from '../components/TextField';
+import { guideOnEveryRow } from '../data/settings';
 import { track } from '../data/usage';
 import { makeMatcher, useHiddenCategories, withoutHidden } from '../data/categories';
 import { cachedLibrary, loadLibrary, type Library } from '../data/libraryCache';
@@ -40,7 +41,7 @@ import { FocusZone, focusManager } from '../focus';
 import { statusText } from '../format';
 import { formatNumber, t } from '../i18n';
 import { useKeys } from '../keys';
-import { navigate } from '../nav';
+import { currentRoute, navigate } from '../nav';
 
 type CategoryId = 'fav' | 'recent' | 'all' | string;
 interface CategoryItem {
@@ -65,6 +66,8 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
   enterLibrary('live');
   const playlistId = () => activePlaylist()?.id ?? null;
   const isXtream = () => activePlaylist()?.type === 'xtream';
+  /** Programme names on every row, or only for the selected channel (Settings → Browsing). */
+  const rowGuide = () => isXtream() && guideOnEveryRow();
   // Already in memory on the way back from full screen, so the first paint has everything.
   const held = cachedLibrary<ChannelRow>(activePlaylist()?.id ?? null, 'live');
   const [library, setLibrary] = createSignal<Library<ChannelRow> | undefined>(held);
@@ -113,8 +116,9 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
   });
   const channels = createMemo<ChannelRow[]>(() => {
     const match = makeMatcher(channelQuery());
+    if (!match) return inCategory();
     const names = library()?.normNames();
-    if (!match || !names) return inCategory();
+    if (!names) return inCategory();
     return perf.timedSync('filter.channels', () => inCategory().filter((c) => match(names.get(c.key) ?? '')));
   });
 
@@ -182,6 +186,20 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
         if (index >= 0) setTimeout(() => channelList?.focusIndex(index), 0);
       }
     }),
+  );
+
+  // Back from full screen, where the channel may have changed: land on what's playing.
+  createEffect(
+    on(
+      () => currentRoute().name,
+      (name) => {
+        const key = playingChannel()?.key;
+        if (name !== 'live' || !key) return;
+        const index = channels().findIndex((c) => c.key === key);
+        if (index >= 0) setTimeout(() => channelList?.focusIndex(index), 0);
+      },
+      { defer: true },
+    ),
   );
 
   // Recent list follows playback.
@@ -379,7 +397,7 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
                     id="lch"
                     label={t('tab.live')}
                     items={channels()}
-                    rowHeight={isXtream() ? 3.9 : 3.4}
+                    rowHeight={rowGuide() ? 3.9 : 3.4}
                     ref={(api) => (channelList = api)}
                     rowClass={(c) => (playingChannel()?.key === c.key ? 'list-item channel-row is-selected' : 'list-item channel-row')}
                     onFocusRow={(c) => {
@@ -401,7 +419,7 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
                       </p>
                     }
                     renderRow={(c) => (
-                      <ChannelRowContent channel={c} epg={isXtream()} favorite={favSet().has(c.key)} locked={rowLocked(c)} />
+                      <ChannelRowContent channel={c} epg={rowGuide()} favorite={favSet().has(c.key)} locked={rowLocked(c)} />
                     )}
                   />
                 </div>
@@ -510,6 +528,16 @@ function PreviewBox(): JSX.Element {
     const r = box!.getBoundingClientRect();
     return { left: r.left, top: r.top, width: r.width, height: r.height };
   };
+  // This screen stays alive under the full-screen player: take the video back on returning.
+  createEffect(
+    on(
+      () => currentRoute().name,
+      (name) => {
+        if (name === 'live' && box) claimSurface('preview', rectOf());
+      },
+      { defer: true },
+    ),
+  );
   onMount(() => {
     if (!box) return;
     claimSurface('preview', rectOf());

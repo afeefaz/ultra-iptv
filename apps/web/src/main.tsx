@@ -23,4 +23,5 @@ void platformReady.then((platform) => {
   perf.mark('startup.platformReady');
   startLogging(platform);
   render(() => <App platform={platform} />, document.getElementById('root')!);
+  document.getElementById('splash')?.remove();
 });

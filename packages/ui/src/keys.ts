@@ -16,8 +16,18 @@ export function pushKeyHandler(handler: ScreenKeyHandler): () => void {
 
 /** Most recently mounted handler first (dialogs over screens over the app). */
 export function dispatchKey(press: KeyPress): boolean {
-  for (let i = stack.length - 1; i >= 0; i--) if (stack[i](press) === true) return true;
+  for (let i = stack.length - 1; i >= 0; i--) {
+    if (stack[i] === KEY_BARRIER) return false;
+    if (stack[i](press) === true) return true;
+  }
   return false;
+}
+
+const KEY_BARRIER: ScreenKeyHandler = () => false;
+
+/** Everything mounted before this no longer gets keys: for a screen kept alive under another. */
+export function useKeyBarrier(): void {
+  onMount(() => onCleanup(pushKeyHandler(KEY_BARRIER)));
 }
 
 export function useKeys(handler: ScreenKeyHandler): void {

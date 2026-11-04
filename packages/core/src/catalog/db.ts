@@ -22,8 +22,8 @@ export interface UltraDb extends DBSchema {
   playlists: { key: string; value: PlaylistRecord };
   secrets: { key: string; value: EncryptedBlob };
   categories: { key: [string, ContentKind, string]; value: CategoryRow; indexes: { byPlaylistKind: [string, ContentKind] } };
-  live: { key: [string, string]; value: ChannelRow; indexes: { byCat: string } };
-  vod: { key: [string, string]; value: VodRow; indexes: { byCat: string } };
+  live: { key: [string, string]; value: ChannelRow; indexes: { byCat: string; byKey: [string, string] } };
+  vod: { key: [string, string]; value: VodRow; indexes: { byCat: string; byKey: [string, string] } };
   series: { key: [string, string]; value: SeriesRow; indexes: { byCat: string } };
   favorites: { key: [string, ContentKind, string]; value: FavoriteRow; indexes: { byPlaylistKind: [string, ContentKind] } };
   // v2 (phase 2)
@@ -37,7 +37,7 @@ export interface UltraDb extends DBSchema {
 }
 
 export const DB_NAME = 'ultraiptv';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 let dbPromise: Promise<IDBPDatabase<UltraDb>> | null = null;
 let dbName = DB_NAME;
@@ -51,7 +51,7 @@ export function useDatabaseName(name: string): void {
 export function openUltraDb(): Promise<IDBPDatabase<UltraDb>> {
   if (!dbPromise) {
     dbPromise = openDB<UltraDb>(dbName, DB_VERSION, {
-      upgrade(db, oldVersion) {
+      upgrade(db, oldVersion, _newVersion, tx) {
         if (oldVersion < 1) {
           db.createObjectStore('keys');
           db.createObjectStore('playlists', { keyPath: 'id' });
@@ -80,6 +80,11 @@ export function openUltraDb(): Promise<IDBPDatabase<UltraDb>> {
         if (oldVersion < 3) {
           db.createObjectStore('progress', { keyPath: ['playlistId', 'kind', 'key'] }).createIndex('byPlaylist', 'playlistId');
           db.createObjectStore('details', { keyPath: ['playlistId', 'kind', 'id'] });
+        }
+        // v4: Home finds its channels and movies without reading the whole catalogue.
+        if (oldVersion < 4) {
+          tx.objectStore('live').createIndex('byKey', ['playlistId', 'key']);
+          tx.objectStore('vod').createIndex('byKey', ['playlistId', 'key']);
         }
       },
       blocking() {

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { setFetch } from '../net/http';
 import { mockM3u, mockXtream } from '../testing/mock-provider';
 import { openUltraDb, useDatabaseName } from './db';
+import { snapshotKey } from './model';
 import { favoriteKeys, listCategories, listItems, listPlaylists } from './queries';
 import { PlaylistService } from './service';
 
@@ -230,6 +231,61 @@ describe('PlaylistService (movies, series, catch-up)', () => {
 });
 
 describe('PlaylistService (category pins)', () => {
+  it('skips saving lists that are unchanged since the last refresh', async () => {
+    const rec = await service.save(XTREAM);
+    await service.refresh(rec.id);
+    const db = await openUltraDb();
+    const before = await db.count('live');
+    events = [];
+    const { perf } = await import('../perf/perf');
+    perf.reset();
+    const second = await service.refresh(rec.id);
+    expect(second.ok).toBe(true);
+    const counters = perf.snapshot().counters;
+    expect(counters['refresh.unchanged.live']).toBe(1);
+    expect(counters['refresh.unchanged.vod']).toBe(1);
+    expect(counters['refresh.unchanged.series']).toBe(1);
+    expect(events.filter((e) => /^changed:[^:]*:.+/.test(e))).toEqual([]);
+    expect(await db.count('live')).toBe(before);
+    expect((await listPlaylists())[0].counts?.live).toBeGreaterThan(0);
+  });
+
+  it('keeps a fast copy of each library, in step with the rows', async () => {
+    const rec = await service.save(XTREAM);
+    await service.refresh(rec.id);
+    const { librarySnapshot } = await import('./queries');
+    const snapshot = (await librarySnapshot(rec.id, 'live'))!;
+    const rows = snapshot.chunks.flatMap((c) => JSON.parse(c) as unknown[]);
+    expect(rows).toEqual(await listItems(rec.id, 'live', null));
+    expect(JSON.parse(snapshot.categories)).toEqual(await listCategories(rec.id, 'live'));
+    await service.remove(rec.id);
+    expect(await librarySnapshot(rec.id, 'live')).toBeNull();
+  });
+
+  it('writes a missing fast copy, also when the lists are unchanged', async () => {
+    const rec = await service.save(XTREAM);
+    await service.refresh(rec.id);
+    const { librarySnapshot } = await import('./queries');
+    const db = await openUltraDb();
+    await db.delete('settings', snapshotKey(rec.id, 'vod'));
+    expect(await librarySnapshot(rec.id, 'vod')).toBeNull();
+    await service.ensureSnapshot(rec.id, 'vod');
+    expect(await librarySnapshot(rec.id, 'vod')).not.toBeNull();
+  });
+
+  it('finds other versions and more from a category without the caller reading everything', async () => {
+    const rec = await service.save(XTREAM);
+    await service.refresh(rec.id);
+    const { listItems } = await import('./queries');
+    const [first] = await listItems(rec.id, 'vod', null);
+    const more = await service.vodMore(rec.id, first.id);
+    expect(more.more.length).toBeGreaterThan(0);
+    expect(more.more.length).toBeLessThanOrEqual(16);
+    expect(more.more.some((m) => m.key === first.key)).toBe(false);
+    expect(more.category).not.toBe('');
+    expect(Array.isArray(await service.vodVersions(rec.id, first.id))).toBe(true);
+  });
+
   it('pins in order, unpins, and forgets them with the playlist', async () => {
     const rec = await service.save(XTREAM);
     const { categoryPins } = await import('./queries');

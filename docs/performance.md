@@ -8,7 +8,7 @@ All measurements stay on the device. Nothing is sent anywhere: `scripts/perf` re
 
 1. **Instrument** the app: startup, screens, keys, frames, network, database, caches, player, memory, usage. Done.
 2. **Baseline** on every device, with a real catalogue. Done: Samsung TV, phone, and both emulators.
-3. **Fix what the numbers point to,** worst first, on the slowest real device. See [What to fix](#what-to-fix).
+3. **Fix what the numbers point to,** worst first, on the slowest real device. Two rounds done; see [What to fix](#what-to-fix) for the rest.
 4. **Hold the line:** run `pnpm perf` before and after speed-sensitive changes, and compare against the budgets.
 
 ## Budgets
@@ -57,7 +57,7 @@ The debug screen (Settings → About → press OK on the version 5 times) can ex
 | `frame.gap`, `frame.dropped` | Frame timing, only while a test asks for it |
 | `main.longTask` | Anything blocking the main thread for over 50 ms |
 | `db.*` | Database reads and sorts, per section |
-| `library.*` | Loading a section, building lookups and search names, sorting |
+| `library.*` | Loading a section, parsing its copy in chunks, building lookups and search names, sorting |
 | `cache.*` | Hits and misses for the library and sort caches |
 | `filter.*` | Search filtering, per key |
 | `rpc.<method>`, `worker.<method>` | Worker calls as seen by the page and by the worker; the gap is queueing and copying |
@@ -74,7 +74,7 @@ Usage is kept in `localStorage` as counts and active time, with no titles, chann
 
 - `frame.dropped` assumes 60 Hz. Phones lower their refresh rate when idle, so idle "drops" there aren't real. Only trust it during scrolling.
 - "App memory" is approximate. Android adds the main process to the page's JavaScript memory.
-- Samsung TVs round JavaScript memory, so the app figure there means nothing. Trust device RAM instead.
+- Samsung TVs round JavaScript memory, so the readout there shows device RAM only.
 - Emulators run on a fast Mac, so they show what the code does, not how a real TV feels.
 
 ## Baseline
@@ -216,23 +216,117 @@ Measured 2026-11-04 with a real catalogue of about 16,500 channels, 20,700 movie
 
 The Samsung's full refresh took 16.4 s: 1–2 s building rows and 4–6 s saving each section, in overlapping background work.
 
+## After two rounds of fixes
+
+Samsung TV, 2026-11-04, one run each, so small differences are noise. Bold means it now meets the budget.
+
+| Measure | Budget | Baseline | Now |
+|---|---|---|---|
+| Live, first open | 2 s | 3.4 s | **1.0 s** |
+| Movies, first open | 2 s | 4.8 s | **1.5 s** |
+| Series, first open | 2 s | 4.4 s | **0.9 s** |
+| Logo on screen after launch | | 2.3 s | **0.75 s** |
+| First frame of the app after launch | 1 s | 2.2 s | 2.3 s |
+| Home with its data | 2 s | 6.4 s | 3.6 s |
+| Back to Live from full screen | 100 ms | 0.59 s | 0.33 s |
+| Back to a movie's page from the player | 100 ms | 0.51 s | 0.73 s |
+| Key press to frame, scrolling posters (p95) | 100 ms | 197 ms | 90–120 ms |
+| Key press to frame, scrolling Live (p95) | 100 ms | 43 ms | **33 ms** |
+| Longest freeze anywhere | 200 ms | 1.55 s | 0.55 s |
+| Longest freeze opening Movies | 200 ms | 1.44 s | 0.33 s |
+| Longest freeze opening a movie's page | 200 ms | 1.48 s | **Under 50 ms** |
+| Frames dropped, scrolling posters | | 521 | 177 |
+| Frames dropped, scrolling Live | | 65 | **1** |
+| Full refresh | 15 s | 16.4 s | **2.7 s** if nothing changed, 10.8 s if only Live did |
+| Channel change, typical | | 1.6 s | 1.4–1.5 s |
+| Channel change, worst of 5 | 1.5 s | 2.1 s | 2.2–2.9 s, varies by channel |
+| Movie start | 3 s | **1.4 s** | **1.5–1.7 s** |
+| Search, per key | 50 ms | **33–43 ms** | **31–40 ms** |
+
+**What did it:**
+
+- **Libraries:** a JSON copy of each section. Reading it took 0.4–0.6 s on the TV, against 1.7–3.4 s for reading rows from IndexedDB, and it parses in chunks of about 40 ms.
+- **Back from the player:** the screen below stays alive instead of being rebuilt.
+- **Scrolling:** no animated borders or shadows on the TV. Profiling showed JavaScript took about 650 ms of an 8.9 s scroll, and graphics 4 s.
+- **Home:** finds its channels by key instead of reading all of them.
+- **Launch:** the logo is in the HTML, so it paints before the JavaScript starts. That's only what you see first: the app itself is no faster. A warm reload reaches its first frame in 0.41 s, so most of the 2.3 s is the TV starting the app engine.
+
+**What didn't:** reducing AVPlay's start buffer from 4 s to 2 s made no measurable difference, so it was put back. On a channel change, about 0.3 s is closing the old stream and 1.2 s (up to 2.6 s) is AVPlay opening the new one.
+
+## Network and catalogue refresh
+
+| Metric | android-tv-emulator | phone-emulator | phone-s24-ultra | samsung-tv |
+|---|---|---|---|---|
+| Full refresh | 2,860 ms | 2,544 ms | 3,347 ms | 16,414 ms |
+| Live list: first byte | 249 ms | 251 ms | 394 ms | 429 ms |
+| Live list: download | 616 ms | 591 ms | 817 ms | 840 ms |
+| Live list: parse | 37.8 ms | 11.2 ms | 19.1 ms | 316 ms |
+| Live: build rows | 230 ms | 80.2 ms | 97.9 ms | 1,550 ms |
+| Live: save | 595 ms | 126 ms | 190 ms | 4,449 ms |
+| Movies list: download | 1,265 ms | 1,151 ms | 1,847 ms | 3,973 ms |
+| Movies: save | 628 ms | 139 ms | 208 ms | 4,121 ms |
+| Series list: download | 1,375 ms | 1,752 ms | 2,238 ms | 2,809 ms |
+| Series: save | 554 ms | 76.3 ms | 113 ms | 6,378 ms |
+
+### Memory
+
+| Metric | android-tv-emulator | phone-emulator | phone-s24-ultra | samsung-tv |
+|---|---|---|---|---|
+| App, on Home after start | 137 MB | 149 MB | 177 MB | 9.5 MB |
+| App, Live open | 136 MB | 154 MB | 177 MB | 10 MB |
+| App, Movies open | 166 MB | 193 MB | 236 MB | 10 MB |
+| App, Series open | 168 MB | 190 MB | 467 MB | 10 MB |
+| App, all libraries held | 167 MB | 189 MB | 446 MB | 10 MB |
+
+The Samsung's full refresh took 16.4 s: 1–2 s building rows and 4–6 s saving each section, in overlapping background work.
+
+## After the first round of fixes
+
+Samsung TV, 2026-11-04, one run each, so small differences are noise.
+
+| Measure | Budget | Before | After |
+|---|---|---|---|
+| Home with its data | 2 s | 6.4 s | **3.4 s** |
+| Movies, first open | 2 s | 4.8 s | 4.0 s |
+| Series, first open | 2 s | 4.4 s | **2.1 s** |
+| Live, first open | 2 s | 3.4 s | 2.9 s |
+| Key press to frame, scrolling posters (p95) | 100 ms | 197 ms | **90 ms** |
+| Main thread blocked, scrolling posters | | 5.5 s | **2.2 s** |
+| Frames dropped, scrolling posters | | 521 | **162** |
+| Frames dropped, scrolling Live | | 65 | **5** |
+| Longest freeze opening a movie's page | 200 ms | 1.48 s | **Under 50 ms** |
+| Longest freeze anywhere | 200 ms | 1.55 s | 1.34 s |
+| Full refresh | 15 s | 16.4 s | **2.7 s** if nothing changed, 7.4 s if only Live did |
+| First frame after launch | 1 s | 2.2 s | 2.2 s |
+| Back from a player | 100 ms | 0.59 s | 0.61 s |
+| Channel change, worst of 5 | 1.5 s | 2.1 s | 2.2 s |
+| Search, per key | 50 ms | 33–43 ms | 31–40 ms |
+
+## Network
+
+What the app asks the provider for, and how often.
+
+| Request | When | Notes |
+|---|---|---|
+| Login, 3 category lists, 3 full lists | Every 12 hours, 15 s after launch if due | 35 MB once unpacked, sent gzipped. A section whose lists are identical skips parsing and saving, and stays in memory |
+| `get_short_epg` (now and next) | One per channel row that stays on screen for 0.3 s, or only the selected channel (Settings → Browsing) | Reused until it runs out of programmes, or for 6 hours; also for channels with no guide |
+| `get_vod_info`, `get_series_info` | First time a title is opened | Stored on the device |
+| Posters and logos | A poster that stays on screen for 0.12 s | No provider API; browser cache only |
+| Video | One stream at a time | |
+
+**Not done:** one bulk guide file (XMLTV) instead of a request per channel. It's one request and would allow a full schedule grid, but the file may be too big for a TV. Measure its size first.
+
 ## What to fix
 
 Worst first, by what you'd feel on the Samsung TV.
 
-| # | Finding | Evidence on the TV | Fix |
+| # | Finding | Evidence on the TV | Fix to try |
 |---|---|---|---|
-| 1 | Home reads every channel at launch | 2.8 s of the 6.4 s to Home, just to show favourites and recents | Read only those channels by key |
-| 2 | Scrolling posters saturates the main thread | 68 long tasks and 5.5 s blocked in one scroll test; about 20 fps; 197 ms key delay | Render fewer cells, recycle them, decode images off the main path, load them after scrolling stops |
-| 3 | A movie's page re-reads every movie | The page loads the full list again for "versions" and "more in": a 1.5 s freeze | Use the library already in memory |
-| 4 | First open of a library reads everything at once | 2.8–3.9 s, with freezes up to 1.55 s | Read in small batches, or fill the open category first and the rest in the background |
-| 5 | Startup is slow before anything shows | 0.9 s until scripts run, 2.2 s to first frame | Smaller first bundle, and don't load what the TV doesn't use. Consider a modern bundle for newer TVs |
-| 6 | Channel changes are slow | 1.6 s typical, 2.1 s worst | Tune AVPlay's start buffer, and repaint less during a change |
-| 7 | Returning from a player still takes 0.3–0.6 s | Several long tasks while rebuilding the screen | Render less on return |
-| 8 | Search names are built on opening a library | 208–240 ms even if you never search | Build them on the first search (a bug: `normNames()` runs before the query is checked) |
-| 9 | Refresh takes 16 s | Saving is the slowest part | Skip unchanged items; low priority as it's in the background |
-| 10 | The TV's "App" memory figure is meaningless | The TV rounds it, showing about 10 MB whatever happens. Device RAM goes from 993 MB to 1,135 MB of 1.5 GB | Hide the figure on the TV |
-| 11 | Posters use a lot of memory on the phone | 177 MB up to about 530 MB, then 360–480 MB. Fine with 10.8 GB | Same fix as #2 |
-| 12 | Many posters fail on the Android TV emulator | 180 failures in one test; none on the Samsung or phone | Probably its old WebView (133); check on a real Android TV |
-
-**Already good on the TV:** movie start (1.4 s), search (33–43 ms per key), remote response in Live (43 ms), and no rebuffering in these short tests.
+| 1 | Home takes 3.6 s to show its data | It waits on playlists (2.5 s) and the worker (2.9 s), not on reading channels any more | Find out what holds those back on a cold start |
+| 2 | First frame is 2.3 s after launch | 0.9 s until scripts run, 0.65 s to mount, 0.8 s to the first frame | A modern bundle for newer TVs, without the polyfills and module loader. Must not break older TVs, and only Tizen 9 is available to test on |
+| 3 | Back to a movie's page freezes for 0.55 s | Measured leaving the player, around saving progress | Trace it |
+| 4 | Channel changes depend on AVPlay and the channel | 1.2 s average to open a stream, up to 2.6 s | Little left on our side: skip extra calls during a change, and test HLS against TS |
+| 5 | Poster scrolling still blocks | 33 long tasks and 2.2 s in the test | Fewer effects on posters; measure holding a key, since the test presses slowly |
+| 6 | Searching is uneven | Long tasks up to 0.3 s while typing; 206 ms building names on the first search | Do it in the worker |
+| 7 | Posters use a lot of memory on the phone | 177 MB up to about 530 MB. Fine with 10.8 GB | Limit decoded posters if it matters on smaller phones |
+| 8 | Many posters fail on the Android TV emulator | None on the Samsung or phone | Probably its old WebView (133); check on a real Android TV |

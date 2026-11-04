@@ -1,3 +1,4 @@
+import { perf } from '@ultra/core';
 import { VIDEO_BEHIND_CLASS } from '../surface';
 import type {
   BufferProfile,
@@ -149,9 +150,11 @@ export class AvPlayPlayer implements PlayerAdapter {
       this.fail(toError(errorName(e)));
       return;
     }
+    const prepare = perf.span('player.prepare');
     await new Promise<void>((resolve) => {
       this.av.prepareAsync(
         () => {
+          prepare.end();
           if (mine === this.seq) this.onPrepared(options.startAt);
           resolve();
         },
@@ -325,8 +328,8 @@ export class AvPlayPlayer implements PlayerAdapter {
     this.showSubtitle('', 0);
     if (!this.opened) return;
     this.opened = false;
-    this.guard(() => this.av.stop());
-    this.guard(() => this.av.close());
+    // close() also stops, and every call into AVPlay blocks the page.
+    perf.timedSync('player.close', () => this.guard(() => this.av.close()));
   }
 
   /** AVPlay throws when called in the wrong state; a racing channel change must not break the app. */

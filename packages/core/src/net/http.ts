@@ -128,7 +128,20 @@ function operationOf(url: string): string {
   return /player_api\.php/.test(url) ? 'login' : 'other';
 }
 
+export function parseJson<T>(url: string, text: string): T {
+  try {
+    return perf.timedSync(`net.parse.${operationOf(url)}`, () => JSON.parse(text) as T);
+  } catch {
+    throw new AppError({ code: 'format', message: 'The response was not valid JSON' });
+  }
+}
+
 export async function getJson<T>(url: string, opts: GetOptions = {}): Promise<T> {
+  return parseJson<T>(url, await getText(url, opts));
+}
+
+/** A whole response as text, for callers that can skip parsing when nothing changed. */
+export async function getText(url: string, opts: GetOptions = {}): Promise<string> {
   const timer = log.time('net', 'GET', { url });
   const op = operationOf(url);
   const total = perf.span(`net.total.${op}`);
@@ -136,15 +149,13 @@ export async function getJson<T>(url: string, opts: GetOptions = {}): Promise<T>
     const firstByte = perf.span(`net.ttfb.${op}`);
     const res = await request(url, opts);
     firstByte.end();
+    // Tells us whether the provider compresses; most browsers hide this header cross-origin.
+    perf.count(`net.encoding.${res.headers.get('content-encoding') ?? 'hidden'}`);
     const text = await res.text();
     total.end({ status: res.status, chars: text.length });
     perf.count(`net.chars.${op}`, text.length);
     timer.end({ status: res.status, bytes: text.length });
-    try {
-      return perf.timedSync(`net.parse.${op}`, () => JSON.parse(text) as T);
-    } catch {
-      throw new AppError({ code: 'format', message: 'The response was not valid JSON' });
-    }
+    return text;
   } catch (e) {
     total.end();
     perf.count(`net.failed.${op}`);

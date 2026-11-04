@@ -1,5 +1,4 @@
 import { toKey } from '../keymap';
-import { jsHeapUsed } from '../usage';
 import type { DeviceInfo, Platform } from '../types';
 import { tizenGlobals } from './api';
 import { AvPlayPlayer } from './player';
@@ -48,6 +47,7 @@ function registerKeys(): void {
 export const tizenPlatform: Platform = {
   id: 'tizen',
   textInput: 'osk',
+  reducedEffects: true,
   // AVPlay plays raw MPEG-TS natively; it's what providers serve most reliably.
   prefersHls: false,
   createPlayer: () => new AvPlayPlayer(),
@@ -94,7 +94,6 @@ export const tizenPlatform: Platform = {
     return {
       ramTotal,
       ramUsed: ramTotal !== undefined && ramFree !== undefined ? ramTotal - ramFree : undefined,
-      appUsed: jsHeapUsed(),
     };
   },
   device(): DeviceInfo {

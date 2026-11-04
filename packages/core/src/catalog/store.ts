@@ -2,7 +2,7 @@ import type { IDBPDatabase } from 'idb';
 import type { Built } from './build';
 import { categoryRange, playlistRange, type UltraDb } from './db';
 import { rematchFavorites, type Rematch } from './favorites';
-import { hiddenCategoriesKey, pinsKey, type ContentKind } from './model';
+import { hiddenCategoriesKey, listHashKey, pinsKey, snapshotKey, type CategoryRow, type ContentKind, type KindRows } from './model';
 
 export interface WriteStats {
   added: number;
@@ -23,7 +23,9 @@ export async function writeKind<K extends ContentKind>(
   kind: K,
   built: Built<K>,
 ): Promise<WriteStats> {
-  const tx = db.transaction(['categories', kind, 'favorites'], 'readwrite');
+  const tx = db.transaction(['categories', kind, 'favorites', 'settings'], 'readwrite');
+  // The copy for fast reading is out of date from here on; it's written again after this.
+  void tx.objectStore('settings').delete(snapshotKey(playlistId, kind));
   const categories = tx.objectStore('categories');
   const store = tx.objectStore(kind);
   const favStore = tx.objectStore('favorites');
@@ -91,6 +93,8 @@ export async function deletePlaylistData(db: IDBPDatabase<UltraDb>, playlistId: 
     await tx.objectStore('recent').delete(kindRange);
     await tx.objectStore('settings').delete(pinsKey(playlistId, kind));
     await tx.objectStore('settings').delete(hiddenCategoriesKey(playlistId, kind));
+    await tx.objectStore('settings').delete(listHashKey(playlistId, kind));
+    await tx.objectStore('settings').delete(snapshotKey(playlistId, kind));
   }
   await tx.objectStore('epg').delete(playlistRange(playlistId));
   for (const type of ['category', 'channel'] as const) {
@@ -103,4 +107,36 @@ export async function deletePlaylistData(db: IDBPDatabase<UltraDb>, playlistId: 
     await tx.objectStore('details').delete(IDBKeyRange.bound([playlistId, kind, ''], [playlistId, kind, '\uffff']));
   }
   await tx.done;
+}
+
+const SNAPSHOT_FORMAT = 1;
+const SNAPSHOT_CHUNK_ROWS = 2000;
+
+/**
+ * A section's rows as JSON text, for reading a whole library. IndexedDB rebuilds rows one object
+ * at a time on the main thread (over 3 s and long freezes for 20,000 movies on a TV), while text
+ * reads almost instantly and parses in small chunks that leave the screen free between them.
+ */
+export interface LibrarySnapshot {
+  format: number;
+  categories: string;
+  chunks: string[];
+}
+
+export async function writeSnapshot<K extends ContentKind>(
+  db: IDBPDatabase<UltraDb>,
+  playlistId: string,
+  kind: K,
+  categories: CategoryRow[],
+  rows: Array<KindRows[K]>,
+): Promise<void> {
+  const chunks: string[] = [];
+  for (let i = 0; i < rows.length; i += SNAPSHOT_CHUNK_ROWS) chunks.push(JSON.stringify(rows.slice(i, i + SNAPSHOT_CHUNK_ROWS)));
+  const snapshot: LibrarySnapshot = { format: SNAPSHOT_FORMAT, categories: JSON.stringify(categories), chunks };
+  await db.put('settings', snapshot, snapshotKey(playlistId, kind));
+}
+
+export async function readSnapshot(db: IDBPDatabase<UltraDb>, playlistId: string, kind: ContentKind): Promise<LibrarySnapshot | null> {
+  const value = (await db.get('settings', snapshotKey(playlistId, kind))) as LibrarySnapshot | undefined;
+  return value && value.format === SNAPSHOT_FORMAT ? value : null;
 }

@@ -5,8 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark" />
     <title>Ultra IPTV</title>
+    <!-- Styles load with the JavaScript, which a TV takes seconds to start: this paints first. -->
+    <style>
+      html, body { margin: 0; background: #080a10; }
+      #splash { position: fixed; top: 0; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: center; }
+      #splash svg { width: 12vh; height: 12vh; }
+    </style>
   </head>
   <body>
+    <div id="splash"><svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="#f59e0b" /><path d="M18 13.5v21a1.2 1.2 0 0 0 1.8 1l17-10.5a1.2 1.2 0 0 0 0-2l-17-10.5a1.2 1.2 0 0 0-1.8 1z" fill="#111" /></svg></div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
