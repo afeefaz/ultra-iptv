@@ -1,4 +1,5 @@
 // Read-only queries used by the UI thread. All writes go through the worker (catalog/service.ts).
+import { perf } from '../perf/perf';
 import { openUltraDb, playlistRange } from './db';
 import {
   catKey,
@@ -19,7 +20,9 @@ export async function listPlaylists(): Promise<PlaylistRecord[]> {
 }
 
 export async function listCategories(playlistId: string, kind: ContentKind): Promise<CategoryRow[]> {
+  const span = perf.span(`db.listCategories.${kind}`);
   const rows = await (await openUltraDb()).getAllFromIndex('categories', 'byPlaylistKind', [playlistId, kind]);
+  span.end({ rows: rows.length });
   return rows.sort((a, b) => a.order - b.order);
 }
 
@@ -32,6 +35,7 @@ export async function listItems<K extends ContentKind>(
   kind: K,
   categoryId: string | null,
 ): Promise<KindRows[K][]> {
+  const span = perf.span(`db.listItems.${kind}`);
   const db = await openUltraDb();
   // The three item stores share one shape for these lookups; `as 'live'` just picks a concrete store type.
   const store = kind as 'live';
@@ -40,7 +44,8 @@ export async function listItems<K extends ContentKind>(
       ? await db.getAll(store, playlistRange(playlistId))
       : await db.getAllFromIndex(store, 'byCat', catKey(playlistId, categoryId))
   ) as unknown as Array<KindRows[K]>;
-  return rows.sort(byNumber as (a: KindRows[K], b: KindRows[K]) => number);
+  span.end({ rows: rows.length });
+  return perf.timedSync(`db.sortItems.${kind}`, () => rows.sort(byNumber as (a: KindRows[K], b: KindRows[K]) => number));
 }
 
 /** Most recently played first. */

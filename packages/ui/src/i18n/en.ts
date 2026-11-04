@@ -376,6 +376,8 @@ export const en = {
   'speed.tooSlow': 'Too slow for smooth playback.',
   'speed.estimate': 'This is an estimate: the provider’s video files couldn’t be used for the test.',
   'speed.failed': 'The test couldn’t reach your provider. Check that your playlist still works.',
+  'debug.perfExport': 'Export performance report',
+  'debug.perfExported': 'Performance report exported',
   'common.yes': 'Yes',
   'common.cancel': 'Cancel',
   'common.back': 'Back',

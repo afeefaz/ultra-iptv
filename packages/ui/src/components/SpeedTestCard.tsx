@@ -3,6 +3,7 @@ import { createSignal, onCleanup, Show, type JSX } from 'solid-js';
 import { catalog } from '../data/catalog';
 import { stopPlayback } from '../data/playback';
 import { activePlaylist } from '../data/playlists';
+import { track } from '../data/usage';
 import { formatBytes } from '../format';
 import { formatNumber, t, type MessageKey } from '../i18n';
 import { usePlatform } from '../platform-context';
@@ -39,6 +40,7 @@ export function SpeedTestCard(): JSX.Element {
     setResult(null);
     setError('');
     setProgress({ phase: 'ping', fraction: 0 });
+    track('speedTest');
     // Nothing else may share the connection, and providers often allow only one at a time.
     stopPlayback();
     try {

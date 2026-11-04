@@ -1,5 +1,6 @@
 import { log, logging } from '../log';
 import { createLimiter } from '../net/limit';
+import { perf } from '../perf/perf';
 import type { SpeedTargets } from '../net/speed';
 import { AppError, getTextStream, toErrorInfo } from '../net/http';
 import { checkPin, hashPin, isValidPin, type PinHash } from '../secure/pin';
@@ -532,6 +533,7 @@ export class PlaylistService {
     const db = await openUltraDb();
     const record = await db.get('playlists', id);
     if (!record) throw new AppError({ code: 'not-found', message: 'Playlist not found' });
+    const refreshSpan = perf.span('refresh.total');
     const timer = log.time('playlist', 'refresh', { playlist: id, type: record.type });
     await db.put('playlists', { ...record, lastAttempt: Date.now() });
     const counts: Partial<Record<ContentKind, number>> = {};
@@ -547,7 +549,7 @@ export class PlaylistService {
     try {
       const secret = await this.secret(id);
       const write = async <K extends ContentKind>(kind: K, built: Built<K>) => {
-        const stats = await writeKind(db, id, kind, built);
+        const stats = await perf.timed(`refresh.write.${kind}`, () => writeKind(db, id, kind, built), { items: built.items.length });
         counts[kind] = built.items.length;
         this.searchCache.delete(id);
         done += W.save;
@@ -574,6 +576,7 @@ export class PlaylistService {
     });
     this.hooks.changed(id, []);
     timer.end({ ok, counts, partial: partial.length ? partial : undefined, error }, ok ? 'info' : 'warn');
+    refreshSpan.end({ ok });
     return { playlistId: id, ok, counts, error, partial: partial.length ? partial : undefined };
   }
 
@@ -603,7 +606,8 @@ export class PlaylistService {
     for (const p of [liveCats, live, vodCats, vod, seriesCats, series]) p.catch(() => undefined);
 
     const account = await login;
-    await write('live', buildXtreamLive(id, await liveCats, await live));
+    const liveLists = [await liveCats, await live] as const;
+    await write('live', perf.timedSync('refresh.build.live', () => buildXtreamLive(id, liveLists[0], liveLists[1])));
     const rest = async <K extends ContentKind>(kind: K, run: () => Promise<Built<K>>) => {
       try {
         await write(kind, await run());
@@ -613,8 +617,14 @@ export class PlaylistService {
       }
     };
     await Promise.all([
-      rest('vod', async () => buildXtreamVod(id, await vodCats, await vod)),
-      rest('series', async () => buildXtreamSeries(id, await seriesCats, await series)),
+      rest('vod', async () => {
+        const [cats, items] = [await vodCats, await vod];
+        return perf.timedSync('refresh.build.vod', () => buildXtreamVod(id, cats, items));
+      }),
+      rest('series', async () => {
+        const [cats, items] = [await seriesCats, await series];
+        return perf.timedSync('refresh.build.series', () => buildXtreamSeries(id, cats, items));
+      }),
     ]);
     return account;
   }

@@ -5,6 +5,8 @@
 //   node scripts/android.mjs --install       … and install on the connected device/emulator
 //   node scripts/android.mjs --install -s emulator-5554   pick a device (adb serial)
 //   node scripts/android.mjs --release       signed release APK, for sharing (docs/sideloading.md)
+//   node scripts/android.mjs --release --perf  the same with debugging on, so scripts/perf can test a
+//                                            device without losing its data. Never publish this one.
 //
 // Gradle needs Java 17–21; Android Studio's bundled JDK is used when JAVA_HOME isn't set.
 import { execFileSync } from 'node:child_process';
@@ -36,7 +38,7 @@ if (release) {
   run('corepack', ['pnpm', 'build:legacy']);
 }
 run('corepack', ['pnpm', 'exec', 'cap', 'sync', 'android'], join(root, 'apps/android'));
-run('./gradlew', [release ? 'assembleRelease' : 'assembleDebug', '--console=plain', '-q'], join(root, 'apps/android/android'));
+run('./gradlew', [release ? 'assembleRelease' : 'assembleDebug', ...(args.includes('--perf') ? ['-PperfBuild'] : []), '--console=plain', '-q'], join(root, 'apps/android/android'));
 
 const apk = join(
   root,

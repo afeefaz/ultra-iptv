@@ -125,6 +125,10 @@ scripts/            build checks
 docs/               spec, debugging, sideloading
 ```
 
+## Contributing
+
+Read [docs/engineering.md](docs/engineering.md) for the rules, conventions and new feature checklist, and [docs/performance.md](docs/performance.md) for the speed budgets and how to measure them.
+
 ## License
 
 MIT, see [LICENSE](LICENSE). The Android APK includes a GPL-3.0 audio decoder, so the APK as a whole is under GPL-3.0: see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

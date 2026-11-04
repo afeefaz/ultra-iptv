@@ -19,7 +19,9 @@
     "check": "node scripts/check-chars.mjs && tsc --noEmit -p tsconfig.json && eslint . && vitest run && vite build --config apps/web/vite.config.ts && vite build --config apps/web/vite.config.ts --mode legacy && node scripts/check-legacy.mjs apps/web/dist-legacy",
     "android": "node scripts/android.mjs",
     "android:install": "node scripts/android.mjs --install",
-    "tizen": "node scripts/tizen.mjs"
+    "tizen": "node scripts/tizen.mjs",
+    "perf": "node scripts/perf/run.mjs",
+    "perf:report": "node scripts/perf/report.mjs"
   },
   "devDependencies": {
     "@babel/core": "7.29.7",

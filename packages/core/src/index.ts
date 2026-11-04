@@ -1,4 +1,5 @@
 export * from './log';
+export { Perf, perf, type PerfEvent, type PerfSnapshot, type PerfStat } from './perf/perf';
 export * from './catalog/model';
 export { UNCATEGORIZED } from './catalog/build';
 export {

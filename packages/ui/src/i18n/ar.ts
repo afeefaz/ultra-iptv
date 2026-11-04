@@ -378,6 +378,8 @@ export const ar: Record<MessageKey, string> = {
   'speed.tooSlow': 'أبطأ من أن يكون التشغيل سلسًا.',
   'speed.estimate': 'هذا تقدير: تعذر استخدام ملفات الفيديو لدى المزود في الاختبار.',
   'speed.failed': 'تعذر الوصول إلى المزود. تأكد من أن قائمة التشغيل ما زالت تعمل.',
+  'debug.perfExport': 'تصدير تقرير الأداء',
+  'debug.perfExported': 'تم تصدير تقرير الأداء',
   'common.yes': 'نعم',
   'common.cancel': 'إلغاء',
   'common.back': 'رجوع',

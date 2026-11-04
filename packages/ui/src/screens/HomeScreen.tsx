@@ -1,4 +1,4 @@
-import { favoriteKeys, listItems, log, recentKeys, type ChannelRow, type ProgressRow, type VodInfo } from '@ultra/core';
+import { favoriteKeys, listItems, log, perf, recentKeys, type ChannelRow, type ProgressRow, type VodInfo } from '@ultra/core';
 import { createEffect, createMemo, createSignal, For, on, Show, type JSX } from 'solid-js';
 import { ChannelLogo } from '../components/ChannelLogo';
 import { FocusButton } from '../components/FocusButton';
@@ -43,6 +43,7 @@ export function HomeScreen(): JSX.Element {
         return;
       }
       const all = await listItems(id, 'live', null);
+      perf.mark('startup.homeData');
       const byKey = new Map(all.map((c) => [c.key, c] as [string, ChannelRow]));
       const pick = (keys: string[]) => keys.map((k) => byKey.get(k)).filter((c): c is ChannelRow => !!c).slice(0, MAX_CHANNELS);
       setFavorites(pick(favKeys));

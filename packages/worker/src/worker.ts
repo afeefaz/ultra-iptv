@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 // Catalogue worker (spec §3): fetches and parses playlists, diffs and writes IndexedDB, searches.
 // Built as a classic (non-module) worker without polyfills: keep to Chrome 53 built-ins here.
-import { log, logging, setFallbackFetch, toErrorInfo } from '@ultra/core';
+import { log, logging, perf, setFallbackFetch, toErrorInfo } from '@ultra/core';
 import { PlaylistService } from '@ultra/core/service';
 import type { FromWorker, HttpReplyMessage, Method, ToWorker, WorkerApi } from './protocol';
 
@@ -71,6 +71,8 @@ const api: WorkerApi = {
   togglePin: (playlistId, kind, categoryId) => service.togglePin(playlistId, kind, categoryId),
   setHiddenCategories: (playlistId, kind, categoryIds) => service.setHiddenCategories(playlistId, kind, categoryIds),
   speedTargets: (playlistId) => service.speedTargets(playlistId),
+  perfSnapshot: async () => perf.snapshot(),
+  perfReset: async () => perf.reset(),
   saveProgress: (row) => service.saveProgress(row),
   clearProgress: (playlistId, kind, key) => service.clearProgress(playlistId, kind, key),
 };
@@ -89,9 +91,14 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
     post({ id, ok: false, error: { code: 'internal', message: `Unknown method ${String(method)}` } });
     return;
   }
+  const span = perf.span(`worker.${String(method)}`);
   fn.apply(api, args).then(
-    (result) => post({ id, ok: true, result }),
+    (result) => {
+      span.end();
+      post({ id, ok: true, result });
+    },
     (err) => {
+      span.end();
       const error = toErrorInfo(err);
       if (error.code === 'internal') log.error('worker', `${method} failed`, { error: err });
       post({ id, ok: false, error });

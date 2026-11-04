@@ -1,3 +1,4 @@
+import { perf } from '@ultra/core';
 import type { Platform } from '@ultra/platform';
 import { webPlatform } from '@ultra/platform/web';
 import { App, startLogging } from '@ultra/ui';
@@ -16,7 +17,10 @@ const platformReady: Promise<Platform> = isAndroidApp
     ? import('@ultra/platform/tizen').then((m) => m.tizenPlatform)
     : Promise.resolve(webPlatform);
 
+perf.mark('startup.scriptRan');
+
 void platformReady.then((platform) => {
+  perf.mark('startup.platformReady');
   startLogging(platform);
   render(() => <App platform={platform} />, document.getElementById('root')!);
 });

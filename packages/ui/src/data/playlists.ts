@@ -1,4 +1,4 @@
-import { listPlaylists, log, type ContentKind, type PlaylistRecord, type RefreshResult } from '@ultra/core';
+import { perf, listPlaylists, log, type ContentKind, type PlaylistRecord, type RefreshResult } from '@ultra/core';
 import { createSignal } from 'solid-js';
 import { catalog, onCatalogEvent } from './catalog';
 
@@ -35,6 +35,7 @@ export const versionOf = (playlistId: string | null | undefined): number =>
 export async function reloadPlaylists(): Promise<void> {
   try {
     setPlaylists(await listPlaylists());
+    perf.mark('startup.playlistsRead');
   } catch (e) {
     log.error('playlist', 'could not read playlists', { error: e });
   } finally {

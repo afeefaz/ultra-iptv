@@ -1,6 +1,7 @@
 package com.ultraiptv.player;
 
 import android.os.Bundle;
+import android.webkit.WebView;
 
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -19,6 +20,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(UltraPlayerPlugin.class);
         super.onCreate(savedInstanceState);
+        if (BuildConfig.PERF_BUILD) WebView.setWebContentsDebuggingEnabled(true);
         hideSystemBars();
     }
 

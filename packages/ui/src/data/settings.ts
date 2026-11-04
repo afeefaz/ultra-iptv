@@ -1,6 +1,7 @@
 import type { StreamFormat } from '@ultra/core';
 import type { BufferProfile } from '@ultra/platform';
 import { createSignal, type Accessor } from 'solid-js';
+import { track } from './usage';
 
 export type SubtitleSize = 'small' | 'medium' | 'large';
 
@@ -18,6 +19,7 @@ function persisted<T>(key: string, fallback: T): [Accessor<T>, (value: T) => voi
     get,
     (value: T) => {
       set(() => value);
+      track(`setting.${key}`);
       try {
         localStorage.setItem('ultraiptv.' + key, JSON.stringify(value));
       } catch {

@@ -17,6 +17,9 @@ keystore.properties
 .env
 .env.*
 
+# Performance results describe one device and account
+perf-results/
+
 # Generated test media (scripts/make-test-media.mjs)
 apps/web/dev/media/
 

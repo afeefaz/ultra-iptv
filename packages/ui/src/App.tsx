@@ -1,4 +1,4 @@
-import { log, logging, type ContentKind } from '@ultra/core';
+import { log, logging, perf, type ContentKind } from '@ultra/core';
 import type { KeyPress, Platform } from '@ultra/platform';
 import { createEffect, createRenderEffect, createSignal, For, Match, on, onCleanup, onMount, Show, Switch, type JSX } from 'solid-js';
 import { FocusButton } from './components/FocusButton';
@@ -13,7 +13,9 @@ import { clock, formatClock } from './data/epg';
 import { startParental } from './data/parental';
 import { playingPlaylistId, stopPlayback } from './data/playback';
 import { activePlaylist, playlists, setActivePlaylist, startPlaylists } from './data/playlists';
+import { startPerfRuntime } from './data/perfRuntime';
 import { textScale } from './data/settings';
+import { startUsage, track } from './data/usage';
 import { DebugScreen } from './debug/DebugScreen';
 import { CONTENT_ZONE, focusManager, FocusZone } from './focus';
 import { countsText } from './format';
@@ -75,6 +77,9 @@ export function App(props: { platform: Platform }): JSX.Element {
 
   const handleKey = (press: KeyPress): boolean => {
     log.debug('keys', 'press', { key: press.key, raw: press.raw, repeat: press.repeat });
+    // Press to the next painted frame: what "the remote feels slow" actually is.
+    const latency = perf.span('input.toFrame');
+    requestAnimationFrame(() => requestAnimationFrame(() => latency.end()));
     if (dispatchKey(press)) return true;
     switch (press.key) {
       case 'up':
@@ -97,7 +102,23 @@ export function App(props: { platform: Platform }): JSX.Element {
     }
   };
 
+  // Each screen change: from the route changing to the new screen being painted.
+  createEffect(
+    on(
+      () => currentRoute().name,
+      (name) => {
+        const span = perf.span(`screen.${name}`);
+        track(`screen.${name}`);
+        requestAnimationFrame(() => requestAnimationFrame(() => span.end()));
+      },
+    ),
+  );
+
   onMount(() => {
+    perf.mark('startup.appMounted');
+    startPerfRuntime(props.platform);
+    startUsage();
+    requestAnimationFrame(() => requestAnimationFrame(() => perf.mark('startup.firstFrame')));
     // Dev builds only: inspect focus state from DevTools (`__ultra.focus.currentId`).
     if (import.meta.env.DEV) (window as unknown as { __ultra: unknown }).__ultra = { focus: focusManager };
     startPlaylists();

@@ -1,4 +1,4 @@
-import { log, logging } from '@ultra/core';
+import { log, logging, perf } from '@ultra/core';
 import type { Platform } from '@ultra/platform';
 import { WorkerClient, type WorkerEvent } from '@ultra/worker';
 import CatalogWorker from '@ultra/worker/worker?worker';
@@ -19,7 +19,7 @@ export function catalog(): WorkerClient {
     if (http) client.setHttp(http);
     const keepHosts = ['localhost', '127.0.0.1'];
     if (location.hostname) keepHosts.push(location.hostname);
-    client.call('init', { saltHex: logging.saltHex, keepHosts, logLevel: log.level, nativeHttp: !!http }).catch((e) => {
+    client.call('init', { saltHex: logging.saltHex, keepHosts, logLevel: log.level, nativeHttp: !!http }).then(() => perf.mark('startup.workerReady'), (e) => {
       log.error('worker', 'init failed', { error: e });
     });
   }

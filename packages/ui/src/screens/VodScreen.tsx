@@ -1,6 +1,7 @@
 import {
   favoriteKeys,
   log,
+  perf,
   UNCATEGORIZED,
   type CategoryRow,
   type ProgressRow,
@@ -13,6 +14,7 @@ import { FocusButton } from '../components/FocusButton';
 import { PinButton } from '../components/PinButton';
 import { Icon } from '../components/Icon';
 import { TextField } from '../components/TextField';
+import { track } from '../data/usage';
 import { makeMatcher, useHiddenCategories, withoutHidden } from '../data/categories';
 import { cachedLibrary, loadLibrary, type Library } from '../data/libraryCache';
 import { enterLibrary, rememberedSearch, rememberSearch } from '../data/libraryMemory';
@@ -82,6 +84,7 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
   const searchKey = () => `items|${activePlaylist()?.id ?? ''}|${props.kind}`;
   const [query, setQuerySignal] = createSignal(rememberedSearch(searchKey()));
   const setQuery = (q: string) => {
+    if (q && !query()) track(`search.${props.kind}`);
     setQuerySignal(q);
     rememberSearch(searchKey(), q);
     // Positions in the old results mean nothing in the new ones.
@@ -135,7 +138,7 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
     const list = inCategory();
     const names = library()?.normNames();
     if (!match || !names) return list;
-    return list.filter((r) => match(names.get(r.key) ?? ''));
+    return perf.timedSync('filter.items', () => list.filter((r) => match(names.get(r.key) ?? '')));
   });
 
   const railItems = createMemo<RailItem[]>(() => {

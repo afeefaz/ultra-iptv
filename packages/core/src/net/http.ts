@@ -1,4 +1,5 @@
 import { log } from '../log';
+import { perf } from '../perf/perf';
 import type { ErrorInfo } from '../catalog/model';
 
 export class AppError extends Error {
@@ -49,6 +50,7 @@ async function send(url: string, init: RequestInit, timeoutMs: number): Promise<
     if (!fallbackImpl || (init.signal && init.signal.aborted)) throw e;
     log.info('net', 'using native HTTP for this server', { url: origin, timeoutMs });
     fallbackOrigins.add(origin);
+    perf.count('net.fallbackUsed');
     return sendFallback(url, init);
   }
 }
@@ -119,18 +121,33 @@ function classifyFetchFailure(url: string): ErrorInfo {
   return { code: 'network', message: 'Network error' };
 }
 
+/** What a request is for, without anything identifying: the API action, or just "login" / "other". */
+function operationOf(url: string): string {
+  const action = /[?&]action=([a-z_]+)/.exec(url);
+  if (action) return action[1];
+  return /player_api\.php/.test(url) ? 'login' : 'other';
+}
+
 export async function getJson<T>(url: string, opts: GetOptions = {}): Promise<T> {
   const timer = log.time('net', 'GET', { url });
+  const op = operationOf(url);
+  const total = perf.span(`net.total.${op}`);
   try {
+    const firstByte = perf.span(`net.ttfb.${op}`);
     const res = await request(url, opts);
+    firstByte.end();
     const text = await res.text();
+    total.end({ status: res.status, chars: text.length });
+    perf.count(`net.chars.${op}`, text.length);
     timer.end({ status: res.status, bytes: text.length });
     try {
-      return JSON.parse(text) as T;
+      return perf.timedSync(`net.parse.${op}`, () => JSON.parse(text) as T);
     } catch {
       throw new AppError({ code: 'format', message: 'The response was not valid JSON' });
     }
   } catch (e) {
+    total.end();
+    perf.count(`net.failed.${op}`);
     timer.end({ error: toErrorInfo(e) }, 'warn');
     throw e;
   }
@@ -143,9 +160,12 @@ export async function getTextStream(
   opts: GetOptions = {},
 ): Promise<number> {
   const timer = log.time('net', 'GET (stream)', { url });
+  const total = perf.span('net.total.stream');
   let bytes = 0;
   try {
+    const firstByte = perf.span('net.ttfb.stream');
     const res = await request(url, opts);
+    firstByte.end();
     const reader = res.body && typeof res.body.getReader === 'function' ? res.body.getReader() : null;
     if (!reader) {
       const text = await res.text();
@@ -165,9 +185,13 @@ export async function getTextStream(
       }
       onChunk(decoder.decode());
     }
+    total.end({ status: res.status, bytes });
+    perf.count('net.bytes.stream', bytes);
     timer.end({ status: res.status, bytes });
     return bytes;
   } catch (e) {
+    total.end();
+    perf.count('net.failed.stream');
     timer.end({ error: toErrorInfo(e), bytes }, 'warn');
     throw e;
   }

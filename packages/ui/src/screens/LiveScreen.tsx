@@ -1,6 +1,7 @@
 import {
   favoriteKeys,
   log,
+  perf,
   recentKeys,
   UNCATEGORIZED,
   type CategoryRow,
@@ -12,6 +13,7 @@ import { ChannelLogo } from '../components/ChannelLogo';
 import { PinButton } from '../components/PinButton';
 import { Icon, type IconName } from '../components/Icon';
 import { TextField } from '../components/TextField';
+import { track } from '../data/usage';
 import { makeMatcher, useHiddenCategories, withoutHidden } from '../data/categories';
 import { cachedLibrary, loadLibrary, type Library } from '../data/libraryCache';
 import { enterLibrary, rememberedSearch, rememberSearch } from '../data/libraryMemory';
@@ -83,6 +85,7 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
   if (props.focusKey) rememberSearch(searchKey(activePlaylist()?.id ?? null), '');
   const [channelQuery, setChannelQuerySignal] = createSignal(rememberedSearch(searchKey(activePlaylist()?.id ?? null)));
   const setChannelQuery = (q: string) => {
+    if (q && !channelQuery()) track('search.channels');
     setChannelQuerySignal(q);
     rememberSearch(searchKey(activePlaylist()?.id ?? null), q);
   };
@@ -112,7 +115,7 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
     const match = makeMatcher(channelQuery());
     const names = library()?.normNames();
     if (!match || !names) return inCategory();
-    return inCategory().filter((c) => match(names.get(c.key) ?? ''));
+    return perf.timedSync('filter.channels', () => inCategory().filter((c) => match(names.get(c.key) ?? '')));
   });
 
   const categoryItems = createMemo<CategoryItem[]>(() => {

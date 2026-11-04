@@ -1,4 +1,4 @@
-import { AppError, log, logging } from '@ultra/core';
+import { AppError, log, logging, perf } from '@ultra/core';
 import type { FromWorker, HttpReplyMessage, Method, RequestMessage, WorkerApi, WorkerEvent } from './protocol';
 
 export type { WorkerApi, WorkerEvent } from './protocol';
@@ -21,8 +21,14 @@ export class WorkerClient {
   call<M extends Method>(method: M, ...args: Parameters<WorkerApi[M]>): ReturnType<WorkerApi[M]> {
     const id = this.nextId++;
     const message: RequestMessage = { id, method, args };
+    // Round trip as the page sees it; the difference from `worker.<method>` is queueing and copying.
+    const span = perf.span(`rpc.${method}`);
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve: resolve as (v: unknown) => void, reject, method });
+      const settle = <T,>(fn: (v: T) => void) => (v: T) => {
+        span.end();
+        fn(v);
+      };
+      this.pending.set(id, { resolve: settle(resolve as (v: unknown) => void), reject: settle(reject), method });
       this.worker.postMessage(message);
     }) as ReturnType<WorkerApi[M]>;
   }

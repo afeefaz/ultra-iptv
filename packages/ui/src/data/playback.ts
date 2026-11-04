@@ -1,8 +1,9 @@
-import { log, WATCHED_RATIO, type ChannelRow, type MediaRef, type ResolvedStream } from '@ultra/core';
+import { log, perf, WATCHED_RATIO, type ChannelRow, type MediaRef, type ResolvedStream } from '@ultra/core';
 import { CANNOT_CONNECT, type Platform, type PlayerAdapter, type PlayerError, type PlayerState, type PlayerStats, type PlayerTracks, type Track, type VideoRect } from '@ultra/platform';
 import { createSignal } from 'solid-js';
 import { resolutionLabel } from '../format';
 import { catalog } from './catalog';
+import { track } from './usage';
 import { ensureUnlocked, isChannelLocked } from './parental';
 import { bufferProfile, preferredAudio, preferredText, setPreferredAudio, setPreferredText, streamFormat } from './settings';
 
@@ -98,6 +99,7 @@ const urlCache = new Map<string, ResolvedStream>();
 
 const isActive = () => !!(current() || media());
 
+let bufferingSpan: { end: () => number } | null = null;
 const [videoSize, setVideoSize] = createSignal<{ width: number; height: number } | null>(null);
 /** The playing picture's resolution ("1080p"), once the player knows it. */
 export const videoResolution = (): string | null => {
@@ -109,7 +111,10 @@ function readVideoSize(): void {
   if (state() !== 'playing' || !player) return;
   const { width, height } = player.stats();
   const size = videoSize();
-  if (width && height && (size?.width !== width || size?.height !== height)) setVideoSize({ width, height });
+  if (width && height && (size?.width !== width || size?.height !== height)) {
+    setVideoSize({ width, height });
+    perf.count(`player.resolution.${resolutionLabel(width, height)}`);
+  }
 }
 
 export function initPlayback(p: Platform, layer: HTMLElement): void {
@@ -401,6 +406,13 @@ function saveProgress(m: MediaItem): void {
 }
 
 function onState(s: PlayerState): void {
+  if (s === 'buffering' && state() !== 'buffering') {
+    bufferingSpan = perf.span('player.buffering');
+    perf.count('player.bufferingEvents');
+  } else if (s !== 'buffering' && bufferingSpan) {
+    bufferingSpan.end();
+    bufferingSpan = null;
+  }
   setState(s);
   if (s === 'loading') setVideoSize(null);
   clearTimeout(stallTimer);
@@ -431,6 +443,7 @@ function onState(s: PlayerState): void {
 
 function onError(e: PlayerError): void {
   if (!isActive()) return;
+  perf.count(`player.error.${e.kind}`);
   if (e.kind === 'autoplay') {
     setStatus({ kind: 'needs-gesture' });
     log.info('player', 'autoplay blocked');
@@ -466,6 +479,7 @@ function onError(e: PlayerError): void {
 }
 
 function scheduleReconnect(): void {
+  perf.count('player.reconnects');
   clearTimeout(retryTimer);
   attempt++;
   if (attempt > MAX_ATTEMPTS) {
@@ -506,6 +520,8 @@ function onTracks(t: PlayerTracks): void {
 function onFirstFrame(): void {
   readVideoSize();
   const zapMs = Math.round(now() - zapStart);
+  perf.record(media() ? 'player.startMedia' : 'player.zap', zapMs);
+  track(media() ? 'play.media' : 'play.live');
   setLastZapMs(zapMs);
   const m = media();
   if (m) {

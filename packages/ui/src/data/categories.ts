@@ -1,6 +1,7 @@
 import { categoryPins, hiddenCategories, log, normalizeText, type ContentKind } from '@ultra/core';
 import { createEffect, createRoot, createSignal, on, type Accessor } from 'solid-js';
 import { catalog } from './catalog';
+import { track } from './usage';
 import { activePlaylist } from './playlists';
 import {
   liveCatSort,
@@ -52,6 +53,7 @@ export function usePins(kind: ContentKind): { pins: Accessor<string[]>; toggle: 
     const pinned = await catalog().call('togglePin', id, kind, categoryId);
     store.set((p) => (pinned ? p.concat(categoryId) : p.filter((c) => c !== categoryId)));
     log.debug('categories', pinned ? 'pinned' : 'unpinned', { kind });
+    track(`pin.${kind}`);
     return pinned;
   };
   return { pins: store.pins, toggle };
@@ -85,6 +87,7 @@ export function useHiddenCategories(kind: ContentKind): { hidden: Accessor<strin
   const store = hiddenStore(kind);
   const setHidden = (ids: string[]) => {
     store.set(ids);
+    track(`hideCategories.${kind}`);
     const id = activePlaylist()?.id;
     if (id) void catalog().call('setHiddenCategories', id, kind, ids);
   };

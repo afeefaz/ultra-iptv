@@ -5,6 +5,7 @@ import { FocusButton } from '../components/FocusButton';
 import { FocusZone, useFocusable } from '../focus';
 import { formatNumber, t } from '../i18n';
 import { usePlatform } from '../platform-context';
+import { perfReport } from '../data/perfRuntime';
 import { addSampleEntries } from './sample-entries';
 
 const MAX_ROWS = 200;
@@ -45,6 +46,13 @@ export function DebugScreen(): JSX.Element {
     });
     onCleanup(off);
   });
+
+  /** Timings and feature counts as a file (docs/performance.md). Numbers only, kept on this device. */
+  const exportPerf = async () => {
+    const report = await perfReport();
+    await platform.fileExport.exportText(`ultra-iptv-performance-${Date.now()}.json`, 'application/json', JSON.stringify(report, null, 1));
+    setStatus(t('debug.perfExported'));
+  };
 
   const filtered = createMemo(() => {
     const q = query().toLowerCase();
@@ -110,6 +118,9 @@ export function DebugScreen(): JSX.Element {
           </FocusButton>
           <FocusButton id="debug-clear" class="btn-danger" onSelect={() => setConfirmClear(true)}>
             {t('debug.clear')}
+          </FocusButton>
+          <FocusButton id="debug-perf-export" onSelect={() => void exportPerf()}>
+            {t('debug.perfExport')}
           </FocusButton>
           <FocusButton id="debug-hosts" selected={showHosts()} onSelect={() => setShowHosts(!showHosts())}>
             {t('debug.hosts')}

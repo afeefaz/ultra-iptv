@@ -11,6 +11,7 @@ import type {
   StreamFormat,
   StreamRef,
   ErrorInfo,
+  PerfSnapshot,
   FavoriteRow,
   LogEntry,
   LogLevel,
@@ -51,6 +52,8 @@ export interface WorkerApi {
   togglePin(playlistId: string, kind: ContentKind, categoryId: string): Promise<boolean>;
   setHiddenCategories(playlistId: string, kind: ContentKind, categoryIds: string[]): Promise<void>;
   speedTargets(playlistId: string): Promise<SpeedTargets>;
+  perfSnapshot(): Promise<PerfSnapshot>;
+  perfReset(): Promise<void>;
   saveProgress(row: ProgressRow): Promise<void>;
   clearProgress(playlistId: string, kind: ProgressKind, key: string): Promise<void>;
 }
