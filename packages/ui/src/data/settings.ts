@@ -75,6 +75,14 @@ export const [detailMode, setDetailMode] = persisted<DetailMode>('vod.detailMode
 /** Next to categories: choosing another category keeps the open title (or closes it). */
 export const [keepTitleOpen, setKeepTitleOpen] = persisted<boolean>('vod.keepTitleOpen', true);
 
+export const MIN_SEEK_SECONDS = 10;
+export const MAX_SEEK_SECONDS = 30;
+/** How far the skip buttons and Left/Right jump in movies and episodes. */
+export const [seekSeconds, setSeekSeconds] = persisted<number>('playback.seekSeconds', MIN_SEEK_SECONDS);
+
+/** The big skip buttons on the picture; the ones under the timeline are always there. */
+export const [showPictureSkip, setShowPictureSkip] = persisted<boolean>('playback.showPictureSkip', true);
+
 /** Programme names on every channel row (a guide request per row), or only the selected channel. */
 export const [guideOnEveryRow, setGuideOnEveryRow] = persisted<boolean>('live.guideOnEveryRow', true);
 

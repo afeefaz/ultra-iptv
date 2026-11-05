@@ -18,10 +18,16 @@ import {
   HOME_SECTIONS,
   homeShows,
   keepTitleOpen,
+  MAX_SEEK_SECONDS,
   MAX_TEXT_SCALE,
+  MIN_SEEK_SECONDS,
   MIN_TEXT_SCALE,
+  seekSeconds,
+  setSeekSeconds,
+  setShowPictureSkip,
   setShowSystemUsage,
   setTextScale,
+  showPictureSkip,
   showSystemUsage,
   TEXT_SCALE_STEP,
   textScale,
@@ -111,6 +117,53 @@ function Card(props: { section: Section; aside?: string; children: JSX.Element }
       </div>
       {props.children}
     </section>
+  );
+}
+
+/** − value + for numbers: a remote can reach every value, one press at a time. */
+function Stepper(props: {
+  id: string;
+  label: string;
+  value: number;
+  unit: string;
+  min: number;
+  max: number;
+  step: number;
+  reset?: number;
+  onChange: (value: number) => void;
+}): JSX.Element {
+  return (
+    <div class="stepper" role="group" aria-label={props.label}>
+      <FocusButton
+        id={`${props.id}-down`}
+        class="stepper-button"
+        label={t('settings.stepDown')}
+        onSelect={() => props.onChange(Math.max(props.min, props.value - props.step))}
+      >
+        −
+      </FocusButton>
+      <span class="stepper-value" dir="ltr">
+        {props.value}
+        {props.unit}
+      </span>
+      <FocusButton
+        id={`${props.id}-up`}
+        class="stepper-button"
+        label={t('settings.stepUp')}
+        onSelect={() => props.onChange(Math.min(props.max, props.value + props.step))}
+      >
+        +
+      </FocusButton>
+      <Show when={props.reset !== undefined && props.value !== props.reset}>
+        <FocusButton id={`${props.id}-reset`} onSelect={() => props.onChange(props.reset!)}>
+          {t('settings.stepReset', { value: `${props.reset}${props.unit}` })}
+        </FocusButton>
+      </Show>
+      <span class="stepper-range" dir="ltr">
+        {props.min}–{props.max}
+        {props.unit}
+      </span>
+    </div>
   );
 }
 
@@ -207,6 +260,33 @@ export function SettingsScreen(): JSX.Element {
                   )}
                 </For>
               </div>
+              <div class="setting-name setting-gap">{t('settings.seekSeconds')}</div>
+              <div class="setting-desc">{t('settings.seekSecondsDesc')}</div>
+              <Stepper
+                id="settings-seek"
+                label={t('settings.seekSeconds')}
+                value={seekSeconds()}
+                unit=" s"
+                min={MIN_SEEK_SECONDS}
+                max={MAX_SEEK_SECONDS}
+                step={1}
+                reset={MIN_SEEK_SECONDS}
+                onChange={setSeekSeconds}
+              />
+              <div class="setting-name setting-gap">{t('settings.pictureSkip')}</div>
+              <div class="setting-desc">{t('settings.pictureSkipDesc')}</div>
+              <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
+                <For each={[true, false]}>
+                  {(show) => (
+                    <FocusButton id={`settings-picture-skip-${show}`} selected={showPictureSkip() === show} onSelect={() => setShowPictureSkip(show)}>
+                      <span class="option-card-text">
+                        <span class="option-card-title">{t(show ? 'settings.usage.on' : 'settings.usage.off')}</span>
+                      </span>
+                      <Icon name={showPictureSkip() === show ? 'checkCircle' : 'radioOff'} />
+                    </FocusButton>
+                  )}
+                </For>
+              </div>
             </Card>
 
             <Card section={section('subtitles')}>
@@ -252,35 +332,17 @@ export function SettingsScreen(): JSX.Element {
             <Card section={section('display')}>
               <div class="setting-name">{t('settings.textSize')}</div>
               <div class="setting-desc">{t('settings.textSizeDesc')}</div>
-              <div class="stepper" role="group" aria-label={t('settings.textSize')}>
-                <FocusButton
-                  id="settings-text-down"
-                  class="stepper-button"
-                  label={t('settings.textSmaller')}
-                  onSelect={() => setTextScale(Math.max(MIN_TEXT_SCALE, textScale() - TEXT_SCALE_STEP))}
-                >
-                  −
-                </FocusButton>
-                <span class="stepper-value" dir="ltr">
-                  {textScale()}%
-                </span>
-                <FocusButton
-                  id="settings-text-up"
-                  class="stepper-button"
-                  label={t('settings.textBigger')}
-                  onSelect={() => setTextScale(Math.min(MAX_TEXT_SCALE, textScale() + TEXT_SCALE_STEP))}
-                >
-                  +
-                </FocusButton>
-                <Show when={textScale() !== 100}>
-                  <FocusButton id="settings-text-reset" onSelect={() => setTextScale(100)}>
-                    {t('settings.textReset')}
-                  </FocusButton>
-                </Show>
-                <span class="stepper-range" dir="ltr">
-                  {MIN_TEXT_SCALE}–{MAX_TEXT_SCALE}%
-                </span>
-              </div>
+              <Stepper
+                id="settings-text"
+                label={t('settings.textSize')}
+                value={textScale()}
+                unit="%"
+                min={MIN_TEXT_SCALE}
+                max={MAX_TEXT_SCALE}
+                step={TEXT_SCALE_STEP}
+                reset={100}
+                onChange={setTextScale}
+              />
               <Show when={platform.systemUsage}>
                 <div class="setting-name setting-gap">{t('settings.usage')}</div>
                 <div class="setting-desc">{t('settings.usageDesc')}</div>

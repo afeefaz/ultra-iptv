@@ -53,7 +53,7 @@ digits, F1–F4 = red/green/yellow/blue, PageUp/PageDown = CH+/CH−.
 | M3U | `http://localhost:<port>/__fixtures/m3u/demo.m3u` (or `big.m3u`) |
 | Renumber everything | open `/__fixtures/bump`, then Refresh: every stream id changes, a few channels go and come, favourites should stay |
 | Drop every stream | open `/__fixtures/outage?seconds=20`: playback shows "Reconnecting (n)…" and resumes by itself |
-| Movies & series | every mock movie and episode is the same 5-minute video (seekable MP4); series have 1–3 seasons of 6 episodes |
+| Movies & series | every mock movie and episode is the same 5-minute video (seekable MP4); series have 1–3 seasons of 6 episodes; every 7th series has 120 episodes per season, for testing long lists |
 | Catch-up | every 5th channel (News 1 HD, …) has 3 days of archive; Live → focus it → **Catch-up** |
 | Provider that blocks browsers | open the app at `http://localhost:<port>` and use server `http://127.0.0.1:<port>/__fixtures/xtream`: the API allows cross-origin requests but streams don't (like many real providers), so live TV falls back to Chrome's built-in HLS player |
 

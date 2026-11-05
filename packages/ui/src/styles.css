@@ -3805,3 +3805,70 @@ h3 {
 .screen-host {
   height: 100%;
 }
+
+/* Skip buttons: a circular arrow with the seconds inside. */
+.seek-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.seek-icon.forward .icon {
+  transform: scaleX(-1);
+}
+
+.seek-icon-number {
+  position: absolute;
+  top: 54%;
+  left: 50%;
+  font-size: 0.42em;
+  font-weight: 700;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+}
+
+.player-button .seek-icon {
+  font-size: 2.4rem;
+}
+
+.player-button .seek-icon .icon {
+  font-size: 2.4rem;
+}
+
+/* The number sits inside the arrow, so it doesn't get the space that follows an icon. */
+.player-button .seek-icon .seek-icon-number {
+  margin-left: 0;
+}
+
+.picture-skip {
+  position: absolute;
+  top: 50%;
+  left: 18%;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 8rem;
+  height: 8rem;
+  margin-top: -4rem;
+  border-radius: 50%;
+  background: rgba(8, 10, 16, 0.6);
+  color: var(--strong);
+  font-size: 5rem;
+  cursor: pointer;
+}
+
+.picture-skip.forward {
+  right: 18%;
+  left: auto;
+}
+
+.picture-skip .icon {
+  font-size: 5rem;
+}
+
+.picture-skip:hover {
+  background: var(--accent);
+  color: var(--on-accent);
+}

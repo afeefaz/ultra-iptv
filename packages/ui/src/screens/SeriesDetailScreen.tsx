@@ -7,10 +7,14 @@ import { VirtualList, type VirtualListApi } from '../components/VirtualList';
 import type { DetailProps } from './VodDetailScreen';
 import { catalog } from '../data/catalog';
 import { episodeItem, episodeKey, episodesOf, progressRatio, resumePosition, useProgress, watch, type EpisodeEntry } from '../data/media';
+import { playingMedia } from '../data/playback';
 import { activePlaylist } from '../data/playlists';
 import { FocusZone } from '../focus';
 import { errorText, formatDuration } from '../format';
 import { formatNumber, t } from '../i18n';
+import { currentRoute } from '../nav';
+
+const RETURN_FOCUS_DELAY_MS = 50;
 
 /** Series page (spec §5): season tabs, episodes with per-episode progress, "Continue". */
 export function SeriesDetailScreen(props: DetailProps): JSX.Element {
@@ -75,15 +79,49 @@ export function SeriesDetailScreen(props: DetailProps): JSX.Element {
     return best + 1 < list.length ? { index: best + 1, startAt: 0 } : { index: best, startAt: 0 };
   });
 
-  // Open on the season of the next episode.
+  const currentSeason = () => season() ?? seasons()[0];
+  const seasonEpisodes = createMemo(() => episodes().filter((e) => e.season === currentSeason()));
+
+  // Open on the next episode to watch, wherever it is in the list.
   createEffect(
     on(upNext, (n) => {
-      if (n && season() === null) setSeason(episodes()[n.index].season);
+      if (!n || season() !== null) return;
+      const entry = episodes()[n.index];
+      setSeason(entry.season);
+      setTimeout(() => list?.scrollToIndex(Math.max(0, seasonEpisodes().indexOf(entry)), true), 0);
     }),
   );
 
-  const currentSeason = () => season() ?? seasons()[0];
-  const seasonEpisodes = createMemo(() => episodes().filter((e) => e.season === currentSeason()));
+  /** Where you are in the series; nothing is marked before you've watched any of it. */
+  const markedEpisode = createMemo(() => {
+    const n = upNext();
+    return n && episodes().some((e) => progressOf(e)) ? episodes()[n.index] : null;
+  });
+
+  // The episode the player is on, including when it moved on to the next one by itself.
+  let lastPlayedKey: string | null = null;
+  createEffect(() => {
+    const playing = playingMedia();
+    const r = row();
+    if (playing && r && playing.seriesKey === r.key) lastPlayedKey = playing.key;
+  });
+
+  // This page stays alive under the player. Coming back lands on that episode, after App has
+  // put focus back where it was.
+  createEffect(
+    on(
+      () => currentRoute().name,
+      (name) => {
+        const r = row();
+        if (name === 'player' || !lastPlayedKey || !r) return;
+        const entry = episodes().filter((e) => episodeKey(r, e) === lastPlayedKey)[0];
+        if (!entry) return;
+        setSeason(entry.season);
+        setTimeout(() => list?.focusIndex(seasonEpisodes().indexOf(entry)), RETURN_FOCUS_DELAY_MS);
+      },
+      { defer: true },
+    ),
+  );
   const watchedCount = createMemo(() => episodes().filter((e) => progressOf(e)?.watched).length);
 
   const play = (e: EpisodeEntry, startAt: number) => {
@@ -233,7 +271,7 @@ export function SeriesDetailScreen(props: DetailProps): JSX.Element {
                     items={seasonEpisodes()}
                     rowHeight={4.4}
                     ref={(api) => (list = api)}
-                    rowClass={() => 'list-item episode-row'}
+                    rowClass={(e) => (e === markedEpisode() ? 'list-item episode-row is-selected' : 'list-item episode-row')}
                     onSelect={(e) => play(e, resumePosition(progressOf(e)))}
                     empty={<p class="hint pane-empty">{error() || (info() || r().episodes ? t('series.noEpisodes') : t('detail.loadingInfo'))}</p>}
                     renderRow={(e) => (

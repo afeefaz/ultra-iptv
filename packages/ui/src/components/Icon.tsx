@@ -17,7 +17,6 @@ import i_dns from '@material-symbols/svg-400/outlined/dns.svg?raw';
 import i_down from '@material-symbols/svg-400/outlined/keyboard_arrow_down.svg?raw';
 import i_edit from '@material-symbols/svg-400/outlined/edit.svg?raw';
 import i_forward from '@material-symbols/svg-400/outlined/arrow_forward.svg?raw';
-import i_forward10 from '@material-symbols/svg-400/outlined/forward_10.svg?raw';
 import i_grid from '@material-symbols/svg-400/outlined/grid_view.svg?raw';
 import i_history from '@material-symbols/svg-400/outlined/history.svg?raw';
 import i_info from '@material-symbols/svg-400/outlined/info.svg?raw';
@@ -38,7 +37,6 @@ import i_playlist from '@material-symbols/svg-400/outlined/playlist_play.svg?raw
 import i_radioOff from '@material-symbols/svg-400/outlined/radio_button_unchecked.svg?raw';
 import i_radioOn from '@material-symbols/svg-400/outlined/radio_button_checked.svg?raw';
 import i_replay from '@material-symbols/svg-400/outlined/replay.svg?raw';
-import i_replay10 from '@material-symbols/svg-400/outlined/replay_10.svg?raw';
 import i_restart from '@material-symbols/svg-400/outlined/restart_alt.svg?raw';
 import i_schedule from '@material-symbols/svg-400/outlined/schedule.svg?raw';
 import i_search from '@material-symbols/svg-400/outlined/search.svg?raw';
@@ -74,7 +72,6 @@ const ICONS = {
   down: i_down,
   edit: i_edit,
   forward: i_forward,
-  forward10: i_forward10,
   grid: i_grid,
   history: i_history,
   info: i_info,
@@ -95,7 +92,6 @@ const ICONS = {
   radioOff: i_radioOff,
   radioOn: i_radioOn,
   replay: i_replay,
-  replay10: i_replay10,
   restart: i_restart,
   schedule: i_schedule,
   search: i_search,

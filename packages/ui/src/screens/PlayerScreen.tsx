@@ -28,6 +28,7 @@ import {
   videoResolution,
   zapTo,
 } from '../data/playback';
+import { seekSeconds, showPictureSkip } from '../data/settings';
 import { formatDuration } from '../format';
 import { formatNumber, t } from '../i18n';
 import { useKeyBarrier, useKeys } from '../keys';
@@ -37,7 +38,6 @@ import { goBack } from '../nav';
 const OVERLAY_MS = 5000;
 const ZAP_DELAY_MS = 1500;
 
-const SEEK_SECONDS = 10;
 const SKIP_SECONDS = 30;
 const PLAY_PAUSE_CONTROL = 2;
 /** Presses closer together than this count as holding the key. */
@@ -263,7 +263,7 @@ function LivePlayer(): JSX.Element {
                   </div>
                 )}
               </Show>
-              <PlayerControls controls={controls} focused={control()} />
+              <PlayerControls controls={controls} focused={control()} onUse={showOverlay} />
               <Show when={stats()}>
                 <p class="player-stats" dir="ltr">
                   {statsText()}
@@ -362,14 +362,14 @@ function MediaPlayer(): JSX.Element {
   const platform = usePlatform();
   const controls: PlayerControl[] = [
     { label: () => t('common.back'), icon: () => 'back', run: () => goBack() },
-    { label: () => t('player.back10'), icon: () => 'replay10', run: () => seekBy(-SEEK_SECONDS) },
+    { label: () => t('player.backBy', { n: seekSeconds() }), icon: () => 'replay', seek: -1, run: () => seekBy(-seekSeconds()) },
     {
       label: () => (playerState() === 'paused' ? t('player.play') : t('player.pause')),
       icon: () => (playerState() === 'paused' ? 'play' : 'pause'),
       wide: true,
       run: () => togglePause(),
     },
-    { label: () => t('player.forward10'), icon: () => 'forward10', run: () => seekBy(SEEK_SECONDS) },
+    { label: () => t('player.forwardBy', { n: seekSeconds() }), icon: () => 'replay', seek: 1, run: () => seekBy(seekSeconds()) },
     { label: () => t('player.audioSubs'), icon: () => 'subtitles', text: true, run: () => setSheet(true) },
     ...externalControl(platform),
   ];
@@ -389,7 +389,7 @@ function MediaPlayer(): JSX.Element {
     const time = Date.now();
     scrubRun = time - lastScrubAt < SCRUB_HOLD_MS ? scrubRun + 1 : 0;
     lastScrubAt = time;
-    const step = SCRUB_STEPS.filter((s) => scrubRun >= s.after).pop()!.seconds;
+    const step = Math.max(seekSeconds(), SCRUB_STEPS.filter((s) => scrubRun >= s.after).pop()!.seconds);
     setDragAt(Math.max(0, Math.min(duration, (dragAt() ?? current) + direction * step)));
   };
   let hideTimer: ReturnType<typeof setTimeout> | undefined;
@@ -463,10 +463,10 @@ function MediaPlayer(): JSX.Element {
     const status = playbackStatus()?.kind;
     switch (press.key) {
       case 'left':
-        seekBy(-SEEK_SECONDS);
+        seekBy(-seekSeconds());
         return true;
       case 'right':
-        seekBy(SEEK_SECONDS);
+        seekBy(seekSeconds());
         return true;
       case 'rew':
         seekBy(-SKIP_SECONDS);
@@ -573,6 +573,9 @@ function MediaPlayer(): JSX.Element {
                 </span>
               </div>
             </div>
+            <Show when={playbackPosition().duration && showPictureSkip()}>
+              <PictureSkipButtons back={controls[1]} forward={controls[3]} onUse={showOverlay} />
+            </Show>
             <div class="player-bottom">
               <div class="seek-panel" classList={{ 'is-focused': onTimeline() }} dir="ltr">
                 <div class="seek-head">
@@ -620,8 +623,8 @@ function MediaPlayer(): JSX.Element {
                   {statsText()}
                 </p>
               </Show>
-              <PlayerControls controls={controls} focused={control()} />
-              <p class="player-hint">{t('player.mediaHint')}</p>
+              <PlayerControls controls={controls} focused={control()} onUse={showOverlay} />
+              <p class="player-hint">{t('player.mediaHint', { n: seekSeconds() })}</p>
             </div>
           </>
         )}
@@ -641,6 +644,8 @@ interface PlayerControl {
   icon: () => IconName;
   /** Shows the label beside the icon. */
   text?: boolean;
+  /** A skip button: the icon points this way, with the number of seconds in it. */
+  seek?: -1 | 1;
   wide?: boolean;
   run: () => void;
 }
@@ -671,8 +676,44 @@ function moveInControls(key: Key, controls: PlayerControl[], control: () => numb
   }
 }
 
+/** A circular arrow with the seconds inside, which is set in Settings. */
+function SeekIcon(props: { direction: -1 | 1 }): JSX.Element {
+  return (
+    <span class="seek-icon" classList={{ forward: props.direction > 0 }}>
+      <Icon name="replay" />
+      <span class="seek-icon-number" dir="ltr">
+        {seekSeconds()}
+      </span>
+    </span>
+  );
+}
+
+/** Big skip buttons on the picture, for touch and mouse; the remote uses Left and Right. */
+function PictureSkipButtons(props: { back: PlayerControl; forward: PlayerControl; onUse: () => void }): JSX.Element {
+  return (
+    <For each={[props.back, props.forward]}>
+      {(c) => (
+        <div
+          class="picture-skip"
+          classList={{ forward: c.seek === 1 }}
+          role="button"
+          title={c.label()}
+          aria-label={c.label()}
+          onClick={(e) => {
+            e.stopPropagation();
+            props.onUse();
+            c.run();
+          }}
+        >
+          <SeekIcon direction={c.seek!} />
+        </div>
+      )}
+    </For>
+  );
+}
+
 /** The player's buttons, for touch and mouse and (through moveInControls) the remote. */
-function PlayerControls(props: { controls: PlayerControl[]; focused: number | null }): JSX.Element {
+function PlayerControls(props: { controls: PlayerControl[]; focused: number | null; onUse: () => void }): JSX.Element {
   return (
     <div class="player-controls" dir="ltr">
       <For each={props.controls}>
@@ -685,10 +726,13 @@ function PlayerControls(props: { controls: PlayerControl[]; focused: number | nu
             aria-label={c.label()}
             onClick={(e) => {
               e.stopPropagation();
+              props.onUse();
               c.run();
             }}
           >
-            <Icon name={c.icon()} />
+            <Show when={c.seek} fallback={<Icon name={c.icon()} />}>
+              <SeekIcon direction={c.seek!} />
+            </Show>
             <Show when={c.text}>
               <span>{c.label()}</span>
             </Show>

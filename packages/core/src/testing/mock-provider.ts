@@ -221,9 +221,11 @@ export function mockSeriesInfo(seriesId: string, origin: string): unknown {
   const i = Number(seriesId) - 700000;
   const seasons = 1 + (i % 3);
   const episodes: Record<string, unknown[]> = {};
+  // Every 7th series is a long one, for testing lists that need scrolling.
+  const perSeason = i % 7 === 6 ? 120 : 6;
   for (let s = 1; s <= seasons; s++) {
-    episodes[String(s)] = Array.from({ length: 6 }, (_, k) => ({
-      id: String(800000 + i * 100 + s * 10 + k + 1),
+    episodes[String(s)] = Array.from({ length: perSeason }, (_, k) => ({
+      id: String(800000 + i * 1000 + s * 200 + k + 1),
       episode_num: k + 1,
       title: `S${s} E${k + 1} · Episode title`,
       container_extension: 'mp4',
