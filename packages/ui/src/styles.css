@@ -3422,7 +3422,7 @@ h3 {
 }
 
 /*
- * Samsung TVs draw video on a plane under the page, so the Live preview needs a real hole down to
+ * TVs and Android draw video on a plane under the page, so the Live preview needs a real hole down to
  * it: everything from the page root to the preview box goes transparent, and shadows repaint the
  * colours around the box (the pane's fill, and the canvas from a frame at the back of the page).
  */

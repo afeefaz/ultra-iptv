@@ -1,19 +1,17 @@
 {
-  "versionCode": 6,
-  "versionName": "0.5.1",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.5.1/UltraIPTV.apk",
-  "sha256": "d722455ea8080a30781ee0bacd60690d6518e9c691a31cb1d574e386762775e7",
-  "size": 12455629,
+  "versionCode": 7,
+  "versionName": "0.5.2",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.5.2/UltraIPTV.apk",
+  "sha256": "50021a1dec25e9dfe4269d0d95118a86492988921ccb462d7b8baa501fa0162f",
+  "size": 12455813,
   "notes": {
     "en": [
-      "Only the item you are on is filled now, with a slowly breathing ring, so you can always see where you are",
-      "Other buttons and saved choices are no longer filled",
-      "On phones, nothing stays highlighted after a tap"
+      "Fixes a freeze on some Android TVs when playing 4K channels",
+      "Video in the small Live box now uses the TV's direct video path, which may also fix sound without picture"
     ],
     "ar": [
-      "العنصر الذي تقف عليه فقط أصبح مملوءًا بلون، مع إطار ينبض ببطء، لتعرف مكانك دائمًا",
-      "لم تعد الأزرار الأخرى والخيارات المحفوظة مملوءة بلون",
-      "على الهواتف، لا يبقى أي عنصر مميزًا بعد اللمس"
+      "إصلاح تجمّد على بعض أجهزة Android TV عند تشغيل قنوات 4K",
+      "الفيديو في المربع الصغير يستخدم الآن مسار الفيديو المباشر للتلفاز، وقد يصلح هذا أيضًا مشكلة الصوت دون صورة"
     ]
   }
 }

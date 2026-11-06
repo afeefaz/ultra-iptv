@@ -1,4 +1,4 @@
-import { VIDEO_BEHIND_CLASS } from '../surface';
+import { createHoleFrame, placeBox, VIDEO_BEHIND_CLASS, VIDEO_HOLE_CLASS } from '../surface';
 import type {
   LoadOptions,
   PlayerAdapter,
@@ -25,6 +25,7 @@ export class NativePlayer implements PlayerAdapter {
   private trackCache: PlayerTracks = { audio: [], text: [] };
   private pos = { current: 0, duration: 0 };
   private statsCache: PlayerStats = { engine: 'exoplayer' };
+  private holeEl: HTMLElement | null = null;
 
   constructor() {
     void UltraPlayer.addListener('state', (e) => {
@@ -57,9 +58,12 @@ export class NativePlayer implements PlayerAdapter {
   }
 
   setRect(rect: VideoRect): void {
-    const root = document.documentElement;
-    if (rect === 'fullscreen') root.classList.add(VIDEO_BEHIND_CLASS);
-    else root.classList.remove(VIDEO_BEHIND_CLASS);
+    const root = document.documentElement.classList;
+    root.toggle(VIDEO_BEHIND_CLASS, rect === 'fullscreen');
+    root.toggle(VIDEO_HOLE_CLASS, !!rect && rect !== 'fullscreen');
+    if (!this.holeEl) this.holeEl = createHoleFrame();
+    this.holeEl.style.display = rect && rect !== 'fullscreen' ? '' : 'none';
+    if (rect && rect !== 'fullscreen') placeBox(this.holeEl, rect);
     if (!rect) void UltraPlayer.setRect({ mode: 'hidden' });
     else if (rect === 'fullscreen') void UltraPlayer.setRect({ mode: 'behind' });
     else void UltraPlayer.setRect({ mode: 'overlay', left: rect.left, top: rect.top, width: rect.width, height: rect.height });

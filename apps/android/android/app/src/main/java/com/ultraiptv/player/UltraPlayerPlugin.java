@@ -11,7 +11,7 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.Gravity;
-import android.view.TextureView;
+import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -35,6 +35,7 @@ import androidx.media3.datasource.DefaultHttpDataSource;
 import androidx.media3.datasource.HttpDataSource;
 import androidx.media3.exoplayer.DecoderCounters;
 import androidx.media3.exoplayer.DefaultRenderersFactory;
+import androidx.media3.exoplayer.analytics.AnalyticsListener;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 import androidx.media3.exoplayer.source.MediaSource;
@@ -60,9 +61,10 @@ import java.util.Collections;
 import java.util.Locale;
 
 /**
- * Media3 ExoPlayer for the web app (spec §4.2). The video view sits above the WebView for the
- * Live preview ("overlay") or under a transparent WebView in full screen ("behind"), so the
- * page's own controls stay on top. Never logs URLs: they carry the user's credentials.
+ * Media3 ExoPlayer for the web app (spec §4.2). The video is always under a WebView that's
+ * see-through where it shows: the whole page in full screen ("behind"), a hole for the Live preview
+ * ("overlay"). It's a SurfaceView, so frames go straight to the display: through the graphics chip,
+ * real 4K froze a TV's whole interface. Never logs URLs: they carry the user's credentials.
  */
 @OptIn(markerClass = UnstableApi.class)
 @CapacitorPlugin(name = "UltraPlayer")
@@ -100,8 +102,8 @@ public class UltraPlayerPlugin extends Plugin {
         container.setVisibility(View.GONE);
         aspect = new AspectRatioFrameLayout(ctx);
         aspect.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FIT);
-        TextureView texture = new TextureView(ctx);
-        aspect.addView(texture, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        SurfaceView surface = new SurfaceView(ctx);
+        aspect.addView(surface, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         container.addView(aspect, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER));
         subtitles = new SubtitleView(ctx);
         subtitles.setUserDefaultStyle();
@@ -116,8 +118,19 @@ public class UltraPlayerPlugin extends Plugin {
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
             .setEnableDecoderFallback(true);
         player = new ExoPlayer.Builder(ctx, renderers).build();
-        player.setVideoTextureView(texture);
+        player.setVideoSurfaceView(surface);
         player.addListener(new Listener());
+        player.addAnalyticsListener(new AnalyticsListener() {
+            @Override
+            public void onVideoDecoderInitialized(EventTime time, String decoderName, long initializedTimestampMs, long initializationDurationMs) {
+                Log.i(TAG, "video decoder " + decoderName + " in " + initializationDurationMs + " ms");
+            }
+
+            @Override
+            public void onDroppedVideoFrames(EventTime time, int droppedFrames, long elapsedMs) {
+                Log.i(TAG, "dropped " + droppedFrames + " frames in " + elapsedMs + " ms");
+            }
+        });
     }
 
     // ---------- Playback ----------
@@ -154,7 +167,6 @@ public class UltraPlayerPlugin extends Plugin {
             }
             MediaSource source = new DefaultMediaSourceFactory(http, extractors).createMediaSource(item.build());
             firstFrame = false;
-            if ("overlay".equals(mode)) underPage();
             if (startAt != null && startAt > 0) player.setMediaSource(source, (long) (startAt * 1000));
             else player.setMediaSource(source);
             player.prepare();
@@ -189,7 +201,6 @@ public class UltraPlayerPlugin extends Plugin {
             firstFrame = false;
             handler.removeCallbacks(tick);
             subtitles.setCues(Collections.emptyList());
-            if ("overlay".equals(mode)) underPage();
             keepScreenOn(false);
             call.resolve();
         });
@@ -224,7 +235,7 @@ public class UltraPlayerPlugin extends Plugin {
             if ("hidden".equals(next)) {
                 container.setVisibility(View.GONE);
             } else if ("behind".equals(next)) {
-                underPage();
+                container.setVisibility(View.VISIBLE);
                 ViewGroup.LayoutParams lp = container.getLayoutParams();
                 lp.width = ViewGroup.LayoutParams.MATCH_PARENT;
                 lp.height = ViewGroup.LayoutParams.MATCH_PARENT;
@@ -232,12 +243,9 @@ public class UltraPlayerPlugin extends Plugin {
                 container.setTranslationX(0);
                 container.setTranslationY(0);
             } else {
-                // At the preview box, on top of the page once a frame exists. Until then it stays
-                // under the page (still drawn, so the video surface exists) and the page's
-                // loading and error messages remain visible.
+                // At the preview box, showing through the page's hole. The page's loading and
+                // error messages are drawn over it.
                 container.setVisibility(View.VISIBLE);
-                if (firstFrame) container.bringToFront();
-                else underPage();
                 ViewGroup.LayoutParams lp = container.getLayoutParams();
                 lp.width = Math.round((float) width * density);
                 lp.height = Math.round((float) height * density);
@@ -247,12 +255,6 @@ public class UltraPlayerPlugin extends Plugin {
             }
             call.resolve();
         });
-    }
-
-    /** Video under the WebView (page on top), but visible so its surface keeps existing. */
-    private void underPage() {
-        container.setVisibility(View.VISIBLE);
-        getBridge().getWebView().bringToFront();
     }
 
     // ---------- Tracks ----------
@@ -369,6 +371,7 @@ public class UltraPlayerPlugin extends Plugin {
         @Override
         public void onVideoSizeChanged(VideoSize size) {
             if (size.width > 0 && size.height > 0) {
+                Log.i(TAG, "video size " + size.width + "x" + size.height);
                 aspect.setAspectRatio(size.height == 0 ? 1 : (size.width * size.pixelWidthHeightRatio) / size.height);
             }
         }
@@ -417,7 +420,6 @@ public class UltraPlayerPlugin extends Plugin {
         if (firstFrame) return;
         firstFrame = true;
         Log.i(TAG, "first frame mode=" + mode);
-        if ("overlay".equals(mode)) container.bringToFront();
         notifyListeners("firstFrame", new JSObject());
     }
 

@@ -1,5 +1,5 @@
 import { perf } from '@ultra/core';
-import { VIDEO_BEHIND_CLASS } from '../surface';
+import { createHoleFrame, placeBox, VIDEO_BEHIND_CLASS, VIDEO_HOLE_CLASS } from '../surface';
 import type {
   BufferProfile,
   LoadOptions,
@@ -14,8 +14,7 @@ import type {
 } from '../types';
 import { tizenGlobals, type AvPlay, type AvPlayTrack } from './api';
 
-/** Class on <html> while the Live preview shows video through a hole in the page. */
-export const VIDEO_HOLE_CLASS = 'video-hole';
+export { VIDEO_HOLE_CLASS };
 
 /** AVPlay's display rectangle is always in this space, whatever the page's size. */
 const PLANE_WIDTH = 1920;
@@ -78,10 +77,7 @@ export class AvPlayPlayer implements PlayerAdapter {
     layer.appendChild(subs);
     this.subsEl = subs;
     if (!this.holeEl) {
-      this.holeEl = document.createElement('div');
-      this.holeEl.className = 'video-hole-frame';
-      this.holeEl.style.display = 'none';
-      document.body.appendChild(this.holeEl);
+      this.holeEl = createHoleFrame();
     }
     this.setRect(this.rect);
   }
@@ -92,7 +88,7 @@ export class AvPlayPlayer implements PlayerAdapter {
     root.toggle(VIDEO_BEHIND_CLASS, rect === 'fullscreen');
     root.toggle(VIDEO_HOLE_CLASS, !!rect && rect !== 'fullscreen');
     const box = rect === 'fullscreen' ? { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight } : rect;
-    if (this.objectEl && box) place(this.objectEl, box);
+    if (this.objectEl && box) placeBox(this.objectEl, box);
     // Subtitles stay inside the picture; their distance from its edges comes from the stylesheet.
     if (this.subsEl && box) {
       this.subsEl.style.left = `${box.left + box.width * 0.05}px`;
@@ -102,7 +98,7 @@ export class AvPlayPlayer implements PlayerAdapter {
     if (this.objectEl) this.objectEl.style.display = box ? '' : 'none';
     if (this.holeEl) {
       this.holeEl.style.display = rect && rect !== 'fullscreen' ? '' : 'none';
-      if (rect && rect !== 'fullscreen') place(this.holeEl, rect);
+      if (rect && rect !== 'fullscreen') placeBox(this.holeEl, rect);
     }
     this.applyDisplayRect();
   }
@@ -366,13 +362,6 @@ export class AvPlayPlayer implements PlayerAdapter {
   private emit<E extends keyof PlayerEvents>(event: E, data: PlayerEvents[E]): void {
     this.listeners.get(event)?.forEach((fn) => fn(data));
   }
-}
-
-function place(el: HTMLElement, box: { left: number; top: number; width: number; height: number }): void {
-  el.style.left = `${box.left}px`;
-  el.style.top = `${box.top}px`;
-  el.style.width = `${box.width}px`;
-  el.style.height = `${box.height}px`;
 }
 
 function errorName(e: unknown): string {
