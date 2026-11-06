@@ -48,6 +48,8 @@ export class FocusManager {
   /** Zone of a focused item that just unmounted (e.g. scrolled out of a virtual list). */
   private lostZone: string | null = null;
   pointerMode = false;
+  /** The last input was a finger: nothing shows "you are here" until the keys are used again. */
+  private touching = false;
 
   get currentId(): string | null {
     return this.current;
@@ -112,7 +114,7 @@ export class FocusManager {
     const prev = this.current ? this.items.get(this.current) : undefined;
     if (prev && prev !== next) prev.el.classList.remove(FOCUSED_CLASS);
     this.current = id;
-    next.el.classList.add(FOCUSED_CLASS);
+    if (!this.touching) next.el.classList.add(FOCUSED_CLASS);
     // Never pull DOM focus out of a text box inside the item (a tap there opens the keyboard;
     // moving focus would close it again).
     const active = document.activeElement;
@@ -135,8 +137,17 @@ export class FocusManager {
     return true;
   }
 
+  setTouching(touching: boolean): void {
+    if (this.touching === touching) return;
+    this.touching = touching;
+    document.documentElement.classList.toggle('touching', touching);
+    const current = this.current ? this.items.get(this.current) : undefined;
+    if (current) current.el.classList.toggle(FOCUSED_CLASS, !touching);
+  }
+
   move(dir: Direction): boolean {
     this.pointerMode = false;
+    this.setTouching(false);
     const pool = this.eligible().filter((i) => isVisible(i.el));
     const cur = this.current ? this.items.get(this.current) : undefined;
     if (!cur || pool.indexOf(cur) < 0) return this.focusFallback(pool);

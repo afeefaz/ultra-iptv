@@ -1,15 +1,19 @@
 {
-  "versionCode": 5,
-  "versionName": "0.5.0",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.5.0/UltraIPTV.apk",
-  "sha256": "2e26ba1cee0101bb6e74504f98d185a98d4bbd40281fc7b1385704fbe61df0a9",
-  "size": 12455237,
+  "versionCode": 6,
+  "versionName": "0.5.1",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.5.1/UltraIPTV.apk",
+  "sha256": "d722455ea8080a30781ee0bacd60690d6518e9c691a31cb1d574e386762775e7",
+  "size": 12455629,
   "notes": {
     "en": [
-      "Update the app from inside the app: Settings, About, Check for updates"
+      "Only the item you are on is filled now, with a slowly breathing ring, so you can always see where you are",
+      "Other buttons and saved choices are no longer filled",
+      "On phones, nothing stays highlighted after a tap"
     ],
     "ar": [
-      "حدّث التطبيق من داخله: الإعدادات، حول، البحث عن تحديثات"
+      "العنصر الذي تقف عليه فقط أصبح مملوءًا بلون، مع إطار ينبض ببطء، لتعرف مكانك دائمًا",
+      "لم تعد الأزرار الأخرى والخيارات المحفوظة مملوءة بلون",
+      "على الهواتف، لا يبقى أي عنصر مميزًا بعد اللمس"
     ]
   }
 }

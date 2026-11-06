@@ -127,11 +127,20 @@ export function App(props: { platform: Platform }): JSX.Element {
     startRemoteAccess();
     startParental();
     const stopKeys = props.platform.keys.start(handleKey);
-    const onPointer = () => (focusManager.pointerMode = true);
+    // A tap also sends a fake mouse move, so only a device that can hover counts as having a mouse.
+    const canHover = window.matchMedia('(hover: hover)').matches;
+    focusManager.setTouching(!canHover && window.matchMedia('(pointer: coarse)').matches);
+    const onPointer = () => {
+      focusManager.pointerMode = true;
+      if (canHover) focusManager.setTouching(false);
+    };
+    const onTouch = () => focusManager.setTouching(true);
     document.addEventListener('mousemove', onPointer);
+    document.addEventListener('touchstart', onTouch, { passive: true });
     onCleanup(() => {
       stopKeys();
       document.removeEventListener('mousemove', onPointer);
+      document.removeEventListener('touchstart', onTouch);
     });
   });
 
