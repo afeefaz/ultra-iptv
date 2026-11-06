@@ -6,8 +6,8 @@ How this codebase is built, and what every change has to respect. `docs/spec.md`
 
 These don't bend for a feature. If a feature seems to need one broken, raise it first.
 
-1. **No backend and no third-party services.** The app only ever talks to the user's own IPTV provider. No telemetry, crash reporting, CDNs or outside speed-test servers.
-2. **Nothing leaves the device.** Logs, performance data and usage counts stay local until the user exports them.
+1. **No third-party services, and no backend that can read your data.** The app talks to the user's IPTV provider, plus our relay (`apps/relay`), which holds encrypted data it has no key for. The app contacts it only when the user presses Refresh, or changes a playlist after having pressed it once, and never on a timer. A device that has never pressed it sends nothing. No telemetry, crash reporting, CDNs or outside speed-test servers.
+2. **Nothing readable leaves the device.** Logs, performance data and usage counts stay local until the user exports them.
 3. **No content.** The app ships no channels, streams or provider details.
 4. **One codebase.** Samsung, Android (phone, TV, Fire TV) and web share the UI. Differences live behind `Platform`, never in `if (samsung)` branches in screens.
 5. **It's a sofa app first.** Everything must work with a remote, on old TVs, with 50,000-item catalogues.
@@ -18,6 +18,7 @@ These don't bend for a feature. If a feature seems to need one broken, raise it 
 apps/web        Entry point; picks the platform at runtime
 apps/android    Capacitor shell and the native player plugin (Java)
 apps/tizen      Samsung config.xml and icon
+apps/relay      Cloudflare Worker: encrypted mailbox and the playlist website
 packages/ui     Screens, components, focus, keys, translations, styles
 packages/worker Catalogue worker and its typed RPC
 packages/platform  One adapter per platform: player, keys, files, device info

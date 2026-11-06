@@ -4,7 +4,7 @@ Read `docs/engineering.md` before changing code. It holds the rules, conventions
 
 Hard rules:
 
-- No backend, third-party services or telemetry. Nothing leaves the device.
+- No third-party services or telemetry. Nothing readable leaves the device. The relay (`apps/relay`) only ever holds encrypted data, and is only contacted when the user presses Refresh, or changes a playlist after having pressed it once.
 - Never type, read or print a real IPTV login. Keep real channel names, hosts and logins out of this public repo.
 - Performance tests may use the account already signed in on a device, one device at a time. Everyday development uses the mock provider.
 - Every action works by remote, touch and mouse. Moving focus never acts.

@@ -18,5 +18,5 @@ The Samsung and web versions don't include this library.
 |---|---|
 | Apache-2.0 | hls.js, mpegts.js, Material Symbols, AndroidX Media3 |
 | SIL OFL 1.1 | Cairo, Outfit and Space Grotesk fonts |
-| MIT | SolidJS, Capacitor and smaller dependencies |
+| MIT | SolidJS, Capacitor, qrcode-generator and smaller dependencies |
 | ISC | idb |

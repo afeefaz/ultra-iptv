@@ -1,7 +1,7 @@
 # Ultra IPTV
 
 A free IPTV player for Android phones, Android TV, Fire TV, Samsung TVs and the web, with English and Arabic.
-No backend, no accounts, no ads. It doesn't include any channels or content: you add your own IPTV playlist.
+No accounts and no ads. Scan the QR code on a TV to manage its playlists from your phone, through a relay that only ever holds encrypted data. It doesn't include any channels or content: you add your own IPTV playlist.
 LG webOS is planned. The design is in `docs/spec.md`.
 
 ## Download

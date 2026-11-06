@@ -154,7 +154,10 @@ export class FocusManager {
     // Something straight across in another zone (the next pane) beats a diagonal jump inside
     // this one (e.g. Right from a category row goes to the channels, not the sort button above).
     if (!next || !inBeam(from, rectOf(next.el), dir)) {
-      const target = pickNext(from, others.filter((i) => i.zone !== cur.zone).map(toCandidate), dir);
+      const across = others.filter((i) => i.zone !== cur.zone);
+      // Left and right stay on the screen if they can: the top bar is above it, not beside it.
+      const onScreen = dir === 'left' || dir === 'right' ? across.filter((i) => this.inZone(i, CONTENT_ZONE)) : [];
+      const target = (this.inZone(cur, CONTENT_ZONE) && pickNext(from, onScreen.map(toCandidate), dir)) || pickNext(from, across.map(toCandidate), dir);
       if (target && (!next || inBeam(from, rectOf(target.el), dir))) next = this.remembered(target.zone, pool) ?? target;
     }
     return next ? this.focus(next.id) : false;

@@ -1,6 +1,6 @@
 {
   "name": "ultra-iptv",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -16,10 +16,13 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
-    "check": "node scripts/check-chars.mjs && tsc --noEmit -p tsconfig.json && eslint . && vitest run && vite build --config apps/web/vite.config.ts && vite build --config apps/web/vite.config.ts --mode legacy && node scripts/check-legacy.mjs apps/web/dist-legacy",
+    "check": "node scripts/check-chars.mjs && tsc --noEmit -p tsconfig.json && eslint . && vitest run && vite build --config apps/relay/vite.config.ts && vite build --config apps/web/vite.config.ts && vite build --config apps/web/vite.config.ts --mode legacy && node scripts/check-legacy.mjs apps/web/dist-legacy",
     "android": "node scripts/android.mjs",
     "android:install": "node scripts/android.mjs --install",
     "tizen": "node scripts/tizen.mjs",
+    "relay:dev": "corepack pnpm --filter @ultra/relay dev",
+    "relay:build": "vite build --config apps/relay/vite.config.ts",
+    "relay:deploy": "vite build --config apps/relay/vite.config.ts && corepack pnpm --filter @ultra/relay run deploy",
     "perf": "node scripts/perf/run.mjs",
     "perf:report": "node scripts/perf/report.mjs"
   },

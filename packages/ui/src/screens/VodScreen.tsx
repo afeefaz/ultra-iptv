@@ -11,6 +11,7 @@ import {
 import { createEffect, createMemo, createSignal, on, Show, type JSX } from 'solid-js';
 import { CategoryRail } from '../components/CategoryRail';
 import { FocusButton } from '../components/FocusButton';
+import { RemoteQrPanel } from '../components/RemoteQrPanel';
 import { PinButton } from '../components/PinButton';
 import { Icon } from '../components/Icon';
 import { TextField } from '../components/TextField';
@@ -248,6 +249,7 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
               <FocusButton id="vod-add" class="btn-primary" autofocus onSelect={() => navigate({ name: 'playlist-form' })}>
                 {t('home.addPlaylist')}
               </FocusButton>
+              <RemoteQrPanel id="vod-remote" />
             </FocusZone>
           </div>
         }

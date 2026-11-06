@@ -19,6 +19,7 @@ import { makeMatcher, useHiddenCategories, withoutHidden } from '../data/categor
 import { cachedLibrary, loadLibrary, type Library } from '../data/libraryCache';
 import { enterLibrary, rememberedSearch, rememberSearch } from '../data/libraryMemory';
 import { FocusButton } from '../components/FocusButton';
+import { RemoteQrPanel } from '../components/RemoteQrPanel';
 import { NowNextView } from '../components/NowNextView';
 import { VirtualList, type VirtualListApi } from '../components/VirtualList';
 import { catalog } from '../data/catalog';
@@ -350,6 +351,7 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
               <FocusButton id="live-add" class="btn-primary" autofocus onSelect={() => navigate({ name: 'playlist-form' })}>
                 {t('home.addPlaylist')}
               </FocusButton>
+              <RemoteQrPanel id="live-remote" />
             </FocusZone>
           </div>
         }

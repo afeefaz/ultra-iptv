@@ -1,0 +1,16 @@
+{
+  "name": "@ultra/relay",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8799",
+    "deploy": "wrangler d1 migrations apply ultra-iptv-relay --remote && wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.158.0"
+  },
+  "dependencies": {
+    "@ultra/core": "workspace:*"
+  }
+}

@@ -13,6 +13,7 @@ import { clock, formatClock } from './data/epg';
 import { startParental } from './data/parental';
 import { playingPlaylistId, stopPlayback } from './data/playback';
 import { activePlaylist, playlists, setActivePlaylist, startPlaylists } from './data/playlists';
+import { startRemoteAccess } from './data/remoteAccess';
 import { startPerfRuntime } from './data/perfRuntime';
 import { textScale } from './data/settings';
 import { startUsage, track } from './data/usage';
@@ -123,6 +124,7 @@ export function App(props: { platform: Platform }): JSX.Element {
     // Dev builds only: inspect focus state from DevTools (`__ultra.focus.currentId`).
     if (import.meta.env.DEV) (window as unknown as { __ultra: unknown }).__ultra = { focus: focusManager };
     startPlaylists();
+    startRemoteAccess();
     startParental();
     const stopKeys = props.platform.keys.start(handleKey);
     const onPointer = () => (focusManager.pointerMode = true);

@@ -3,6 +3,7 @@ import { createEffect, createMemo, createSignal, For, on, Show, type JSX } from 
 import { ChannelLogo } from '../components/ChannelLogo';
 import { FocusButton } from '../components/FocusButton';
 import { Icon } from '../components/Icon';
+import { RemoteQrPanel } from '../components/RemoteQrPanel';
 import { catalog } from '../data/catalog';
 import { formatClock, useNowNext } from '../data/epg';
 import { itemFromProgress, progressRatio, useProgress, watch } from '../data/media';
@@ -328,6 +329,7 @@ function Welcome(): JSX.Element {
           <Icon name="add" />
           <span>{t('home.addPlaylist')}</span>
         </FocusButton>
+        <RemoteQrPanel id="home-remote" />
       </FocusZone>
       <Show when={devServer}>
         <p class="hint dev-hint">{t('home.devHint', { server: devServer })}</p>

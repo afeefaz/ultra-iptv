@@ -10,6 +10,7 @@ import { normalizeServer, parseXtreamUrl, XtreamApi, type XtreamCreds } from '..
 import { buildM3u, buildXtreamLive, buildXtreamSeries, buildXtreamVod, type Built } from './build';
 import { openUltraDb, playlistRange } from './db';
 import { parseSeriesInfo, parseVodInfo, versionKey } from './details';
+import { RemoteAccess } from './remote';
 import { listCategories, listItems } from './queries';
 import { epgIsFresh, parseShortEpg } from './epg';
 import { hash64 } from './hash';
@@ -119,6 +120,17 @@ export class PlaylistService {
   private readonly epgLimit = createLimiter(3);
   private lastRecentAt = 0;
 
+  /** Managing this device from another one; silent until the user pairs. */
+  readonly remote = new RemoteAccess(
+    {
+      editData: (id) => this.editData(id),
+      save: (input) => this.save(input),
+      remove: (id) => this.remove(id),
+      secretsFound: (secrets) => this.hooks.secrets(secrets, []),
+    },
+    this.box,
+  );
+
   constructor(private readonly hooks: ServiceHooks) {}
 
   /** Registers every saved playlist's credentials with the redactors. */
@@ -196,7 +208,8 @@ export class PlaylistService {
     const all = await db.getAll('playlists');
     const record: PlaylistRecord = {
       ...(existing ?? { createdAt: now, order: all.length }),
-      id: existing?.id ?? newId(),
+      // A playlist from the website keeps the id it was given there.
+      id: existing?.id ?? input.id ?? newId(),
       name: input.name.trim() || n.host,
       type: n.type,
       host: n.host,

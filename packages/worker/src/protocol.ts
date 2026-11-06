@@ -21,7 +21,9 @@ import type {
   RefreshProgress,
   RefreshResult,
   SearchResults,
+  RemoteIdentity,
   SpeedTargets,
+  TickResult,
   TestResult,
 } from '@ultra/core';
 
@@ -56,6 +58,10 @@ export interface WorkerApi {
   setHiddenCategories(playlistId: string, kind: ContentKind, categoryIds: string[]): Promise<void>;
   speedTargets(playlistId: string): Promise<SpeedTargets>;
   ensureSnapshot(playlistId: string, kind: ContentKind): Promise<void>;
+  remoteEnable(): Promise<RemoteIdentity>;
+  remoteLocalSaved(id: string): Promise<void>;
+  remoteLocalDeleted(id: string): Promise<void>;
+  remoteTick(): Promise<TickResult>;
   perfSnapshot(): Promise<PerfSnapshot>;
   perfReset(): Promise<void>;
   saveProgress(row: ProgressRow): Promise<void>;

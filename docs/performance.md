@@ -329,4 +329,3 @@ Worst first, by what you'd feel on the Samsung TV.
 | 5 | Poster scrolling still blocks | 33 long tasks and 2.2 s in the test | Fewer effects on posters; measure holding a key, since the test presses slowly |
 | 6 | Searching is uneven | Long tasks up to 0.3 s while typing; 206 ms building names on the first search | Do it in the worker |
 | 7 | Posters use a lot of memory on the phone | 177 MB up to about 530 MB. Fine with 10.8 GB | Limit decoded posters if it matters on smaller phones |
-| 8 | Many posters fail on the Android TV emulator | None on the Samsung or phone | Probably its old WebView (133); check on a real Android TV |

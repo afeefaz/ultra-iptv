@@ -1,0 +1,28 @@
+# Encrypted store for playlists and sync data (docs/remote-and-sync-plan.md).
+name = "ultra-iptv-relay"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+workers_dev = true
+send_metrics = false
+
+[assets]
+directory = "./dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ultra-iptv-relay"
+database_id = "4262eecf-eb29-4a44-a7a4-3efe17056464"
+migrations_dir = "migrations"
+
+# Removes expired boxes.
+[triggers]
+crons = ["17 * * * *"]
+
+# Per address.
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 120
+  period = 60

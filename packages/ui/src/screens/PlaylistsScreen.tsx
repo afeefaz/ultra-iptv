@@ -3,8 +3,10 @@ import { createSignal, For, Show, type JSX } from 'solid-js';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { BackButton } from '../components/BackButton';
 import { FocusButton } from '../components/FocusButton';
+import { RemoteQrPanel } from '../components/RemoteQrPanel';
 import { catalog } from '../data/catalog';
 import { activePlaylist, playlists, refreshing, refreshPlaylist, reloadPlaylists, setActivePlaylist } from '../data/playlists';
+import { publishDeleted } from '../data/remoteAccess';
 import { FocusZone } from '../focus';
 import { countsText, errorText, statusText } from '../format';
 import { t } from '../i18n';
@@ -37,6 +39,8 @@ export function PlaylistsScreen(): JSX.Element {
           </FocusButton>
         </FocusZone>
       </div>
+      <div class="playlists-layout">
+        <div class="playlists-main">
       <Show when={error()}>
         <p class="form-message form-error" role="alert">
           {error()}
@@ -100,6 +104,13 @@ export function PlaylistsScreen(): JSX.Element {
           </div>
         </FocusZone>
       </Show>
+        </div>
+        <aside class="playlists-aside guide-card">
+          <FocusZone id="playlists-remote">
+            <RemoteQrPanel id="playlists-remote" />
+          </FocusZone>
+        </aside>
+      </div>
       <Show when={deleting()}>
         {(p) => (
           <ConfirmDialog
@@ -110,7 +121,10 @@ export function PlaylistsScreen(): JSX.Element {
             onConfirm={() => {
               const id = p().id;
               setDeleting(null);
-              void run(() => catalog().call('deletePlaylist', id));
+              void run(async () => {
+                await catalog().call('deletePlaylist', id);
+                publishDeleted(id);
+              });
             }}
           />
         )}

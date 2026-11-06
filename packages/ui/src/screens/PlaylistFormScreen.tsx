@@ -1,12 +1,14 @@
 import { log, parseXtreamUrl, type PlaylistInput, type PlaylistType, type TestResult } from '@ultra/core';
-import { createSignal, For, onCleanup, onMount, Show, type JSX } from 'solid-js';
+import { createEffect, createSignal, For, on, onCleanup, onMount, Show, type JSX } from 'solid-js';
 import { BackButton } from '../components/BackButton';
 import { FocusButton } from '../components/FocusButton';
 import { LoadingCard } from '../components/LoadingProgress';
+import { RemoteQrPanel } from '../components/RemoteQrPanel';
 import { Icon } from '../components/Icon';
 import { TextField } from '../components/TextField';
 import { catalog } from '../data/catalog';
 import { refreshPlaylist, reloadPlaylists, setActivePlaylist } from '../data/playlists';
+import { publishSaved, remoteAdded, remoteLoading } from '../data/remoteAccess';
 import { FocusZone } from '../focus';
 import { formatDate, errorText } from '../format';
 import { formatNumber, t } from '../i18n';
@@ -38,6 +40,21 @@ export function PlaylistFormScreen(props: { id?: string }): JSX.Element {
   let savedId: string | undefined;
   const editing = !!props.id;
   onCleanup(() => setLoadingId(null));
+
+  // A playlist added by scanning the QR code here: show it loading, then open it. Not if they've
+  // started typing one, which it shouldn't take them away from.
+  createEffect(
+    on(remoteLoading, (id) => {
+      if (id && !editing && phase() === 'idle' && !server() && !m3uUrl()) setLoadingId(id);
+    }, { defer: true }),
+  );
+  createEffect(
+    on(remoteAdded, (added) => {
+      if (!added || loadingId() !== added.id) return;
+      if (added.ok) setActivePlaylist(added.id);
+      openRoot({ name: added.ok ? 'live' : 'playlists' });
+    }, { defer: true }),
+  );
 
   onMount(async () => {
     if (!props.id) return;
@@ -98,6 +115,7 @@ export function PlaylistFormScreen(props: { id?: string }): JSX.Element {
       await reloadPlaylists();
       if (editing) {
         void refreshPlaylist(record.id);
+        publishSaved(record.id);
         goBack();
         return;
       }
@@ -105,6 +123,7 @@ export function PlaylistFormScreen(props: { id?: string }): JSX.Element {
       setActivePlaylist(record.id);
       setLoadingId(record.id);
       const loaded = await refreshPlaylist(record.id);
+      publishSaved(record.id);
       // Still on this screen (Back leaves the load running in the background).
       if (loadingId() !== record.id) return;
       if (loaded && loaded.ok) {
@@ -246,6 +265,13 @@ export function PlaylistFormScreen(props: { id?: string }): JSX.Element {
           </div>
         </FocusZone>
         <aside class="form-aside">
+          <Show when={!editing}>
+            <FocusZone id="form-remote">
+              <div class="guide-card">
+                <RemoteQrPanel id="form-remote" />
+              </div>
+            </FocusZone>
+          </Show>
           <div class="guide-card">
             <h2>
               <Icon name="info" />

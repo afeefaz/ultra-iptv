@@ -3,6 +3,8 @@ import type { BufferProfile } from '@ultra/platform';
 import { For, Show, type JSX } from 'solid-js';
 import { FocusButton } from '../components/FocusButton';
 import { Icon, type IconName } from '../components/Icon';
+import { RemoteQrPanel } from '../components/RemoteQrPanel';
+import { RemoteIdentityLine } from '../components/RemoteRefreshButton';
 import { SpeedTestCard } from '../components/SpeedTestCard';
 import { CATEGORY_SORTS, useHiddenCategories } from '../data/categories';
 import { lockedCategories, lockedChannels, pinSet, requestPin } from '../data/parental';
@@ -79,6 +81,7 @@ const SECTIONS: Section[] = [
   { id: 'home', icon: 'layers', title: 'settings.home', first: () => 'settings-home-hero' },
   { id: 'parental', icon: 'shield', title: 'settings.parental', first: () => (pinSet() ? 'settings-pin-change' : 'settings-pin-set') },
   { id: 'playlists', icon: 'playlist', title: 'settings.playlists', first: () => 'settings-playlists' },
+  { id: 'remote', icon: 'link', title: 'settings.remote', first: () => 'settings-remote-refresh' },
   { id: 'network', icon: 'sync', title: 'settings.network', first: () => 'settings-speed' },
   { id: 'about', icon: 'info', title: 'settings.about', first: () => 'settings-about' },
 ];
@@ -522,6 +525,32 @@ export function SettingsScreen(): JSX.Element {
                   <Icon name="list" />
                   <span>{t('playlists.manage')}</span>
                 </FocusButton>
+              </div>
+            </Card>
+
+            <Card section={section('remote')}>
+              <div class="remote-settings">
+                <div class="remote-settings-info">
+                  <div class="remote-settings-title">{t('settings.remoteName')}</div>
+                  <ul class="remote-settings-points">
+                    <li>
+                      <Icon name="check" />
+                      <span>{t('settings.remotePoint1')}</span>
+                    </li>
+                    <li>
+                      <Icon name="check" />
+                      <span>{t('settings.remotePoint2')}</span>
+                    </li>
+                    <li class="remote-settings-warning">
+                      <Icon name="info" />
+                      <span>{t('settings.remoteWarning')}</span>
+                    </li>
+                  </ul>
+                  <RemoteIdentityLine />
+                </div>
+                <div class="remote-settings-qr">
+                  <RemoteQrPanel id="settings-remote" hideText />
+                </div>
               </div>
             </Card>
 
