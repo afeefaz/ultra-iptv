@@ -40,7 +40,7 @@ Keyboard stands in for the remote in the browser: arrows, Enter = OK, Backspace/
 digits, F1–F4 = red/green/yellow/blue, PageUp/PageDown = CH+/CH−.
 
 - `/?tv=1` behaves like a TV: text fields use the on-screen keyboard.
-- Hidden debug screen: Settings → About → press Enter on the version 5 times (or open `/?debug=1`).
+- Hidden debug screen: Settings → System → press Enter on the version 5 times (or open `/?debug=1`).
 
 ### Test data (dev server only)
 

@@ -1,6 +1,7 @@
 import type { StreamFormat } from '@ultra/core';
 import type { BufferProfile } from '@ultra/platform';
 import { createSignal, type Accessor } from 'solid-js';
+import { DEFAULT_ACCENT } from './accent';
 import { track } from './usage';
 
 export type SubtitleSize = 'small' | 'medium' | 'large';
@@ -80,8 +81,20 @@ export const MAX_SEEK_SECONDS = 30;
 /** How far the skip buttons and Left/Right jump in movies and episodes. */
 export const [seekSeconds, setSeekSeconds] = persisted<number>('playback.seekSeconds', MIN_SEEK_SECONDS);
 
-/** The big skip buttons on the picture; the ones under the timeline are always there. */
-export const [showPictureSkip, setShowPictureSkip] = persisted<boolean>('playback.showPictureSkip', true);
+/** Set at startup, once the platform has answered. Nothing reads it before a player opens. */
+const [deviceIsTv, setDeviceIsTv] = createSignal(false);
+export { setDeviceIsTv };
+
+const [storedPictureSkip, storePictureSkip] = persisted<boolean | null>('playback.showPictureSkip', null);
+/**
+ * The big skip buttons on the picture; the ones under the timeline are always there. Until someone
+ * chooses, a remote has Left and Right for skipping, and a phone needs the buttons.
+ */
+export const showPictureSkip = (): boolean => storedPictureSkip() ?? !deviceIsTv();
+export const setShowPictureSkip = (show: boolean): void => storePictureSkip(show);
+
+/** When an episode ends, count down and play the next one. */
+export const [autoPlayNext, setAutoPlayNext] = persisted<boolean>('playback.autoPlayNext', true);
 
 /** Programme names on every channel row (a guide request per row), or only the selected channel. */
 export const [guideOnEveryRow, setGuideOnEveryRow] = persisted<boolean>('live.guideOnEveryRow', true);
@@ -92,6 +105,9 @@ export const MAX_TEXT_SCALE = 150;
 export const TEXT_SCALE_STEP = 5;
 /** Percent. Scales the whole interface with its text, so every screen keeps its layout. */
 export const [textScale, setTextScale] = persisted<number>('display.textScale', 100);
+
+/** The colour of the app, as the preset's hex (see accent.ts). */
+export const [accent, setAccent] = persisted<string>('display.accent', DEFAULT_ACCENT);
 
 /** The live memory and storage readout next to the playlist. */
 export const [showSystemUsage, setShowSystemUsage] = persisted<boolean>('display.systemUsage', false);

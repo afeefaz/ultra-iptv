@@ -15,7 +15,8 @@ import { playingPlaylistId, stopPlayback } from './data/playback';
 import { activePlaylist, playlists, setActivePlaylist, startPlaylists } from './data/playlists';
 import { startRemoteAccess } from './data/remoteAccess';
 import { startPerfRuntime } from './data/perfRuntime';
-import { textScale } from './data/settings';
+import { accentColor, accentVariables } from './data/accent';
+import { accent, setDeviceIsTv, textScale } from './data/settings';
 import { startUsage, track } from './data/usage';
 import { DebugScreen } from './debug/DebugScreen';
 import { CONTENT_ZONE, focusManager, FocusZone } from './focus';
@@ -47,6 +48,10 @@ const focusByRoute = new Map<string, string>();
 export function App(props: { platform: Platform }): JSX.Element {
   applyLocaleToDocument();
   setCatalogPlatform(props.platform);
+  Promise.resolve(props.platform.isTv?.()).then(
+    (tv) => setDeviceIsTv(!!tv),
+    (e) => log.warn('app', 'could not tell if this is a TV', { error: e }),
+  );
   onBackNavigated(restoreFocus);
   if (props.platform.reducedEffects) document.documentElement.classList.add('reduced-effects');
 
@@ -58,6 +63,11 @@ export function App(props: { platform: Platform }): JSX.Element {
     // Lists and the video preview measure in pixels; they re-measure on resize.
     if (scaled) window.dispatchEvent(new Event('resize'));
     scaled = true;
+  });
+
+  createRenderEffect(() => {
+    const vars = accentVariables(accentColor(accent()));
+    for (const name of Object.keys(vars)) document.documentElement.style.setProperty(name, vars[name]);
   });
 
   const stopFocusTracking = focusManager.onChange((id) => {

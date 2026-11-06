@@ -80,11 +80,11 @@ export function VirtualGrid<T>(props: VirtualGridProps<T>): JSX.Element {
     const row = Math.floor(idx / cols);
     const page = Math.max(1, Math.floor(viewport() / rowPx()) - 1) * cols;
     if (press.key === 'down') {
-      if (row >= rowCount() - 1) return false;
-      api.focusIndex(Math.min(n - 1, idx + cols)); // short last row: land on its last item
+      // On the last row, stay: the nearest thing below it was often in the next pane.
+      if (row < rowCount() - 1) api.focusIndex(Math.min(n - 1, idx + cols)); // short last row: land on its last item
     } else if (press.key === 'up') {
-      if (row === 0) return false; // leave upwards (sort button)
-      api.focusIndex(idx - cols);
+      if (row > 0) api.focusIndex(idx - cols);
+      else if (!press.repeat) return false; // a new press leaves upwards (sort button); holding the key stops here
     } else if (press.key === 'chDown') api.focusIndex(Math.min(n - 1, idx + page));
     else if (press.key === 'chUp') api.focusIndex(Math.max(idx % cols, idx - page));
     else return false;

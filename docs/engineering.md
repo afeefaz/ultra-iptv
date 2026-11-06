@@ -65,6 +65,7 @@ Dependencies only point downward: `ui` → `worker`, `platform` → `core`. `cor
 - Everything is in `rem`. One rem is 1/120 of the screen's width times the text-size setting, so a `rem` layout works from phones to 4K. `px` only for hairlines.
 - A screen must survive text size 70–150%. Widths that hold text must grow: see `--text-scale` on `.pane-categories`.
 - Colours come from the `:root` variables in `styles.css`.
+- The accent colour can be changed in Settings, so never write its value in CSS. Use `--accent`, `--accent-light`, `--accent-soft` or `--accent-ring`. A new preset goes in `data/accent.ts`, whose test checks its contrast.
 
 **Text**
 
@@ -77,7 +78,7 @@ Dependencies only point downward: `ui` → `worker`, `platform` → `core`. `cor
 - **Every action works by remote, touch and mouse.** Use `FocusButton` or `useFocusable`, inside a `FocusZone`. Test with arrow keys and with a tap.
 - **Moving focus never acts.** Only OK or a tap acts. Focus-triggered actions caused several bugs.
 - **Only the item you're on is filled.** It gets a solid fill, a white border and a breathing ring. Everything else stays unfilled, including primary buttons. A saved choice, like the open category or current tab, gets a marker: a thin border, an underline or accent text. The logo and progress bars are the only other solid accent. On touchscreens nothing stays highlighted, and a button only fills while pressed.
-- **Keep the focus animation cheap.** It only changes the opacity of one ring on its own layer, in 12 steps a second. Don't animate a border, shadow or size, which repaint on every frame.
+- **Keep the focus animation cheap.** It only changes the opacity of one ring on its own layer, in 12 steps a second, and holds still while focus is moving. Don't animate a border, shadow or size, which repaint on every frame.
 - **Every screen has an obvious first focus** (`autofocus`), and never lands on Back.
 - **Back always works:** the remote key, the phone gesture, and `BackButton` on any page below a tab. It returns to the same place, with the same scroll, focus and search.
 - **Lists use `VirtualList` or `VirtualGrid`** when they can be long, with fixed row heights.

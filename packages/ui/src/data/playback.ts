@@ -1,11 +1,11 @@
-import { log, perf, WATCHED_RATIO, type ChannelRow, type MediaRef, type ResolvedStream } from '@ultra/core';
+import { getProgress, log, perf, RESUME_MIN_SECONDS, WATCHED_RATIO, type ChannelRow, type MediaRef, type ProgressRow, type ResolvedStream } from '@ultra/core';
 import { CANNOT_CONNECT, type Platform, type PlayerAdapter, type PlayerError, type PlayerState, type PlayerStats, type PlayerTracks, type Track, type VideoRect } from '@ultra/platform';
 import { createSignal } from 'solid-js';
 import { resolutionLabel } from '../format';
 import { catalog } from './catalog';
 import { track } from './usage';
 import { ensureUnlocked, isChannelLocked } from './parental';
-import { bufferProfile, preferredAudio, preferredText, setPreferredAudio, setPreferredText, streamFormat } from './settings';
+import { autoPlayNext, bufferProfile, preferredAudio, preferredText, setPreferredAudio, setPreferredText, streamFormat } from './settings';
 
 /** Reconnect schedule (spec §4.2): 0.5 s → 8 s, at most 6 attempts; switch container once. */
 const MAX_ATTEMPTS = 6;
@@ -15,6 +15,8 @@ const RESOLUTION_POLL_MS = 2000;
 const URL_CACHE_SIZE = 50;
 /** Progress is saved every 10 s and on pause/exit (spec §4.2). */
 const SAVE_EVERY_MS = 10_000;
+/** How long the next episode waits, so it can be cancelled. */
+const NEXT_EPISODE_SECONDS = 10;
 
 export type PlaybackStatus =
   | { kind: 'reconnecting'; attempt: number }
@@ -43,7 +45,8 @@ export interface MediaItem {
   startAt?: number;
   seriesKey?: string;
   seriesId?: string;
-  /** Played automatically when this one ends (next episode). */
+  /** The episodes either side of this one. */
+  prev?: MediaItem;
   next?: MediaItem;
 }
 
@@ -60,11 +63,19 @@ const [recentVersion, setRecentVersion] = createSignal(0);
 /** Bumped after progress is saved, so "Continue watching" and detail pages can reload. */
 const [progressVersion, setProgressVersion] = createSignal(0);
 const [lastZapMs, setLastZapMs] = createSignal<number | null>(null);
+/**
+ * Apart from `media`, because loading a stream gives up if `media` changes, and Continue watching
+ * only finds out the neighbours after it has started.
+ */
+const [neighbours, setNeighbours] = createSignal<{ prev?: MediaItem; next?: MediaItem }>({});
+/** Seconds until the next episode starts, or null when nothing is counting down. */
+const [nextEpisodeIn, setNextEpisodeIn] = createSignal<number | null>(null);
 
 export {
   current as playingChannel,
   lastZapMs,
   media as playingMedia,
+  nextEpisodeIn,
   position as playbackPosition,
   progressVersion,
   recentVersion,
@@ -76,6 +87,14 @@ export {
 };
 
 /** Playlist of whatever is playing (live or media). */
+export const previousEpisode = (): MediaItem | undefined => neighbours().prev;
+export const nextEpisode = (): MediaItem | undefined => neighbours().next;
+
+/** Position worth offering "Resume" for (spec §4.2: more than 2 minutes in, not finished). */
+export function resumePosition(row: ProgressRow | undefined): number {
+  return row && !row.watched && row.position >= RESUME_MIN_SECONDS ? row.position : 0;
+}
+
 export const playingPlaylistId = (): string | null => session()?.playlistId ?? media()?.playlistId ?? null;
 
 let player: PlayerAdapter | null = null;
@@ -86,6 +105,7 @@ let attempt = 0;
 let retryTimer: ReturnType<typeof setTimeout> | undefined;
 let stallTimer: ReturnType<typeof setTimeout> | undefined;
 let tickTimer: ReturnType<typeof setInterval> | undefined;
+let nextEpisodeTimer: ReturnType<typeof setInterval> | undefined;
 let zapStart = 0;
 let surfaceOwner: 'preview' | 'fullscreen' | null = null;
 /** Where media resumes after a reconnect. */
@@ -201,9 +221,11 @@ export async function playMedia(item: MediaItem): Promise<void> {
   const previous = media();
   if (previous) saveProgress(previous);
   mediaStarted = false;
+  stopNextEpisodeCountdown();
   setCurrent(null);
   setSession(null);
   setMedia(item);
+  setNeighbours({ prev: item.prev, next: item.next });
   setPosition({ current: item.startAt ?? 0, duration: 0 });
   attempt = 0;
   usingFallback = false;
@@ -215,6 +237,47 @@ export async function playMedia(item: MediaItem): Promise<void> {
   clearInterval(tickTimer);
   tickTimer = setInterval(tick, 1000);
   await loadCurrent();
+}
+
+/** Previous or next episode, from where it was left if it's unfinished. Does nothing at either end. */
+export async function playEpisode(direction: -1 | 1): Promise<void> {
+  const from = media();
+  const target = direction < 0 ? neighbours().prev : neighbours().next;
+  if (!from || !target) return;
+  stopNextEpisodeCountdown();
+  track('player.changeEpisode');
+  const saved = await getProgress(target.playlistId, 'episode', target.key).catch(() => undefined);
+  if (media() !== from) return; // left the player, or pressed again, meanwhile
+  await playMedia({ ...target, startAt: resumePosition(saved) });
+}
+
+/** Stays on the finished episode. Its next-episode button still works. */
+export function cancelNextEpisode(): void {
+  stopNextEpisodeCountdown();
+  if (media()) setStatus({ kind: 'ended' });
+}
+
+function startNextEpisodeCountdown(): void {
+  setNextEpisodeIn(NEXT_EPISODE_SECONDS);
+  nextEpisodeTimer = setInterval(() => {
+    const left = (nextEpisodeIn() ?? 0) - 1;
+    if (left > 0) {
+      setNextEpisodeIn(left);
+      return;
+    }
+    log.info('player', 'next episode');
+    void playEpisode(1);
+  }, 1000);
+}
+
+function stopNextEpisodeCountdown(): void {
+  clearInterval(nextEpisodeTimer);
+  setNextEpisodeIn(null);
+}
+
+/** Tells the player the neighbours of an item that started without them. */
+export function setEpisodeNeighbours(item: MediaItem, prev: MediaItem | undefined, next: MediaItem | undefined): void {
+  if (media() === item) setNeighbours({ prev, next });
 }
 
 /** Next/previous channel in the current list, wrapping around (fast zapping, spec §4.2). */
@@ -248,12 +311,14 @@ export function stopPlayback(): void {
 /** Saves progress and clears the media item (when switching away or stopping). */
 function finishMedia(): void {
   clearInterval(tickTimer);
+  stopNextEpisodeCountdown();
   const m = media();
   if (!m) return;
   saveProgress(m);
   log.info('player', 'media stopped', { kind: m.kind });
   mediaStarted = false;
   setMedia(null);
+  setNeighbours({});
 }
 
 export function togglePause(): void {
@@ -432,12 +497,8 @@ function onState(s: PlayerState): void {
     const m = media();
     if (!m) return;
     saveProgress(m);
-    if (m.next) {
-      log.info('player', 'next episode');
-      void playMedia({ ...m.next, startAt: 0 });
-    } else {
-      setStatus({ kind: 'ended' });
-    }
+    if (neighbours().next && autoPlayNext()) startNextEpisodeCountdown();
+    else setStatus({ kind: 'ended' });
   }
 }
 

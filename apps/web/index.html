@@ -14,6 +14,13 @@
   </head>
   <body>
     <div id="splash"><svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="#f59e0b" /><path d="M18 13.5v21a1.2 1.2 0 0 0 1.8 1l17-10.5a1.2 1.2 0 0 0 0-2l-17-10.5a1.2 1.2 0 0 0-1.8 1z" fill="#111" /></svg></div>
+    <script>
+      // The chosen color, before the app has loaded. The value is one of the presets in data/accent.ts.
+      try {
+        var saved = JSON.parse(localStorage.getItem('ultraiptv.display.accent'));
+        if (/^#[0-9a-f]{6}$/.test(saved)) document.querySelector('#splash rect').setAttribute('fill', saved);
+      } catch (e) {}
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

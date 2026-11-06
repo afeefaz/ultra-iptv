@@ -47,6 +47,8 @@ import i_sort from '@material-symbols/svg-400/outlined/swap_vert.svg?raw';
 import i_star from '@material-symbols/svg-400/outlined/star.svg?raw';
 import i_starFill from '@material-symbols/svg-400/outlined/star-fill.svg?raw';
 import i_subtitles from '@material-symbols/svg-400/outlined/subtitles.svg?raw';
+import i_skipNext from '@material-symbols/svg-400/outlined/skip_next.svg?raw';
+import i_skipPrevious from '@material-symbols/svg-400/outlined/skip_previous.svg?raw';
 import i_sync from '@material-symbols/svg-400/outlined/sync.svg?raw';
 import i_tune from '@material-symbols/svg-400/outlined/tune.svg?raw';
 import i_tv from '@material-symbols/svg-400/outlined/tv.svg?raw';
@@ -102,6 +104,8 @@ const ICONS = {
   star: i_star,
   starFill: i_starFill,
   subtitles: i_subtitles,
+  skipNext: i_skipNext,
+  skipPrevious: i_skipPrevious,
   sync: i_sync,
   tune: i_tune,
   tv: i_tv,

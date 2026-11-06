@@ -1,6 +1,6 @@
 import { log } from '@ultra/core';
 import type { Key, Platform } from '@ultra/platform';
-import { createSignal, For, onCleanup, onMount, Show, type JSX } from 'solid-js';
+import { createMemo, createSignal, For, onCleanup, onMount, Show, type JSX } from 'solid-js';
 import { ChannelLogo } from '../components/ChannelLogo';
 import { Icon, type IconName } from '../components/Icon';
 import { TrackSheet } from '../components/TrackSheet';
@@ -9,7 +9,12 @@ import { catalog } from '../data/catalog';
 import { clock, formatClock, useNowNext } from '../data/epg';
 import { isChannelLocked } from '../data/parental';
 import {
+  cancelNextEpisode,
   claimSurface,
+  nextEpisode,
+  nextEpisodeIn,
+  playEpisode,
+  previousEpisode,
   lastZapMs,
   playbackPosition,
   playbackSession,
@@ -39,7 +44,6 @@ const OVERLAY_MS = 5000;
 const ZAP_DELAY_MS = 1500;
 
 const SKIP_SECONDS = 30;
-const PLAY_PAUSE_CONTROL = 2;
 /** Presses closer together than this count as holding the key. */
 const SCRUB_HOLD_MS = 400;
 const SCRUB_STEPS = [
@@ -360,19 +364,37 @@ function MediaPlayer(): JSX.Element {
   const [sheet, setSheet] = createSignal(false);
   const [stats, setStats] = createSignal(false);
   const platform = usePlatform();
-  const controls: PlayerControl[] = [
-    { label: () => t('common.back'), icon: () => 'back', run: () => goBack() },
-    { label: () => t('player.backBy', { n: seekSeconds() }), icon: () => 'replay', seek: -1, run: () => seekBy(-seekSeconds()) },
-    {
-      label: () => (playerState() === 'paused' ? t('player.play') : t('player.pause')),
-      icon: () => (playerState() === 'paused' ? 'play' : 'pause'),
-      wide: true,
-      run: () => togglePause(),
-    },
-    { label: () => t('player.forwardBy', { n: seekSeconds() }), icon: () => 'replay', seek: 1, run: () => seekBy(seekSeconds()) },
-    { label: () => t('player.audioSubs'), icon: () => 'subtitles', text: true, run: () => setSheet(true) },
-    ...externalControl(platform),
-  ];
+  const back: PlayerControl = { label: () => t('common.back'), icon: () => 'back', run: () => goBack() };
+  const skipBack: PlayerControl = { label: () => t('player.backBy', { n: seekSeconds() }), icon: () => 'replay', seek: -1, run: () => seekBy(-seekSeconds()) };
+  const playPause: PlayerControl = {
+    label: () => (playerState() === 'paused' ? t('player.play') : t('player.pause')),
+    icon: () => (playerState() === 'paused' ? 'play' : 'pause'),
+    wide: true,
+    run: () => togglePause(),
+  };
+  const skipForward: PlayerControl = { label: () => t('player.forwardBy', { n: seekSeconds() }), icon: () => 'replay', seek: 1, run: () => seekBy(seekSeconds()) };
+  // Always there for an episode, and dimmed at either end, so the row doesn't shift under the remote.
+  const prevEp: PlayerControl = { label: () => t('player.prevEpisode'), icon: () => 'skipPrevious', disabled: () => !previousEpisode(), run: () => void playEpisode(-1) };
+  const nextEp: PlayerControl = { label: () => t('player.nextEpisode'), icon: () => 'skipNext', disabled: () => !nextEpisode(), run: () => void playEpisode(1) };
+  const audioSubs: PlayerControl = { label: () => t('player.audioSubs'), icon: () => 'subtitles', text: true, run: () => setSheet(true) };
+  const external = externalControl(platform);
+  const isEpisode = () => playingMedia()?.kind === 'episode';
+  const controls = createMemo<PlayerControl[]>(() =>
+    isEpisode()
+      ? [back, prevEp, skipBack, playPause, skipForward, nextEp, audioSubs, ...external]
+      : [back, skipBack, playPause, skipForward, audioSubs, ...external],
+  );
+  /** Which button of the next-episode card the remote is on: 0 plays now, 1 cancels. */
+  const [nextChoice, setNextChoice] = createSignal(0);
+  const counting = () => nextEpisodeIn() !== null;
+  const playNextNow = () => {
+    setNextChoice(0);
+    void playEpisode(1);
+  };
+  const cancelNext = () => {
+    setNextChoice(0);
+    cancelNextEpisode();
+  };
   /** Index of the button the remote is on; null means Left/Right seek and OK pauses. */
   const [control, setControl] = createSignal<number | null>(null);
   /** The remote is on the timeline's dot: Left/Right pick a time and OK jumps there. */
@@ -423,12 +445,30 @@ function MediaPlayer(): JSX.Element {
       setSheet(false);
       return true;
     }
+    if (counting()) {
+      switch (press.key) {
+        case 'left':
+        case 'right':
+          setNextChoice((c) => 1 - c);
+          return true;
+        case 'ok':
+          if (nextChoice() === 0) playNextNow();
+          else cancelNext();
+          return true;
+        case 'back':
+        case 'stop':
+          goBack();
+          return true;
+        default:
+          return true; // nothing to seek or pause: the episode has ended
+      }
+    }
     if (control() !== null && press.key === 'up') {
       setControl(null);
       setOnTimeline(true);
       return true;
     }
-    if (moveInControls(press.key, controls, control, setControl)) return true;
+    if (moveInControls(press.key, controls(), control, setControl)) return true;
     if (onTimeline() && playbackPosition().duration) {
       const at = dragAt();
       switch (press.key) {
@@ -450,7 +490,7 @@ function MediaPlayer(): JSX.Element {
         case 'down':
           setDragAt(null);
           setOnTimeline(false);
-          setControl(PLAY_PAUSE_CONTROL);
+          setControl(controls().indexOf(playPause));
           return true;
         case 'back':
           if (at === null) break;
@@ -490,7 +530,15 @@ function MediaPlayer(): JSX.Element {
         setStats(!stats());
         return true;
       case 'down':
-        setControl(PLAY_PAUSE_CONTROL);
+        setControl(controls().indexOf(playPause));
+        return true;
+      case 'chUp':
+        if (!isEpisode()) return false;
+        void playEpisode(1);
+        return true;
+      case 'chDown':
+        if (!isEpisode()) return false;
+        void playEpisode(-1);
         return true;
       case 'up':
         if (playbackPosition().duration) setOnTimeline(true);
@@ -547,13 +595,13 @@ function MediaPlayer(): JSX.Element {
       onMouseMove={showOverlay}
       onClick={(e) => {
         // Clicking the picture (not a control) pauses/resumes, like most web players.
-        if (e.target === e.currentTarget) {
+        if (e.target === e.currentTarget && !counting()) {
           togglePause();
           showOverlay();
         }
       }}
     >
-      <Show when={overlay() && playingMedia()}>
+      <Show when={overlay() && !counting() && playingMedia()}>
         {(m) => (
           <>
             <div class="player-top">
@@ -574,7 +622,7 @@ function MediaPlayer(): JSX.Element {
               </div>
             </div>
             <Show when={playbackPosition().duration && showPictureSkip()}>
-              <PictureSkipButtons back={controls[1]} forward={controls[3]} onUse={showOverlay} />
+              <PictureSkipButtons back={skipBack} forward={skipForward} onUse={showOverlay} />
             </Show>
             <div class="player-bottom">
               <div class="seek-panel" classList={{ 'is-focused': onTimeline() }} dir="ltr">
@@ -623,14 +671,54 @@ function MediaPlayer(): JSX.Element {
                   {statsText()}
                 </p>
               </Show>
-              <PlayerControls controls={controls} focused={control()} onUse={showOverlay} />
-              <p class="player-hint">{t('player.mediaHint', { n: seekSeconds() })}</p>
+              <PlayerControls controls={controls()} focused={control()} onUse={showOverlay} />
+              <p class="player-hint">
+                {t('player.mediaHint', { n: seekSeconds() })}
+                {isEpisode() ? ` · ${t('player.episodeHint')}` : ''}
+              </p>
             </div>
           </>
         )}
       </Show>
       <Show when={playerState() === 'paused'}>
         <PausedPill />
+      </Show>
+      <Show when={counting()}>
+        <div class="next-card" role="status">
+          <div class="next-card-title">{t('player.nextIn', { n: formatNumber(nextEpisodeIn() ?? 0) })}</div>
+          <Show when={nextEpisode()?.subtitle}>
+            {(subtitle) => (
+              <div class="next-card-name">
+                <bdi>{subtitle()}</bdi>
+              </div>
+            )}
+          </Show>
+          <div class="next-card-buttons" dir="ltr">
+            <div
+              class="player-button"
+              classList={{ 'is-focused': nextChoice() === 0 }}
+              role="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                playNextNow();
+              }}
+            >
+              <Icon name="skipNext" />
+              <span>{t('player.playNow')}</span>
+            </div>
+            <div
+              class="player-button"
+              classList={{ 'is-focused': nextChoice() === 1 }}
+              role="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                cancelNext();
+              }}
+            >
+              <span>{t('player.cancelNext')}</span>
+            </div>
+          </div>
+        </div>
       </Show>
       <Show when={sheet()}>
         <TrackSheet onClose={() => setSheet(false)} />
@@ -647,6 +735,8 @@ interface PlayerControl {
   /** A skip button: the icon points this way, with the number of seconds in it. */
   seek?: -1 | 1;
   wide?: boolean;
+  /** Dimmed: the remote steps over it, and pressing it does nothing. */
+  disabled?: () => boolean;
   run: () => void;
 }
 
@@ -657,15 +747,20 @@ interface PlayerControl {
 function moveInControls(key: Key, controls: PlayerControl[], control: () => number | null, setControl: (index: number | null) => void): boolean {
   const at = control();
   if (at === null) return false;
+  const step = (direction: number) => {
+    let i = at + direction;
+    while (controls[i]?.disabled?.()) i += direction;
+    return controls[i] ? i : at;
+  };
   switch (key) {
     case 'left':
-      setControl(Math.max(0, at - 1));
+      setControl(step(-1));
       return true;
     case 'right':
-      setControl(Math.min(controls.length - 1, at + 1));
+      setControl(step(1));
       return true;
     case 'ok':
-      controls[at].run();
+      if (!controls[at].disabled?.()) controls[at].run();
       return true;
     case 'up':
     case 'down':
@@ -720,14 +815,15 @@ function PlayerControls(props: { controls: PlayerControl[]; focused: number | nu
         {(c, i) => (
           <div
             class="player-button"
-            classList={{ wide: !!c.wide, 'is-focused': props.focused === i() }}
+            classList={{ wide: !!c.wide, 'is-focused': props.focused === i(), 'is-disabled': !!c.disabled?.() }}
             role="button"
             title={c.label()}
             aria-label={c.label()}
+            aria-disabled={c.disabled?.() ? 'true' : undefined}
             onClick={(e) => {
               e.stopPropagation();
               props.onUse();
-              c.run();
+              if (!c.disabled?.()) c.run();
             }}
           >
             <Show when={c.seek} fallback={<Icon name={c.icon()} />}>

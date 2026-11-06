@@ -90,11 +90,11 @@ export function VirtualList<T>(props: VirtualListProps<T>): JSX.Element {
     if (press.key === 'down') {
       if (idx < n - 1) api.focusIndex(idx + 1);
       else if (props.wrap && n > 1) api.focusIndex(0);
-      else return false; // let focus leave the list downwards
+      // Otherwise stay on the last row: the nearest thing below it was often in the next pane.
     } else if (press.key === 'up') {
       if (idx > 0) api.focusIndex(idx - 1);
       else if (props.wrap && n > 1) api.focusIndex(n - 1);
-      else return false;
+      else if (!press.repeat) return false; // a new press leaves upwards; holding the key stops here
     } else if (press.key === 'chDown') api.focusIndex(idx + page);
     else if (press.key === 'chUp') api.focusIndex(idx - page);
     else return false;

@@ -30,7 +30,7 @@ Every line the app prints starts with `[UltraIPTV]`, then the level and area:
 
 ## The hidden debug screen (all platforms)
 
-- **Open it:** Settings → About → press **OK on the version number 5 times**. On the web, add `?debug=1` to the URL.
+- **Open it:** Settings → System → About → press **OK on the version number 5 times**. On the web, add `?debug=1` to the URL.
 - **What you can do:** filter by level, area and text; pause; change the log level (`debug` persists until turned off); clear the buffer; **Export**.
 - **Where Export goes** on each platform is described in the sections below.
 

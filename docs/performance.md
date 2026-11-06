@@ -45,7 +45,7 @@ Options: `--cold <n>` cold starts (default 3), `--skip-playback`, `--skip-speed`
 - **Debug access:** Android needs a debug build, or for a device with the release build, `node scripts/android.mjs --release --perf --install -s <serial>`. That one keeps the app's data, but put the normal release back afterwards and never publish it. Quit Apps2Samsung if the TV won't connect.
 - **Results** go to `perf-results/`, which is gitignored.
 
-The debug screen (Settings → About → press OK on the version 5 times) can export the same data with **Export performance report**.
+The debug screen (Settings → System → About → press OK on the version 5 times) can export the same data with **Export performance report**.
 
 ## What's measured
 
@@ -215,6 +215,42 @@ Measured 2026-11-04 with a real catalogue of about 16,500 channels, 20,700 movie
 | App, all libraries held | 167 MB | 189 MB | 446 MB | 10 MB |
 
 The Samsung's full refresh took 16.4 s: 1–2 s building rows and 4–6 s saving each section, in overlapping background work.
+
+## Re-measured, 2026-11-06
+
+Samsung TV on the 0.5.2 build, one full run, so small differences are noise.
+
+| Measure | Budget | 2026-11-04 | Now |
+|---|---|---|---|
+| First frame of the app after launch | 1 s | 2.3 s | 2.2 s |
+| Home with its data | 2 s | 3.6 s | 3.4 s |
+| Live, first open | 2 s | 1.0 s | **1.1 s** |
+| Movies, first open | 2 s | 1.5 s | **1.7 s** |
+| Series, first open | 2 s | 0.9 s | **1.0 s** |
+| Back to Live from full screen | 100 ms | 0.33 s | 0.34 s |
+| Back to the movie grid | 100 ms | 0.19 s | 0.35 s |
+| Key press to frame, scrolling posters (p95) | 100 ms | 120 ms | 123 ms |
+| Key press to frame, scrolling Live (p95) | 100 ms | 33 ms | **33 ms** |
+| Frames dropped, scrolling posters | | 177 | 319 |
+| Channel change, typical | | 1.5 s | 1.8 s |
+| Channel change, worst of 5 | 1.5 s | 2.9 s | 2.4 s |
+| Movie start | 3 s | **1.7 s** | **1.4 s** |
+| Filter channels, per key | 50 ms | **35 ms** | **8 ms** |
+| Filter movies, per key | 50 ms | **47 ms** | **35 ms** |
+| Full refresh | 15 s | 10.8 s, 2 lists unchanged | 28.9 s, every list changed |
+
+**The focus ring while scrolling posters.** 30 key presses on the same grid, taking turns between each version, four runs each, on 0.5.2 with the styles changed live. Medians:
+
+| | Ring breathing | Ring still while moving |
+|---|---|---|
+| Time the main thread stalled | 6.5 s | 3.8 s |
+| Long tasks | 55 | 43 |
+| Frames drawn | 136 | 282 |
+| Key press to frame (p50) | 84 ms | 76 ms |
+
+Sitting on one item costs nothing: 599 frames in 10 s with the ring and 601 without, with no long tasks. So the ring now holds still until focus has stopped moving for 350 ms.
+
+**Full refresh when everything changed** is the slowest result: saving took 4 s for Live, 5.7 s for Movies and 9.5 s for Series.
 
 ## After two rounds of fixes
 

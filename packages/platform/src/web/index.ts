@@ -17,6 +17,7 @@ const tvMode = typeof location !== 'undefined' && /[?&]tv=1(&|$)/.test(location.
 export const webPlatform: Platform = {
   id: 'web',
   textInput: tvMode ? 'osk' : 'native',
+  isTv: () => tvMode,
   // Browsers can't play raw MPEG-TS without mpegts.js; HLS is the more robust default.
   prefersHls: true,
   createPlayer: () => new WebPlayer(),

@@ -25,6 +25,9 @@ export interface ZoneSpec {
 }
 
 export const FOCUSED_CLASS = 'is-focused';
+/** On the root while focus is moving. The focus ring holds still, and breathes once the keys stop. */
+const MOVING_CLASS = 'is-moving';
+const RING_REST_MS = 350;
 /** Zone wrapping the current screen's content; default focus target after navigation. */
 export const CONTENT_ZONE = 'content';
 
@@ -50,6 +53,7 @@ export class FocusManager {
   pointerMode = false;
   /** The last input was a finger: nothing shows "you are here" until the keys are used again. */
   private touching = false;
+  private ringTimer: ReturnType<typeof setTimeout> | undefined;
 
   get currentId(): string | null {
     return this.current;
@@ -107,12 +111,26 @@ export class FocusManager {
     };
   }
 
+  /**
+   * Starting the animation on every item passed nearly doubled the time a Samsung TV stalled while
+   * scrolling posters, and it's only worth seeing once you stop.
+   */
+  private holdRing(): void {
+    const root = document.documentElement;
+    root.classList.add(MOVING_CLASS);
+    clearTimeout(this.ringTimer);
+    this.ringTimer = setTimeout(() => root.classList.remove(MOVING_CLASS), RING_REST_MS);
+  }
+
   focus(id: string, scroll = true, notify = true): boolean {
     const next = this.items.get(id);
     if (!next) return false;
     this.weakFocus = false;
     const prev = this.current ? this.items.get(this.current) : undefined;
-    if (prev && prev !== next) prev.el.classList.remove(FOCUSED_CLASS);
+    if (prev && prev !== next) {
+      prev.el.classList.remove(FOCUSED_CLASS);
+      this.holdRing();
+    }
     this.current = id;
     if (!this.touching) next.el.classList.add(FOCUSED_CLASS);
     // Never pull DOM focus out of a text box inside the item (a tap there opens the keyboard;

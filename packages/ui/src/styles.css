@@ -30,6 +30,7 @@
   --accent: #f59e0b;
   --accent-light: #fbbf24;
   --accent-soft: rgba(245, 158, 11, 0.16);
+  --accent-ring: rgba(245, 158, 11, 0.5);
   --on-accent: #080a10;
   --cyan: #38bdf8;
   --cyan-soft: rgba(56, 189, 248, 0.14);
@@ -2541,6 +2542,46 @@ h3 {
   box-shadow: 0 0 0 0.2rem var(--strong);
 }
 
+.player-button.is-disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* An episode has ended and the next one is counting down. */
+.next-card {
+  position: absolute;
+  right: 3rem;
+  bottom: 3rem;
+  width: 34rem;
+  max-width: 80%;
+  padding: 1.5rem 1.8rem;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: rgba(13, 17, 26, 0.92);
+  color: var(--strong);
+}
+
+.next-card-title {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 700;
+}
+
+.next-card-name {
+  overflow: hidden;
+  margin-top: 0.4rem;
+  color: var(--muted);
+  font-size: 1.1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.next-card-buttons {
+  display: flex;
+  margin-top: 1.2rem;
+}
+
 /* The remote is on the timeline: Left/Right pick a time, OK jumps there. */
 .seek-panel.is-focused {
   border-color: var(--accent);
@@ -2553,7 +2594,7 @@ h3 {
 
 .seek-bar.is-focused .seek-handle {
   background: var(--strong);
-  box-shadow: 0 0 0 0.3rem rgba(245, 158, 11, 0.5);
+  box-shadow: 0 0 0 0.3rem var(--accent-ring);
   transform: scale(1.7);
 }
 
@@ -2996,6 +3037,33 @@ h3 {
   margin-right: 0;
 }
 
+.option-cards-wrap {
+  flex-wrap: wrap;
+  margin-top: 0.8rem;
+}
+
+/* Four to a row, on phones too: flex has no gap on Chrome 53, so each card brings its own. */
+.option-cards-wrap > .btn,
+.option-cards-wrap > .btn:last-child {
+  flex: 0 0 auto;
+  width: 23.5%;
+  margin-right: 2%;
+  margin-bottom: 0.8rem;
+}
+
+.option-cards-wrap > .btn:nth-child(4n) {
+  margin-right: 0;
+}
+
+.color-swatch {
+  flex: none;
+  width: 1.6rem;
+  height: 1.6rem;
+  margin-right: 0.7rem;
+  border: 0.14rem solid var(--strong);
+  border-radius: 50%;
+}
+
 .option-card-text {
   display: flex;
   flex: 1;
@@ -3407,6 +3475,27 @@ h3 {
     width: auto;
     max-height: 40vh;
     margin: 0 0 1rem 0;
+  }
+
+  /* Two columns of short entries, so the page itself stays on screen. */
+  .settings-menu {
+    display: flex;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    align-self: stretch;
+    width: auto;
+    margin: 0 0 1rem 0;
+    padding: 0.5rem;
+  }
+
+  .settings-menu .eyebrow,
+  .settings-menu .list-item .icon:last-child {
+    display: none;
+  }
+
+  .settings-menu .list-item {
+    width: 50%;
+    box-sizing: border-box;
   }
 }
 
@@ -4127,6 +4216,15 @@ h3 {
   will-change: opacity;
   /* In steps, because a slow fade doesn't need 60 updates a second: 60% less graphics work. */
   animation: focus-breathe 1s steps(12, end) infinite alternate;
+}
+
+/* Still while focus moves: restarting it on every item passed slows scrolling on TVs. */
+.is-moving .btn.is-focused::after,
+.is-moving .player-button.is-focused::after,
+.is-moving .field-box.is-focused::after,
+.is-moving .is-focused > .poster::after {
+  will-change: auto;
+  animation: none;
 }
 
 /* Its poster has the ring. */

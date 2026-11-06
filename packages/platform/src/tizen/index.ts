@@ -47,6 +47,7 @@ function registerKeys(): void {
 export const tizenPlatform: Platform = {
   id: 'tizen',
   textInput: 'osk',
+  isTv: () => true,
   reducedEffects: true,
   // AVPlay plays raw MPEG-TS natively; it's what providers serve most reliably.
   prefersHls: false,

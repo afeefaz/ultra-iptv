@@ -1,19 +1,23 @@
 {
-  "versionCode": 8,
-  "versionName": "0.5.3",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.5.3/UltraIPTV.apk",
-  "sha256": "6ac033bef4d7efccf49708a50ded379cf65752e5e2deac8c4817068155396f60",
-  "size": 12459473,
+  "versionCode": 9,
+  "versionName": "0.5.4",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.5.4/UltraIPTV.apk",
+  "sha256": "120e16dfd7f47162b2c4e6d39ead4434075b4fa2c8274ba5c6d1eb9d8ba48efd",
+  "size": 12462645,
   "notes": {
     "en": [
-      "Hidden categories: Live categories are grouped by language or prefix, so you can hide a whole group at once",
-      "Hidden categories: search, go to top, hide all, show all and undo",
-      "Live: press Left on the category list to jump to a group. You can turn this off in Settings"
+      "Choose the app's color: 8 colors in Settings → Appearance",
+      "Series: next and previous episode buttons, and the next episode starts after a 10-second countdown you can cancel",
+      "Settings are now organized into six pages",
+      "Smoother scrolling on TVs, and lists stop at the last item when you hold Down",
+      "On TVs, the big skip buttons on the picture are now hidden by default"
     ],
     "ar": [
-      "الفئات المخفية: تُجمَّع فئات البث المباشر حسب اللغة أو البادئة، لتتمكن من إخفاء مجموعة كاملة دفعة واحدة",
-      "الفئات المخفية: بحث، والانتقال إلى الأعلى، وإخفاء الكل، وإظهار الكل، وتراجع",
-      "البث المباشر: اضغط يسارًا في قائمة الفئات للانتقال إلى مجموعة. يمكنك إيقاف ذلك من الإعدادات"
+      "اختر لون التطبيق: 8 ألوان في الإعدادات ← المظهر",
+      "المسلسلات: أزرار للحلقة التالية والسابقة، وتبدأ الحلقة التالية بعد عد تنازلي 10 ثوانٍ يمكنك إلغاؤه",
+      "أصبحت الإعدادات منظمة في ست صفحات",
+      "تمرير أكثر سلاسة على أجهزة التلفاز، وتتوقف القوائم عند آخر عنصر عند الاستمرار في الضغط لأسفل",
+      "على أجهزة التلفاز، أصبحت أزرار التخطي الكبيرة على الصورة مخفية افتراضيًا"
     ]
   }
 }

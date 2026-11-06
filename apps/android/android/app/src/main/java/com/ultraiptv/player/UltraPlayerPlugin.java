@@ -1,8 +1,11 @@
 package com.ultraiptv.player;
 
 import android.app.ActivityManager;
+import android.app.UiModeManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Debug;
@@ -134,6 +137,20 @@ public class UltraPlayerPlugin extends Plugin {
     }
 
     // ---------- Playback ----------
+
+    /** One APK for phones and TVs. Touch can't tell them apart: some TVs report a touch screen. */
+    @PluginMethod
+    public void isTv(PluginCall call) {
+        Context context = getContext();
+        UiModeManager uiMode = (UiModeManager) context.getSystemService(Context.UI_MODE_SERVICE);
+        PackageManager packages = context.getPackageManager();
+        boolean tv = (uiMode != null && uiMode.getCurrentModeType() == Configuration.UI_MODE_TYPE_TELEVISION)
+                || packages.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+                || packages.hasSystemFeature(PackageManager.FEATURE_TELEVISION);
+        JSObject out = new JSObject();
+        out.put("tv", tv);
+        call.resolve(out);
+    }
 
     @PluginMethod
     public void load(PluginCall call) {

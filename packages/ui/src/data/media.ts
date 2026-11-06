@@ -1,7 +1,7 @@
 import {
+  getItem,
   listProgress,
   log,
-  RESUME_MIN_SECONDS,
   type Episode,
   type MediaRef,
   type ProgressRow,
@@ -10,7 +10,8 @@ import {
 } from '@ultra/core';
 import { createEffect, createMemo, createSignal, on, type Accessor } from 'solid-js';
 import { navigate, type Tab } from '../nav';
-import { playMedia, progressVersion, type MediaItem } from './playback';
+import { catalog } from './catalog';
+import { playMedia, progressVersion, resumePosition, setEpisodeNeighbours, type MediaItem } from './playback';
 import { activePlaylist } from './playlists';
 
 /** Every saved position of the active playlist, keyed `${kind}|${key}`; reloads after each save. */
@@ -25,10 +26,7 @@ export function useProgress(): Accessor<Map<string, ProgressRow>> {
   return createMemo(() => new Map(rows().map((r) => [`${r.kind}|${r.key}`, r] as [string, ProgressRow])));
 }
 
-/** Position worth offering "Resume" for (spec §4.2: more than 2 minutes in, not finished). */
-export function resumePosition(row: ProgressRow | undefined): number {
-  return row && !row.watched && row.position >= RESUME_MIN_SECONDS ? row.position : 0;
-}
+export { resumePosition };
 
 export function progressRatio(row: ProgressRow | undefined): number {
   if (!row) return 0;
@@ -72,14 +70,17 @@ export function episodesOf(series: SeriesRow, fetched: Episode[] | undefined): E
 
 export const episodeKey = (series: SeriesRow, e: { season: number; episode: number }) => `${series.key}|${e.season}x${e.episode}`;
 
-/** The episode as a playable item, chained to the ones after it so playback continues. */
+/** The episode as a playable item, linked to the ones either side of it, across seasons. */
 export function episodeItem(series: SeriesRow, list: EpisodeEntry[], index: number): MediaItem {
-  let next: MediaItem | undefined;
-  for (let i = list.length - 1; i > index; i--) next = toItem(series, list[i], next);
-  return toItem(series, list[index], next);
+  const items = list.map((e) => toItem(series, e));
+  items.forEach((item, i) => {
+    item.prev = items[i - 1];
+    item.next = items[i + 1];
+  });
+  return items[index];
 }
 
-function toItem(series: SeriesRow, e: EpisodeEntry, next: MediaItem | undefined): MediaItem {
+function toItem(series: SeriesRow, e: EpisodeEntry): MediaItem {
   return {
     playlistId: series.playlistId,
     kind: 'episode',
@@ -91,7 +92,6 @@ function toItem(series: SeriesRow, e: EpisodeEntry, next: MediaItem | undefined)
     ref: e.ref,
     seriesKey: series.key,
     seriesId: series.id,
-    next,
   };
 }
 
@@ -99,9 +99,27 @@ function toItem(series: SeriesRow, e: EpisodeEntry, next: MediaItem | undefined)
 export function watch(item: MediaItem, tab: Tab): void {
   void playMedia(item);
   navigate({ name: 'player', tab });
+  void findNeighbours(item);
 }
 
-/** "Continue watching" entry → item (episodes resume without the rest of the season chain). */
+/** Continue watching knows one episode, not the series. The rest is on the device by then, as it was opened to play this one. */
+async function findNeighbours(item: MediaItem): Promise<void> {
+  if (item.kind !== 'episode' || item.prev || item.next || !item.seriesId) return;
+  try {
+    const series = await getItem(item.playlistId, 'series', item.seriesId);
+    if (!series) return;
+    const info = series.episodes ? undefined : await catalog().call('seriesInfo', item.playlistId, series.seriesId);
+    const list = episodesOf(series, info?.episodes);
+    const index = list.map((e) => episodeKey(series, e)).indexOf(item.key);
+    if (index < 0) return;
+    const linked = episodeItem(series, list, index);
+    setEpisodeNeighbours(item, linked.prev, linked.next);
+  } catch (e) {
+    log.warn('media', 'could not find the next episode', { error: e });
+  }
+}
+
+/** "Continue watching" entry → item (`watch` finds the episodes either side). */
 export function itemFromProgress(row: ProgressRow): MediaItem {
   return {
     playlistId: row.playlistId,

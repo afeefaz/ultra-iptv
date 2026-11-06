@@ -29,6 +29,7 @@ export interface UltraPlayerPlugin {
   openExternal(options: { url: string; title: string }): Promise<void>;
   shareText(options: { filename: string; mimeType: string; text: string }): Promise<void>;
   systemUsage(): Promise<{ ramUsed: number; ramTotal: number; appUsed: number }>;
+  isTv(): Promise<{ tv: boolean }>;
   /** Reads the URL for `seconds` and discards the data; 0 stops at the first response. */
   measureDownload(options: { url: string; seconds: number }): Promise<{ status: number; ttfbMs: number; bytes: number; ms: number }>;
   cancelDownload(): Promise<void>;
