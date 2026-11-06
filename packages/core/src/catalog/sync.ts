@@ -5,7 +5,8 @@ import { log } from '../log';
 import { deriveDeviceBoxes, DEVICE_TTL_SECONDS, normalizeDeviceId, normalizeDeviceKey, open, seal, type DeviceBoxes, type RelayClient, type RemotePlaylist } from '../pair/pair';
 import type { SecretBox } from '../secure/secret-box';
 import { openUltraDb } from './db';
-import { hiddenCategoriesKey, pinsKey, type ContentKind, type EncryptedBlob, type FavoriteRow, type LockRow, type PlaylistInput, type PlaylistRecord, type ProgressRow, type RecentRow } from './model';
+import type { HiddenRule } from './groups';
+import { hiddenCategoriesKey, hiddenRuleKey, pinsKey, type ContentKind, type EncryptedBlob, type FavoriteRow, type LockRow, type PlaylistInput, type PlaylistRecord, type ProgressRow, type RecentRow } from './model';
 import { listPlaylists } from './queries';
 
 const GROUP_SETTING = 'sync.group';
@@ -25,6 +26,8 @@ interface SyncedPlaylist extends RemotePlaylist {
   locks: Array<WithoutPlaylist<LockRow>>;
   pins: Partial<Record<ContentKind, string[]>>;
   hidden: Partial<Record<ContentKind, string[]>>;
+  /** Missing in a push from before whole groups could be hidden. */
+  hiddenRules?: Partial<Record<ContentKind, HiddenRule>>;
 }
 
 interface Snapshot {
@@ -221,6 +224,7 @@ export class SyncAccess {
         locks: strip(await db.getAllFromIndex('locks', 'byPlaylist', record.id)),
         pins: {},
         hidden: {},
+        hiddenRules: {},
       };
       for (const kind of KINDS) {
         synced.favorites.push(...strip(await db.getAllFromIndex('favorites', 'byPlaylistKind', [record.id, kind])));
@@ -229,6 +233,8 @@ export class SyncAccess {
         const hidden = (await db.get('settings', hiddenCategoriesKey(record.id, kind))) as string[] | undefined;
         if (pins) synced.pins[kind] = pins;
         if (hidden) synced.hidden[kind] = hidden;
+        const rule = (await db.get('settings', hiddenRuleKey(record.id, kind))) as HiddenRule | undefined;
+        if (rule) synced.hiddenRules![kind] = rule;
       }
       out.push(synced);
     }
@@ -309,10 +315,13 @@ export class SyncAccess {
       await recent.delete(range);
       await settings.delete(pinsKey(playlistId, kind));
       await settings.delete(hiddenCategoriesKey(playlistId, kind));
+      await settings.delete(hiddenRuleKey(playlistId, kind));
       const pins = playlist.pins[kind];
       const hidden = playlist.hidden[kind];
       if (pins) await settings.put(pins, pinsKey(playlistId, kind));
       if (hidden) await settings.put(hidden, hiddenCategoriesKey(playlistId, kind));
+      const rule = playlist.hiddenRules?.[kind];
+      if (rule) await settings.put(rule, hiddenRuleKey(playlistId, kind));
     }
     for (const key of await progress.index('byPlaylist').getAllKeys(playlistId)) await progress.delete(key);
     for (const key of await locks.index('byPlaylist').getAllKeys(playlistId)) await locks.delete(key);

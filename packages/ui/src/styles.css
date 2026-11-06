@@ -4189,3 +4189,27 @@ h3 {
 .touching .player-button.is-focused::after {
   content: none;
 }
+
+/* Hidden categories: tools and group rows */
+.hidden-categories .pane-tools .btn {
+  flex-shrink: 0;
+  margin-left: 0.6rem;
+}
+
+.hidden-group {
+  font-weight: 700;
+}
+
+.hidden-child .list-label {
+  padding-left: 2rem;
+}
+
+.hidden-expand {
+  flex-shrink: 0;
+  margin-left: 0.6rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.hidden-list .list-count {
+  min-width: 4rem;
+}

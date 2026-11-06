@@ -23,6 +23,7 @@ import type {
   SearchResults,
   ApplyResult,
   FetchResult,
+  HiddenRule,
   LinkResult,
   PushResult,
   RemoteIdentity,
@@ -60,7 +61,7 @@ export interface WorkerApi {
   seriesInfo(playlistId: string, seriesId: string): Promise<SeriesInfo>;
   catchupListings(playlistId: string, streamId: string, days: number): Promise<EpgEntry[]>;
   togglePin(playlistId: string, kind: ContentKind, categoryId: string): Promise<boolean>;
-  setHiddenCategories(playlistId: string, kind: ContentKind, categoryIds: string[]): Promise<void>;
+  setHiddenCategories(playlistId: string, kind: ContentKind, categoryIds: string[], rule: HiddenRule): Promise<void>;
   speedTargets(playlistId: string): Promise<SpeedTargets>;
   ensureSnapshot(playlistId: string, kind: ContentKind): Promise<void>;
   remoteEnable(): Promise<RemoteIdentity>;

@@ -5,7 +5,7 @@ import { deriveDeviceBoxes, DEVICE_TTL_SECONDS, open, RelayClient, seal, type Re
 import { mockXtream } from '../testing/mock-provider';
 import { openUltraDb, useDatabaseName } from './db';
 import { hiddenCategoriesKey, pinsKey, type ProgressRow } from './model';
-import { listPlaylists } from './queries';
+import { hiddenRule, listPlaylists } from './queries';
 import { PlaylistService } from './service';
 
 const ORIGIN = 'http://mock.test';
@@ -205,6 +205,18 @@ describe('sync', () => {
     expect(record.id).toBe(idB);
     expect(record.lastSync).toBeUndefined();
     expect((await on(b).editData(idB)).password).toBe('new-password');
+  });
+
+  it('carries hidden groups, so a new category stays hidden on the other device too', async () => {
+    const a = device();
+    const b = device();
+    const { id } = await on(a).save(XTREAM);
+    await on(a).setHiddenCategories(id, 'live', ['c1'], { labels: ['AR'], shown: ['c2'] });
+    await linkTo(b, a);
+    await on(a).sync.push({}, null);
+    await pull(b);
+    const here = (await listPlaylists())[0]!.id;
+    expect(await hiddenRule(here, 'live')).toEqual({ labels: ['AR'], shown: ['c2'] });
   });
 
   it('keeps the order of the playlists', async () => {

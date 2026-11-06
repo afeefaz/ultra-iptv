@@ -1,17 +1,19 @@
 {
-  "versionCode": 7,
-  "versionName": "0.5.2",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.5.2/UltraIPTV.apk",
-  "sha256": "50021a1dec25e9dfe4269d0d95118a86492988921ccb462d7b8baa501fa0162f",
-  "size": 12455813,
+  "versionCode": 8,
+  "versionName": "0.5.3",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.5.3/UltraIPTV.apk",
+  "sha256": "6ac033bef4d7efccf49708a50ded379cf65752e5e2deac8c4817068155396f60",
+  "size": 12459473,
   "notes": {
     "en": [
-      "Fixes a freeze on some Android TVs when playing 4K channels",
-      "Video in the small Live box now uses the TV's direct video path, which may also fix sound without picture"
+      "Hidden categories: Live categories are grouped by language or prefix, so you can hide a whole group at once",
+      "Hidden categories: search, go to top, hide all, show all and undo",
+      "Live: press Left on the category list to jump to a group. You can turn this off in Settings"
     ],
     "ar": [
-      "إصلاح تجمّد على بعض أجهزة Android TV عند تشغيل قنوات 4K",
-      "الفيديو في المربع الصغير يستخدم الآن مسار الفيديو المباشر للتلفاز، وقد يصلح هذا أيضًا مشكلة الصوت دون صورة"
+      "الفئات المخفية: تُجمَّع فئات البث المباشر حسب اللغة أو البادئة، لتتمكن من إخفاء مجموعة كاملة دفعة واحدة",
+      "الفئات المخفية: بحث، والانتقال إلى الأعلى، وإخفاء الكل، وإظهار الكل، وتراجع",
+      "البث المباشر: اضغط يسارًا في قائمة الفئات للانتقال إلى مجموعة. يمكنك إيقاف ذلك من الإعدادات"
     ]
   }
 }

@@ -262,6 +262,7 @@ export interface DetailRow {
 export const pinsKey = (playlistId: string, kind: ContentKind) => `catpins|${playlistId}|${kind}`;
 export const snapshotKey = (playlistId: string, kind: ContentKind) => `libsnap|${playlistId}|${kind}`;
 export const listHashKey = (playlistId: string, kind: ContentKind) => `listhash|${playlistId}|${kind}`;
+export const hiddenRuleKey = (playlistId: string, kind: ContentKind) => `cathiderule|${playlistId}|${kind}`;
 export const hiddenCategoriesKey = (playlistId: string, kind: ContentKind) => `cathidden|${playlistId}|${kind}`;
 
 export const RESUME_MIN_SECONDS = 120;

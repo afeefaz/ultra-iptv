@@ -1,7 +1,8 @@
-import type { ContentKind } from '@ultra/core';
+import { detectGroups, type ContentKind } from '@ultra/core';
 import { createEffect, createMemo, createSignal, on, Show, type JSX } from 'solid-js';
 import { rememberedSearch, rememberSearch } from '../data/libraryMemory';
 import { activePlaylist } from '../data/playlists';
+import { liveGroupPicker } from '../data/settings';
 import { arrangeCategories, CATEGORY_SORTS, categorySort, makeMatcher, normalizeText, usePins } from '../data/categories';
 import { focusManager } from '../focus';
 import { formatNumber, locale, t } from '../i18n';
@@ -49,6 +50,7 @@ export function CategoryRail(props: CategoryRailProps): JSX.Element {
   };
   createEffect(on(railKey, (key) => setQuerySignal(rememberedSearch(key)), { defer: true }));
   const [sortOpen, setSortOpen] = createSignal(false);
+  const [groupsOpen, setGroupsOpen] = createSignal(false);
   const [sort, setSort] = categorySort(props.kind);
   const { pins, toggle } = usePins(props.kind);
   let list: VirtualListApi | undefined;
@@ -60,6 +62,20 @@ export function CategoryRail(props: CategoryRailProps): JSX.Element {
     return match ? arranged.filter((c) => match(normalizeText(c.name))) : props.fixed.concat(arranged);
   });
   const isPinned = (id: string) => pins().indexOf(id) >= 0;
+
+  // Live only: its lists get long enough to need this, and it can be turned off in Settings.
+  const groups = createMemo(() => (props.kind === 'live' && liveGroupPicker() ? (detectGroups(props.categories)?.groups ?? []) : []));
+
+  const jumpToGroup = (key: string) => {
+    setGroupsOpen(false);
+    if (query()) setQuery('');
+    setTimeout(() => {
+      const group = groups().filter((g) => g.key === key)[0];
+      // Below the pinned rows, which is where the rest of the group is.
+      const index = group ? items().findIndex((c) => !isPinned(c.id) && group.items.some((g) => g.id === c.id)) : 0;
+      list?.focusIndex(Math.max(0, index));
+    }, 0);
+  };
   const canPin = (id: string) => props.fixed.every((f) => f.id !== id);
 
   const focusedItem = (): RailItem | undefined => {
@@ -90,6 +106,11 @@ export function CategoryRail(props: CategoryRailProps): JSX.Element {
   );
 
   useKeys((press) => {
+    // Nothing is to the left of this column, so Left is free.
+    if (press.key === 'left' && focusedItem() && groups().length) {
+      setGroupsOpen(true);
+      return true;
+    }
     if (press.key !== 'green') return false;
     const c = focusedItem();
     if (!c) return false;
@@ -101,6 +122,11 @@ export function CategoryRail(props: CategoryRailProps): JSX.Element {
     <div class="pane pane-categories">
       <div class="pane-tools">
         <TextField id={`${props.id}-search`} compact label={t('search.categories')} value={query()} onChange={setQuery} />
+        <Show when={groups().length}>
+          <FocusButton id={`${props.id}-groups`} class="icon-button" label={t('categories.groups')} onSelect={() => setGroupsOpen(true)}>
+            <Icon name="layers" />
+          </FocusButton>
+        </Show>
         <FocusButton id={`${props.id}-sort`} class="icon-button" label={t('categories.sortTitle')} onSelect={() => setSortOpen(true)}>
           <Icon name="sort" />
         </FocusButton>
@@ -150,6 +176,15 @@ export function CategoryRail(props: CategoryRailProps): JSX.Element {
             setSortOpen(false);
             setSort(id as typeof CATEGORY_SORTS[number]);
           }}
+        />
+      </Show>
+      <Show when={groupsOpen()}>
+        <PickerDialog
+          id={`${props.id}-group-picker`}
+          title={t('categories.groups')}
+          options={[{ id: '', label: t('categories.groupsAll') }].concat(groups().map((g) => ({ id: g.key, label: g.label, detail: t('categories.groupCount', { n: formatNumber(g.items.length) }) })))}
+          onCancel={() => setGroupsOpen(false)}
+          onPick={jumpToGroup}
         />
       </Show>
     </div>

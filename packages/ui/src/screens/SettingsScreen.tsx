@@ -17,6 +17,8 @@ import {
   defaultVodSort,
   detailMode,
   guideOnEveryRow,
+  liveGroupPicker,
+  setLiveGroupPicker,
   setGuideOnEveryRow,
   hiddenHomeSections,
   HOME_SECTIONS,
@@ -407,6 +409,21 @@ export function SettingsScreen(): JSX.Element {
                         <span class="option-card-title">{t(`categories.sort.${sort}`)}</span>
                       </span>
                       <Icon name={defaultCatSort() === sort ? 'checkCircle' : 'radioOff'} />
+                    </FocusButton>
+                  )}
+                </For>
+              </div>
+              <div class="setting-name setting-gap">{t('settings.groupPicker')}</div>
+              <div class="setting-desc">{t('settings.groupPickerDesc')}</div>
+              <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
+                <For each={[true, false]}>
+                  {(on) => (
+                    <FocusButton id={`settings-groups-${on}`} selected={liveGroupPicker() === on} onSelect={() => setLiveGroupPicker(on)}>
+                      <span class="option-card-text">
+                        <span class="option-card-title">{t(on ? 'settings.groupPicker.on' : 'settings.groupPicker.off')}</span>
+                        <span class="option-card-sub">{t(on ? 'settings.groupPicker.onSub' : 'settings.groupPicker.offSub')}</span>
+                      </span>
+                      <Icon name={liveGroupPicker() === on ? 'checkCircle' : 'radioOff'} />
                     </FocusButton>
                   )}
                 </For>

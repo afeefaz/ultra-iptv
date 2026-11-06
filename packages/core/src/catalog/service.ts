@@ -12,7 +12,8 @@ import { openUltraDb, playlistRange } from './db';
 import { parseSeriesInfo, parseVodInfo, versionKey } from './details';
 import { RemoteAccess } from './remote';
 import { SyncAccess } from './sync';
-import { listCategories, listItems } from './queries';
+import { applyHiddenRule, type HiddenRule } from './groups';
+import { hiddenCategories, hiddenRule, listCategories, listItems } from './queries';
 import { epgIsFresh, parseShortEpg } from './epg';
 import { hash64 } from './hash';
 import {
@@ -20,6 +21,7 @@ import {
   CONTENT_KINDS,
   maskUser,
   hiddenCategoriesKey,
+  hiddenRuleKey,
   listHashKey,
   pinsKey,
   type AccountInfo,
@@ -503,8 +505,19 @@ export class PlaylistService {
     return pinned;
   }
 
-  async setHiddenCategories(playlistId: string, kind: ContentKind, categoryIds: string[]): Promise<void> {
-    await (await openUltraDb()).put('settings', categoryIds, hiddenCategoriesKey(playlistId, kind));
+  async setHiddenCategories(playlistId: string, kind: ContentKind, categoryIds: string[], rule: HiddenRule): Promise<void> {
+    const db = await openUltraDb();
+    await db.put('settings', categoryIds, hiddenCategoriesKey(playlistId, kind));
+    await db.put('settings', rule, hiddenRuleKey(playlistId, kind));
+  }
+
+  /** A category the provider just added to a hidden group stays hidden. */
+  private async applyHiddenGroups(playlistId: string, kind: ContentKind): Promise<void> {
+    const rule = await hiddenRule(playlistId, kind);
+    if (!rule.labels.length) return;
+    const ids = await hiddenCategories(playlistId, kind);
+    const next = applyHiddenRule(await listCategories(playlistId, kind), ids, rule);
+    if (next.length !== ids.length) await (await openUltraDb()).put('settings', next, hiddenCategoriesKey(playlistId, kind));
   }
 
   /** What the speed test downloads: a few of the provider's video files, then its big lists. */
@@ -660,6 +673,7 @@ export class PlaylistService {
         const stats = await perf.timed(`refresh.write.${kind}`, () => writeKind(db, id, kind, built), { items: built.items.length });
         await perf.timed(`refresh.snapshot.${kind}`, () => this.saveSnapshot(id, kind));
         counts[kind] = built.items.length;
+        await this.applyHiddenGroups(id, kind);
         this.searchCache.delete(id);
         if (kind === 'vod') this.versionIndexes.delete(id);
         done += W.save;

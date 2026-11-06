@@ -1,10 +1,12 @@
 // Read-only queries used by the UI thread. All writes go through the worker (catalog/service.ts).
 import { perf } from '../perf/perf';
 import { openUltraDb, playlistRange } from './db';
+import { EMPTY_RULE, type HiddenRule } from './groups';
 import { readSnapshot, type LibrarySnapshot } from './store';
 import {
   catKey,
   hiddenCategoriesKey,
+  hiddenRuleKey,
   pinsKey,
   type CategoryRow,
   type ContentKind,
@@ -90,6 +92,12 @@ export async function getProgress(playlistId: string, kind: ProgressKind, key: s
 
 export async function getItem<K extends ContentKind>(playlistId: string, kind: K, id: string): Promise<KindRows[K] | undefined> {
   return (await (await openUltraDb()).get(kind as 'live', [playlistId, id])) as unknown as KindRows[K] | undefined;
+}
+
+/** Whole groups hidden in Settings for one section. */
+export async function hiddenRule(playlistId: string, kind: ContentKind): Promise<HiddenRule> {
+  const v = (await (await openUltraDb()).get('settings', hiddenRuleKey(playlistId, kind))) as HiddenRule | undefined;
+  return v ?? EMPTY_RULE;
 }
 
 /** Category ids hidden in Settings for one section. */

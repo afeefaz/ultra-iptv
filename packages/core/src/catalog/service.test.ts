@@ -297,7 +297,7 @@ describe('PlaylistService (category pins)', () => {
     expect(await categoryPins(rec.id, 'live')).toEqual(['1']);
     const { hiddenCategories } = await import('./queries');
     expect(await hiddenCategories(rec.id, 'live')).toEqual([]);
-    await service.setHiddenCategories(rec.id, 'live', ['2']);
+    await service.setHiddenCategories(rec.id, 'live', ['2'], { labels: [], shown: [] });
     expect(await hiddenCategories(rec.id, 'live')).toEqual(['2']);
     expect(await hiddenCategories(rec.id, 'vod')).toEqual([]);
     await service.remove(rec.id);
@@ -317,4 +317,25 @@ describe('PlaylistService (M3U)', () => {
     const found = await service.search(rec.id, 'news 1 hd');
     expect(found.hits.live[0].name).toBe('News 1 HD');
   });
+});
+
+describe('hidden groups', () => {
+  it('keeps a category the provider adds to a hidden group hidden after a refresh', async () => {
+    const { hiddenCategories, listCategories } = await import('./queries');
+    const { groupKey } = await import('./groups');
+    const rec = await service.save({ ...XTREAM, username: 'big', password: 'big' });
+    expect((await service.refresh(rec.id)).ok).toBe(true);
+    const cats = await listCategories(rec.id, 'live');
+    const key = groupKey(cats[0]!.name)!;
+    const inGroup = cats.filter((c) => groupKey(c.name) === key).map((c) => c.id);
+    expect(inGroup.length).toBeGreaterThan(2);
+    // One category is shown by hand, and one looks new because it isn't in the hidden list yet.
+    const [shownByHand, looksNew, ...rest] = inGroup;
+    await service.setHiddenCategories(rec.id, 'live', rest, { labels: [key], shown: [shownByHand!] });
+    generation++;
+    expect((await service.refresh(rec.id)).ok).toBe(true);
+    const hiddenNow = await hiddenCategories(rec.id, 'live');
+    expect(hiddenNow).toContain(looksNew);
+    expect(hiddenNow).not.toContain(shownByHand);
+  }, 30000);
 });

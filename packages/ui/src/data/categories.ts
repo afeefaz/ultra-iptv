@@ -1,8 +1,8 @@
-import { categoryPins, hiddenCategories, log, normalizeText, type ContentKind } from '@ultra/core';
+import { categoryPins, EMPTY_RULE, hiddenCategories, hiddenRule, log, normalizeText, type ContentKind, type HiddenRule } from '@ultra/core';
 import { createEffect, createRoot, createSignal, on, type Accessor } from 'solid-js';
 import { catalog } from './catalog';
 import { track } from './usage';
-import { activePlaylist } from './playlists';
+import { activePlaylist, versionOf } from './playlists';
 import {
   liveCatSort,
   seriesCatSort,
@@ -60,38 +60,55 @@ export function usePins(kind: ContentKind): { pins: Accessor<string[]>; toggle: 
 }
 
 // Hidden categories, shared like pins: Settings and the libraries stay in sync.
-const hiddenStores: Partial<Record<ContentKind, { hidden: Accessor<string[]>; set: (v: string[]) => void }>> = {};
+interface HiddenStore {
+  hidden: Accessor<string[]>;
+  rule: Accessor<HiddenRule>;
+  set: (ids: string[], rule: HiddenRule) => void;
+}
 
-function hiddenStore(kind: ContentKind) {
+const hiddenStores: Partial<Record<ContentKind, HiddenStore>> = {};
+
+function hiddenStore(kind: ContentKind): HiddenStore {
   let store = hiddenStores[kind];
   if (store) return store;
   store = createRoot(() => {
-    const [hidden, set] = createSignal<string[]>([]);
+    const [hidden, setHiddenIds] = createSignal<string[]>([]);
+    const [rule, setRule] = createSignal<HiddenRule>(EMPTY_RULE);
     createEffect(
-      on(
-        () => activePlaylist()?.id,
-        (id) => {
-          if (!id) return set([]);
-          hiddenCategories(id, kind).then(set, (e) => log.warn('categories', 'could not load hidden', { error: e }));
-        },
-      ),
+      // Again after a refresh: a category the provider added to a hidden group joins the hidden ones.
+      on([() => activePlaylist()?.id, () => versionOf(activePlaylist()?.id)], ([id]) => {
+        if (!id) {
+          setHiddenIds([]);
+          setRule(EMPTY_RULE);
+          return;
+        }
+        hiddenCategories(id, kind).then(setHiddenIds, (e) => log.warn('categories', 'could not load hidden', { error: e }));
+        hiddenRule(id, kind).then(setRule, (e) => log.warn('categories', 'could not load hidden groups', { error: e }));
+      }),
     );
-    return { hidden, set: (v: string[]) => void set(v) };
+    return {
+      hidden,
+      rule,
+      set: (ids: string[], next: HiddenRule) => {
+        setHiddenIds(ids);
+        setRule(next);
+      },
+    };
   });
   hiddenStores[kind] = store;
   return store;
 }
 
 /** Categories hidden in Settings for the active playlist and one section. */
-export function useHiddenCategories(kind: ContentKind): { hidden: Accessor<string[]>; setHidden: (ids: string[]) => void } {
+export function useHiddenCategories(kind: ContentKind): { hidden: Accessor<string[]>; rule: Accessor<HiddenRule>; setHidden: (ids: string[], rule: HiddenRule) => void } {
   const store = hiddenStore(kind);
-  const setHidden = (ids: string[]) => {
-    store.set(ids);
+  const setHidden = (ids: string[], rule: HiddenRule) => {
+    store.set(ids, rule);
     track(`hideCategories.${kind}`);
     const id = activePlaylist()?.id;
-    if (id) void catalog().call('setHiddenCategories', id, kind, ids);
+    if (id) void catalog().call('setHiddenCategories', id, kind, ids, rule);
   };
-  return { hidden: store.hidden, setHidden };
+  return { hidden: store.hidden, rule: store.rule, setHidden };
 }
 
 /** Items left once hidden categories are gone: one still listed elsewhere stays. */

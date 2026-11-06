@@ -85,6 +85,7 @@ export const [showPictureSkip, setShowPictureSkip] = persisted<boolean>('playbac
 
 /** Programme names on every channel row (a guide request per row), or only the selected channel. */
 export const [guideOnEveryRow, setGuideOnEveryRow] = persisted<boolean>('live.guideOnEveryRow', true);
+export const [liveGroupPicker, setLiveGroupPicker] = persisted<boolean>('live.groupPicker', true);
 
 export const MIN_TEXT_SCALE = 70;
 export const MAX_TEXT_SCALE = 150;
