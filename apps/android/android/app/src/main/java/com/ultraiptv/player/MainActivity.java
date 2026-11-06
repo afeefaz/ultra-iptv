@@ -19,6 +19,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(UltraPlayerPlugin.class);
+        registerPlugin(UltraUpdaterPlugin.class);
         super.onCreate(savedInstanceState);
         if (BuildConfig.PERF_BUILD) WebView.setWebContentsDebuggingEnabled(true);
         hideSystemBars();

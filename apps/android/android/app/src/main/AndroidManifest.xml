@@ -43,6 +43,9 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Check for updates in Settings: the user still has to allow this once. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
 
     <!-- One APK for phones, Android TV and Fire TV (spec §4.1). -->
     <uses-feature android:name="android.software.leanback" android:required="false" />

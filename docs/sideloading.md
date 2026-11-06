@@ -135,7 +135,11 @@ To publish an update, raise `versionCode` and `versionName` in `apps/android/and
 ```sh
 cp apps/android/android/app/build/outputs/apk/release/app-release.apk UltraIPTV.apk
 gh release create v0.1.1 UltraIPTV.apk --repo afeefaz/ultra-iptv --title "Ultra IPTV 0.1.1" --notes "What changed"
+node scripts/release-manifest.mjs notes.json   # notes.json: {"en": ["What changed"], "ar": ["ما الذي تغيّر"]}
+pnpm relay:deploy                              # only now does the app offer it
 ```
+
+**Updates from inside the app:** Settings → About → Check for updates reads `latest.json` from our website when pressed, and installs from the release it names. Commit the new `latest.json`. Publish the release before deploying it, so the app is never offered a file that isn't there yet. The file is checked against its hash, only `github.com/afeefaz/ultra-iptv/releases/download/` is accepted, and Android refuses anything not signed with the release key. Android 12 and newer install without a confirmation, once the user has allowed the app to install updates. Older versions ask each time, and so does Android when an app updates itself twice within about 30 seconds. The app closes when it updates, and Android doesn't allow it to reopen itself, so the screen tells the user to open it again.
 
 ## Samsung TV (Tizen)
 

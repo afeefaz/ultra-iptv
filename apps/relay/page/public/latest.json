@@ -1,0 +1,15 @@
+{
+  "versionCode": 5,
+  "versionName": "0.5.0",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.5.0/UltraIPTV.apk",
+  "sha256": "2e26ba1cee0101bb6e74504f98d185a98d4bbd40281fc7b1385704fbe61df0a9",
+  "size": 12455237,
+  "notes": {
+    "en": [
+      "Update the app from inside the app: Settings, About, Check for updates"
+    ],
+    "ar": [
+      "حدّث التطبيق من داخله: الإعدادات، حول، البحث عن تحديثات"
+    ]
+  }
+}

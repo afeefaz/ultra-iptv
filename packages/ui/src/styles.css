@@ -4082,3 +4082,27 @@ h3 {
   line-height: 1.15;
   white-space: nowrap;
 }
+
+/* Check for updates */
+.status-row.update-row {
+  margin-top: 0.7rem;
+}
+
+.update-bar {
+  height: 0.5rem;
+  margin-top: 0.6rem;
+  border-radius: 0.3rem;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.update-bar-fill {
+  height: 100%;
+  background: var(--accent);
+}
+
+.update-notes {
+  margin: 0.5rem 0 0;
+  padding: 0 0 0 1.2rem;
+  color: var(--muted);
+}

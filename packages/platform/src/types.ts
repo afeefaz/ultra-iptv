@@ -78,8 +78,28 @@ export interface Platform {
   download?: (url: string, options: DownloadOptions) => Promise<DownloadResult>;
   /** Hands a stream to another installed player app (Android). */
   openExternal?: (url: string, title: string) => Promise<void>;
+  /** Installs a new version from inside the app. Missing where a platform can't (Samsung, web). */
+  updater?: AppUpdater;
   /** Called at exit from the root screen (Back on Home); platforms without an exit ignore it. */
   exit?: () => void;
+}
+
+export type UpdateProblem = 'network' | 'corrupt' | 'storage' | 'refused' | 'install';
+
+export interface AppUpdater {
+  info(): Promise<{ versionCode: number; canInstall: boolean }>;
+  /** False if this device has no screen for it. */
+  openInstallPermission(): Promise<boolean>;
+  install(
+    update: { url: string; sha256: string },
+    events: {
+      onProgress: (percent: number) => void;
+      /** The system has it. The app closes when it's done, or the system asks to confirm first. */
+      onInstalling: () => void;
+      onCancelled: () => void;
+      onProblem: (problem: UpdateProblem) => void;
+    },
+  ): Promise<void>;
 }
 
 /** All in bytes. A field is missing when this device can't report it. */

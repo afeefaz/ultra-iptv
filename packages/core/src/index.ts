@@ -22,6 +22,7 @@ export { nowNext, type NowNext } from './catalog/epg';
 export type { Container, ResolvedStream } from './catalog/stream-url';
 export type { SearchDoc, SearchResults } from './catalog/search';
 export type { RefreshProgress, RefreshResult, TestResult } from './catalog/service';
+export { LATEST_URL, parseLatest, type LatestRelease } from './update/update';
 export type { RemoteIdentity, TickResult } from './catalog/remote';
 export type { ApplyResult, FetchResult, LinkResult, PushResult, SyncStatus } from './catalog/sync';
 export { fillUrl } from './catalog/stream-creds';

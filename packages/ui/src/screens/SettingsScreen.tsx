@@ -5,6 +5,7 @@ import { FocusButton } from '../components/FocusButton';
 import { Icon, type IconName } from '../components/Icon';
 import { RemoteQrPanel } from '../components/RemoteQrPanel';
 import { SyncCard } from '../components/SyncCard';
+import { UpdateRow } from '../components/UpdateRow';
 import { RemoteIdentityLine } from '../components/RemoteRefreshButton';
 import { SpeedTestCard } from '../components/SpeedTestCard';
 import { CATEGORY_SORTS, useHiddenCategories } from '../data/categories';
@@ -577,6 +578,7 @@ export function SettingsScreen(): JSX.Element {
                   {t('settings.about')}
                 </FocusButton>
               </div>
+              <Show when={platform.updater}>{(updater) => <UpdateRow updater={updater()} />}</Show>
             </Card>
           </div>
         </FocusZone>

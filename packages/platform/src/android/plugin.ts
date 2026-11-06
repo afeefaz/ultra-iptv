@@ -44,3 +44,14 @@ export interface UltraPlayerPlugin {
 }
 
 export const UltraPlayer = registerPlugin<UltraPlayerPlugin>('UltraPlayer');
+
+/** Native side: apps/android/android/app/src/main/java/com/ultraiptv/player/UltraUpdaterPlugin.java */
+export interface UltraUpdaterPlugin {
+  info(): Promise<{ versionCode: number; canInstall: boolean }>;
+  openInstallPermission(): Promise<{ opened: boolean }>;
+  install(options: { url: string; sha256: string }): Promise<void>;
+  addListener(event: 'progress', fn: (e: { percent: number }) => void): Promise<PluginListenerHandle>;
+  addListener(event: 'status', fn: (e: { state: 'confirm' | 'installed' | 'cancelled' | 'storage' | 'refused' }) => void): Promise<PluginListenerHandle>;
+}
+
+export const UltraUpdater = registerPlugin<UltraUpdaterPlugin>('UltraUpdater');

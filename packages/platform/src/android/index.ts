@@ -3,7 +3,7 @@ import { CapacitorHttp } from '@capacitor/core';
 import type { DeviceInfo, Platform } from '../types';
 import { jsHeapUsed } from '../usage';
 import { webPlatform } from '../web';
-import { UltraPlayer } from './plugin';
+import { UltraPlayer, UltraUpdater } from './plugin';
 import { NativePlayer } from './player';
 
 /**
@@ -62,6 +62,29 @@ export const androidPlatform: Platform = {
     } finally {
       void sub.remove();
     }
+  },
+  updater: {
+    info: () => UltraUpdater.info(),
+    async openInstallPermission() {
+      return (await UltraUpdater.openInstallPermission()).opened;
+    },
+    async install({ url, sha256 }, events) {
+      const progress = await UltraUpdater.addListener('progress', (e) => events.onProgress(e.percent));
+      const status = await UltraUpdater.addListener('status', (e) => {
+        if (e.state === 'cancelled') events.onCancelled();
+        else if (e.state === 'refused' || e.state === 'storage') events.onProblem(e.state);
+      });
+      try {
+        await UltraUpdater.install({ url, sha256 });
+        events.onInstalling();
+      } catch (e) {
+        const code = (e as { code?: string }).code;
+        events.onProblem(code === 'corrupt' || code === 'network' ? code : 'install');
+        void status.remove();
+      } finally {
+        void progress.remove();
+      }
+    },
   },
   async openExternal(url, title) {
     await UltraPlayer.openExternal({ url, title });
