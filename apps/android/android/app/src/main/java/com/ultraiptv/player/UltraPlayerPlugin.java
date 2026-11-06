@@ -416,6 +416,7 @@ public class UltraPlayerPlugin extends Plugin {
     private void onFirstFrame() {
         if (firstFrame) return;
         firstFrame = true;
+        Log.i(TAG, "first frame mode=" + mode);
         if ("overlay".equals(mode)) container.bringToFront();
         notifyListeners("firstFrame", new JSObject());
     }

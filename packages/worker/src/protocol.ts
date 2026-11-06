@@ -21,7 +21,12 @@ import type {
   RefreshProgress,
   RefreshResult,
   SearchResults,
+  ApplyResult,
+  FetchResult,
+  LinkResult,
+  PushResult,
   RemoteIdentity,
+  SyncStatus,
   SpeedTargets,
   TickResult,
   TestResult,
@@ -62,6 +67,12 @@ export interface WorkerApi {
   remoteLocalSaved(id: string): Promise<void>;
   remoteLocalDeleted(id: string): Promise<void>;
   remoteTick(): Promise<TickResult>;
+  syncStatus(): Promise<SyncStatus>;
+  syncPush(settings: Record<string, string>, activeId: string | null): Promise<PushResult>;
+  syncFetch(): Promise<FetchResult>;
+  syncApply(): Promise<ApplyResult | null>;
+  syncLink(id: string, key: string): Promise<LinkResult>;
+  syncUnlink(): Promise<boolean>;
   perfSnapshot(): Promise<PerfSnapshot>;
   perfReset(): Promise<void>;
   saveProgress(row: ProgressRow): Promise<void>;

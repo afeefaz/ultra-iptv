@@ -96,6 +96,8 @@ const aesKey = (bytes: Uint8Array) => crypto.subtle.importKey('raw', bytes as Bu
 export interface DeviceBoxes {
   /** The device's playlists, saved by the website or the device. */
   stateBox: string;
+  /** What this device's group last pushed, or a link to where that is. */
+  syncBox: string;
   key: CryptoKey;
 }
 
@@ -103,8 +105,8 @@ export interface DeviceBoxes {
 export async function deriveDeviceBoxes(id: string, key: string): Promise<DeviceBoxes> {
   const base = await crypto.subtle.importKey('raw', encoder.encode(`${id}|${key}`), 'PBKDF2', false, ['deriveBits']);
   const master = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: encoder.encode(PBKDF2_SALT), iterations: PBKDF2_ITERATIONS }, base, 256);
-  const [aes, state] = await hkdfParts(master, ['device-key', 'device-state']);
-  return { stateBox: toBase64Url(state!), key: await aesKey(aes!) };
+  const [aes, state, sync] = await hkdfParts(master, ['device-key', 'device-state', 'device-sync']);
+  return { stateBox: toBase64Url(state!), syncBox: toBase64Url(sync!), key: await aesKey(aes!) };
 }
 
 export async function seal(key: CryptoKey, value: unknown): Promise<string> {

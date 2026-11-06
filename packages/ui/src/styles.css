@@ -4003,3 +4003,82 @@ h3 {
   font-weight: 700;
   letter-spacing: 0.04em;
 }
+
+/* Push and Pull */
+.sync-card {
+  padding: 1.2rem 1.4rem;
+  border-radius: 0.8rem;
+  background: var(--well);
+}
+
+.sync-status {
+  margin-top: 0.7rem;
+  color: var(--strong);
+  font-weight: 600;
+}
+
+.sync-status span {
+  display: block;
+}
+
+.sync-actions {
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.sync-actions .btn .icon {
+  margin-right: 0.5rem;
+}
+
+.dialog.sync-link {
+  box-sizing: border-box;
+  width: 46rem;
+  max-width: 96%;
+}
+
+.remote-qr .remote-identity {
+  justify-content: center;
+  margin: 0 0 0.8rem;
+}
+
+.remote-qr .remote-identity-item {
+  margin: 0 0.4rem 0.5rem;
+}
+
+.btn.remote-big-button {
+  width: auto;
+  margin: 0 0 0.9rem;
+}
+
+.remote-big-button .icon {
+  margin-right: 0.5rem;
+}
+
+/* For reading from across the room: as big and as plain as it can be. */
+.dialog-backdrop.remote-big {
+  background: #000;
+}
+
+.remote-big-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.remote-big-label {
+  margin-top: 1.5vw;
+  color: #fff;
+  font-size: 2.8vw;
+  font-weight: 600;
+}
+
+.remote-big-value {
+  margin-bottom: 1.5vw;
+  color: #fff;
+  font-family: 'DejaVu Sans Mono', 'Roboto Mono', 'Droid Sans Mono', Menlo, Consolas, monospace;
+  font-size: 9vw;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+}

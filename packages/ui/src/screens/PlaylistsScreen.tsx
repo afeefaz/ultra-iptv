@@ -107,7 +107,7 @@ export function PlaylistsScreen(): JSX.Element {
         </div>
         <aside class="playlists-aside guide-card">
           <FocusZone id="playlists-remote">
-            <RemoteQrPanel id="playlists-remote" />
+            <RemoteQrPanel id="playlists-remote" showIdentity />
           </FocusZone>
         </aside>
       </div>

@@ -12,7 +12,8 @@ interface Env {
   LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
 }
 
-const MAX_BODY_CHARS = 256 * 1024;
+// A row can be 2 MB, and a push with lots of watch history is the biggest thing stored.
+const MAX_BODY_CHARS = 1_900_000;
 const MIN_TTL_SECONDS = 60;
 const MAX_TTL_SECONDS = 10 * 365 * 24 * 3600;
 const DEFAULT_TTL_SECONDS = 15 * 60;

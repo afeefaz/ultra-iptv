@@ -329,7 +329,7 @@ function Welcome(): JSX.Element {
           <Icon name="add" />
           <span>{t('home.addPlaylist')}</span>
         </FocusButton>
-        <RemoteQrPanel id="home-remote" />
+        <RemoteQrPanel id="home-remote" showIdentity />
       </FocusZone>
       <Show when={devServer}>
         <p class="hint dev-hint">{t('home.devHint', { server: devServer })}</p>

@@ -199,6 +199,18 @@ export class RemoteAccess {
     await this.changeOnRelay(async (list) => list.filter((p) => p.id !== id));
   }
 
+  /** A Pull replaced this device's playlists. Silent until this device has pressed Refresh. */
+  async publishAll(): Promise<void> {
+    const db = await openUltraDb();
+    const identity = await this.identity();
+    if (!(await db.get('settings', SYNCED_SETTING)) || !identity) return;
+    const playlists = await Promise.all((await listPlaylists()).map((r) => this.toRemote(r)));
+    await this.save(await this.boxesFor(identity), playlists);
+    const next: Record<string, string> = {};
+    for (const p of playlists) next[p.id] = matchValue(p);
+    await db.put('settings', next, SYNCED_SETTING);
+  }
+
   /** Reads first, so only this one playlist changes: the website may have changed others meanwhile. */
   private async changeOnRelay(change: (list: RemotePlaylist[]) => Promise<RemotePlaylist[]>): Promise<void> {
     const db = await openUltraDb();

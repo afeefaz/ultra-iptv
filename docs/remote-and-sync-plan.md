@@ -1,11 +1,11 @@
 # Plan: remote playlist editing and sync
 
-Status: milestones 0, 1 and 2 built: a device ID and key, and a website the TV fetches from. Next is sync (milestone 3).
+Status: all built: a device ID and key, a website the TV fetches from, and on-demand sync.
 
 ## Goals
 
 1. **Remote editing:** add or change a playlist on a TV from a phone or computer, without typing on the remote.
-2. **Sync:** favourites, watch progress, playlists and some settings follow you between your devices.
+2. **Sync:** push everything from one device, and pull it on others.
 
 Both must work on Samsung TVs, Android, iPhones and computers, across networks, with no accounts.
 
@@ -18,7 +18,7 @@ Both must work on Samsung TVs, Android, iPhones and computers, across networks, 
 | Accounts | None. Each device has an ID in MAC format and a key, as IPTV players commonly do | Nothing to sign up for or lose |
 | Default | The ID, key and QR code are always there, with nothing to turn on. The relay is only contacted when the user presses Refresh | No constant requests, and nothing leaves the device until someone asks |
 | Logins in sync | Yes, encrypted, between paired devices only | A new device works straight away |
-| Parental PIN and locks | Not synced at first | Unlocking on one device shouldn't weaken another |
+| Parental PIN and locks | Synced, because sync means everything. Pull asks for the PIN first | Otherwise pulling could remove a lock |
 | Channel and movie lists | Never synced | Each device downloads its own, as now |
 
 ## Parts
@@ -59,7 +59,7 @@ There are no accounts, and nothing is logged about the contents. It enforces siz
 
 Decided: **the website is the database, and the TV fetches from it.** One person can manage several TVs in other homes, months apart, with those TVs off.
 
-1. Each TV has a permanent ID in MAC format and a key, in **Settings → Remote access**, and a QR code that holds both. A QR code is on the Home, Live and Movies screens while there's no playlist, and always on Add playlist, Playlists and Settings.
+1. Each TV has a permanent ID in MAC format and a key, shown on Home (while there's no playlist), Playlists and **Settings → Remote access**, and a QR code that holds both. A QR code is on the Home, Live and Movies screens while there's no playlist, and always on Add playlist, Playlists and Settings.
 2. On the website, log in with the ID and key, or scan the QR. The browser remembers each TV, with an optional name that stays in that browser.
 3. Adding, editing or deleting on the website saves straight to the relay. Nothing needs the TV, and nothing waits for it.
 4. **Refresh** on the TV makes it match: one request when nothing's new. It takes what's saved without testing it first. A new login reloads that playlist's catalogue, and a rename doesn't call the provider at all.
@@ -75,30 +75,31 @@ Decided: **the website is the database, and the TV fetches from it.** One person
 
 ## Sync
 
-Paired devices share one encrypted state, kept in one box.
+Decided: **on demand, and whoever pushes is the source of truth.** There is no merging and nothing automatic.
 
-1. **When:** to be decided. This was planned as on launch and after changes, but the owner has since chosen Refresh-only for playlists, to keep requests down.
-2. **How:** read the box, merge, write it back only if nobody else wrote in between, and retry otherwise.
-3. **Merging:** the newest change wins per item, with the device id as a tie-break. Deletions are kept as markers for a while so they don't come back.
+1. **Link once,** after that device has pushed. On a new device, enter the ID and key of any device in the group. The device left a link in its own box if it's itself linked, so this follows the chain to where the group's data lives. Linking two devices to each other doesn't loop. Linking only succeeds if it finds a push: a single mistyped character leads to an empty box, and would otherwise look like a working link.
+2. **Push** gathers everything and saves it to the group's one box, in one request. It replaces the last push, whichever device made it.
+3. **Pull** downloads it (one request) and asks to confirm, showing which device pushed and when. Nothing changes until then. Then this device matches the push exactly, and the app restarts so every screen shows it.
 
-| Data | Identified by | Merge |
-|---|---|---|
-| Playlists and logins | Hash of server and username, shared by all devices | Newest wins |
-| Favourites | Playlist id + item `key` | Added or removed, newest wins |
-| Watch progress | Playlist id + item `key` | Newest wins |
-| Recently watched | Playlist id + item `key` | Newest wins, capped |
-| Pinned and hidden categories | Playlist id + section | Newest wins per list |
-| Settings, later | Name | Only ones that make sense everywhere |
+| Moves | Stays on the device |
+|---|---|
+| Playlists and logins, and their order | The device's own ID and key |
+| Favourites, watch progress, recently watched | Downloaded catalogues and guide data |
+| Pinned and hidden categories, locks | Usage counts and log settings |
+| The parental PIN | |
+| Every other setting, including ones added later | |
 
-**Already in our favour:** item `key`s come from a hash of the name and category, so they match across devices on the same provider.
+**Catalogues don't download again.** A playlist with the same account here keeps its local id, its channel lists and its place in the app, and everything else is mapped onto it. Only a new account, or a changed password, makes it load again, when it's next opened.
 
-**The real work:** each device gives a playlist its own random id today, so synced data needs a shared id mapped to the local one.
+**The PIN:** Pull asks for it if this device has one, because otherwise pulling from a device with no PIN would remove the lock.
 
-**Stay per device:** text size, memory readout, buffering, stream format and subtitle size.
+**The website:** a device that uses it gets its website copy updated by a Pull, so a later Refresh doesn't undo it.
+
+**Limits:** a push can be about 1.9 MB encrypted, because a D1 row can be 2 MB. That's several thousand watch history entries, and a bigger one says so rather than saving part of it. Linking gives a device the group's key, so anyone with it can read that group's data.
 
 ## Cost and limits
 
-- The free plan allows 100,000 Worker requests a day. A device only uses requests when someone presses Refresh or changes a playlist, about 1 to 2 each time, so this should comfortably cover normal use.
+- The free plan allows 100,000 Worker requests a day. A device only uses requests when someone presses Refresh, Push, Pull or Link, or changes a playlist, about 1 to 3 each time, so this should comfortably cover normal use.
 - If the relay is down or over its limit, the app carries on as normal and tries again later. Nothing depends on it except remote access and sync.
 - The relay's address travels with each pairing, so moving it later is possible.
 
@@ -109,15 +110,11 @@ Paired devices share one encrypted state, kept in one box.
 | 0 | Empty Worker deployed, with small tests | Samsung TV, phone and emulator all reach it over `https`; encryption round trip works on the TV |
 | 1 | Relay, device ID and key, and adding a playlist | Add a playlist to the TV from a phone and a computer, on another network |
 | 2 | Editing and deleting a playlist from the page | Change a password from the page, with nobody at the TV, and the TV tests it |
-| 3 | Sync: favourites and progress | Start a movie on the phone, resume on the TV |
-| 4 | Sync: playlists, recents, pins, hidden categories | A newly paired device is ready straight away |
-| 5 | Paired devices screen, remove a device, settings | Removing a device stops it reading new data |
+| 3 | On-demand sync: Link, Push and Pull for everything | Push on one device, Pull on another, and it matches |
 
 Each milestone gets unit tests for its logic, and `perf`, `track` and logging without any secrets, per `docs/engineering.md`.
 
 ## Still to confirm
 
-- D1's limits on row size, for the sync box. The first version keeps state small and may split it.
 - That older Samsung TVs reach Cloudflare over `https`. Tizen 9 does, but older TVs may have older certificates, and only Tizen 9 is available to test on.
-- A device with a wrong date can't connect, because secure connections check dates. Pairing needs a clear message for this rather than a generic failure.
-- How large sync state gets with a real account's favourites and history.
+- How large a push gets with a real account's favourites and history.

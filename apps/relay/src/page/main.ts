@@ -1,6 +1,7 @@
 import {
   deriveDeviceBoxes,
   DEVICE_TTL_SECONDS,
+  formatDeviceKey,
   newPlaylistId,
   normalizeDeviceId,
   normalizeDeviceKey,
@@ -26,6 +27,8 @@ const strings = {
     badId: 'That ID doesn’t look right. It has 12 letters and numbers, like 02:AB:CD:EF:01:23.',
     badKey: 'That key doesn’t look right. It has 8 letters and numbers.',
     next: 'Continue',
+    copy: 'Copy',
+    copied: 'Copied',
     devices: 'Your TVs',
     addDevice: 'Add another TV',
     forget: 'Remove from this browser',
@@ -66,6 +69,8 @@ const strings = {
     badId: 'المعرّف غير صحيح. يتكوّن من 12 حرفًا ورقمًا، مثل 02:AB:CD:EF:01:23.',
     badKey: 'المفتاح غير صحيح. يتكوّن من 8 أحرف وأرقام.',
     next: 'متابعة',
+    copy: 'نسخ',
+    copied: 'تم النسخ',
     devices: 'أجهزة التلفاز',
     addDevice: 'إضافة تلفاز آخر',
     forget: 'إزالة من هذا المتصفح',
@@ -176,6 +181,43 @@ function hostOf(p: RemotePlaylist): string {
   }
 }
 
+async function copyText(value: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(value);
+    return true;
+  } catch {
+    // Some in-app browsers refuse the clipboard API, but still allow this.
+    const area = element('textarea', { value });
+    document.body.append(area);
+    area.select();
+    const done = document.execCommand('copy');
+    area.remove();
+    return done;
+  }
+}
+
+/** A value to copy into notes, and from there to another device. */
+function copyLine(label: string, value: string): HTMLElement {
+  const copy = button(text.copy, 'small', () => {
+    void copyText(value).then((done) => {
+      if (!done) {
+        // The browser refused, so leave it selected, ready to copy by hand.
+        getSelection()?.selectAllChildren(shown);
+        return;
+      }
+      copy.textContent = text.copied;
+      setTimeout(() => (copy.textContent = text.copy), 2000);
+    });
+  });
+  const shown = element('div', { className: 'id-value' }, value);
+  shown.dir = 'ltr';
+  return element('div', { className: 'id-line' }, element('div', { className: 'id-text' }, element('div', { className: 'id-label' }, label), shown), copy);
+}
+
+function deviceLines(device: SavedDevice): HTMLElement {
+  return element('div', { className: 'id-lines' }, copyLine(text.deviceId, device.id), copyLine(text.deviceKey, formatDeviceKey(device.key)));
+}
+
 function showLogin(error?: string): void {
   view++;
   const id = field(text.deviceId, 'device-id', { placeholder: '02:AB:CD:EF:01:23' });
@@ -269,9 +311,9 @@ async function showDevice(device: SavedDevice, message?: HTMLElement): Promise<v
     });
     const messages = message ? [message] : playlists ? [] : [notice(text.nothingYet)];
     const body = rows.length || !playlists ? rows : [element('p', { className: 'sub' }, text.none)];
-    app.replaceChildren(...heading(title, device.id), ...messages, ...body, button(text.add, 'primary', () => showForm(device, boxes)), ...footer());
+    app.replaceChildren(...heading(title), deviceLines(device), ...messages, ...body, button(text.add, 'primary', () => showForm(device, boxes)), ...footer());
   } catch {
-    if (mine === view) app.replaceChildren(...heading(title, device.id), notice(text.noRelay, 'bad'), ...footer());
+    if (mine === view) app.replaceChildren(...heading(title), deviceLines(device), notice(text.noRelay, 'bad'), ...footer());
   }
 }
 

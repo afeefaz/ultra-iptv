@@ -4,6 +4,7 @@ import { For, Show, type JSX } from 'solid-js';
 import { FocusButton } from '../components/FocusButton';
 import { Icon, type IconName } from '../components/Icon';
 import { RemoteQrPanel } from '../components/RemoteQrPanel';
+import { SyncCard } from '../components/SyncCard';
 import { RemoteIdentityLine } from '../components/RemoteRefreshButton';
 import { SpeedTestCard } from '../components/SpeedTestCard';
 import { CATEGORY_SORTS, useHiddenCategories } from '../data/categories';
@@ -82,6 +83,7 @@ const SECTIONS: Section[] = [
   { id: 'parental', icon: 'shield', title: 'settings.parental', first: () => (pinSet() ? 'settings-pin-change' : 'settings-pin-set') },
   { id: 'playlists', icon: 'playlist', title: 'settings.playlists', first: () => 'settings-playlists' },
   { id: 'remote', icon: 'link', title: 'settings.remote', first: () => 'settings-remote-refresh' },
+  { id: 'sync', icon: 'sync', title: 'settings.sync', first: () => 'settings-sync-push' },
   { id: 'network', icon: 'sync', title: 'settings.network', first: () => 'settings-speed' },
   { id: 'about', icon: 'info', title: 'settings.about', first: () => 'settings-about' },
 ];
@@ -552,6 +554,10 @@ export function SettingsScreen(): JSX.Element {
                   <RemoteQrPanel id="settings-remote" hideText />
                 </div>
               </div>
+            </Card>
+
+            <Card section={section('sync')}>
+              <SyncCard />
             </Card>
 
             <Card section={section('network')}>

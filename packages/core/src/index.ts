@@ -23,6 +23,7 @@ export type { Container, ResolvedStream } from './catalog/stream-url';
 export type { SearchDoc, SearchResults } from './catalog/search';
 export type { RefreshProgress, RefreshResult, TestResult } from './catalog/service';
 export type { RemoteIdentity, TickResult } from './catalog/remote';
+export type { ApplyResult, FetchResult, LinkResult, PushResult, SyncStatus } from './catalog/sync';
 export { fillUrl } from './catalog/stream-creds';
 export { normalizeText } from './catalog/hash';
 export { AppError, setFallbackFetch, setFetch, toErrorInfo } from './net/http';

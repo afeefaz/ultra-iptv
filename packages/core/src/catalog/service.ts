@@ -11,6 +11,7 @@ import { buildM3u, buildXtreamLive, buildXtreamSeries, buildXtreamVod, type Buil
 import { openUltraDb, playlistRange } from './db';
 import { parseSeriesInfo, parseVodInfo, versionKey } from './details';
 import { RemoteAccess } from './remote';
+import { SyncAccess } from './sync';
 import { listCategories, listItems } from './queries';
 import { epgIsFresh, parseShortEpg } from './epg';
 import { hash64 } from './hash';
@@ -127,6 +128,25 @@ export class PlaylistService {
       save: (input) => this.save(input),
       remove: (id) => this.remove(id),
       secretsFound: (secrets) => this.hooks.secrets(secrets, []),
+    },
+    this.box,
+  );
+
+  /** On-demand sync between devices. */
+  readonly sync = new SyncAccess(
+    {
+      relay: () => this.remote.relay,
+      identity: () => this.remote.enable(),
+      editData: (id) => this.editData(id),
+      save: (input) => this.save(input),
+      remove: (id) => this.remove(id),
+      readPin: () => this.storedPin(),
+      writePin: async (pin) => {
+        const db = await openUltraDb();
+        if (pin) await db.put('settings', await this.box.seal(pin), PIN_KEY);
+        else await db.delete('settings', PIN_KEY);
+      },
+      playlistsReplaced: () => this.remote.publishAll(),
     },
     this.box,
   );
