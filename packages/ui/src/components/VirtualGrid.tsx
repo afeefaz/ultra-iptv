@@ -21,6 +21,8 @@ export interface VirtualGridProps<T> {
   ref?: (api: VirtualGridApi) => void;
   empty?: JSX.Element;
   label?: string;
+  /** Cell that takes focus when the grid appears (if nothing the user chose has focus). */
+  autofocusIndex?: number;
 }
 
 const remToPx = (rem: number) => rem * parseFloat(getComputedStyle(document.documentElement).fontSize || '16');
@@ -131,6 +133,9 @@ function cellsOf(row: number, cols: number, n: number): number[] {
 function Cell<T>(p: { index: number; id: string; item: () => T; grid: VirtualGridProps<T> }): JSX.Element {
   const ref = useFocusable({
     id: p.id,
+    get autofocus() {
+      return p.index === p.grid.autofocusIndex;
+    },
     onSelect: () => {
       const item = p.item();
       if (item !== undefined) p.grid.onSelect?.(item, p.index);

@@ -9,12 +9,19 @@ import { UpdateRow } from '../components/UpdateRow';
 import { RemoteIdentityLine } from '../components/RemoteRefreshButton';
 import { SpeedTestCard } from '../components/SpeedTestCard';
 import { ACCENT_COLORS, accentColor } from '../data/accent';
-import { CATEGORY_SORTS, useHiddenCategories } from '../data/categories';
+import { CATEGORY_SORTS, useCategoryNames, useHiddenCategories } from '../data/categories';
 import { lockedCategories, lockedChannels, pinSet, requestPin } from '../data/parental';
 import { activePlaylist } from '../data/playlists';
 import {
   accent,
   autoPlayNext,
+  boxGrid,
+  LARGE_BOXES,
+  largeBoxes,
+  liveLayout,
+  setLargeBoxes,
+  setLiveLayout,
+  type LiveLayout,
   setAccent,
   setAutoPlayNext,
   bufferProfile,
@@ -23,7 +30,9 @@ import {
   detailMode,
   guideOnEveryRow,
   liveGroupPicker,
+  liveShowRecent,
   setLiveGroupPicker,
+  setLiveShowRecent,
   setGuideOnEveryRow,
   hiddenHomeSections,
   HOME_SECTIONS,
@@ -200,6 +209,54 @@ function Stepper(props: {
         {props.unit}
       </span>
     </div>
+  );
+}
+
+/** A small picture of the Live screen in each layout, so the choice is seen rather than read. */
+function LayoutSketch(props: { layout: LiveLayout }): JSX.Element {
+  return (
+    <span class="sketch" aria-hidden="true">
+      <span class="sketch-inner">
+        <Show when={props.layout === 'standard'} fallback={<BoxesCells columns={3} rows={2} />}>
+          <span class="sketch-col sketch-rail">
+            <For each={[1, 2, 3, 4, 5]}>{() => <span class="sketch-line" />}</For>
+          </span>
+          <span class="sketch-col sketch-list">
+            <For each={[1, 2, 3, 4, 5]}>{() => <span class="sketch-line" />}</For>
+          </span>
+          <span class="sketch-col sketch-preview">
+            <span class="sketch-video" />
+            <span class="sketch-line" />
+            <span class="sketch-line short" />
+          </span>
+        </Show>
+      </span>
+    </span>
+  );
+}
+
+function BoxesSketch(props: { columns: number; rows: number }): JSX.Element {
+  return (
+    <span class="sketch" aria-hidden="true">
+      <span class="sketch-inner">
+        <BoxesCells columns={props.columns} rows={props.rows} />
+      </span>
+    </span>
+  );
+}
+
+function BoxesCells(props: { columns: number; rows: number }): JSX.Element {
+  const cells = () => Array.from({ length: props.columns * props.rows }, (_, i) => i);
+  return (
+    <span class="sketch-boxes">
+      <For each={cells()}>
+        {() => (
+          <span class="sketch-cell" style={{ width: `${100 / props.columns}%`, height: `${100 / props.rows}%` }}>
+            <span class="sketch-box" />
+          </span>
+        )}
+      </For>
+    </span>
   );
 }
 
@@ -435,6 +492,40 @@ export function SettingsScreen(): JSX.Element {
                     )}
                   </For>
                 </div>
+                <div class="setting-name setting-gap">{t('settings.liveLayout')}</div>
+                <div class="setting-desc">{t('settings.liveLayoutDesc')}</div>
+                <div class="option-cards layout-picks" role="radiogroup" aria-label={t('settings.liveLayout')}>
+                  <For each={['standard', 'large'] as LiveLayout[]}>
+                    {(l) => (
+                      <FocusButton id={`settings-live-layout-${l}`} class="layout-pick" selected={liveLayout() === l} onSelect={() => setLiveLayout(l)}>
+                        <LayoutSketch layout={l} />
+                        <span class="layout-pick-label">
+                          <span class="option-card-text">
+                            <span class="option-card-title">{t(`settings.liveLayout.${l}`)}</span>
+                            <span class="option-card-sub">{t(`settings.liveLayout.${l}Sub`)}</span>
+                          </span>
+                          <Icon name={liveLayout() === l ? 'checkCircle' : 'radioOff'} />
+                        </span>
+                      </FocusButton>
+                    )}
+                  </For>
+                </div>
+                <Show when={liveLayout() === 'large'}>
+                  <div class="setting-name setting-gap">{t('settings.largeCount')}</div>
+                  <div class="option-cards layout-picks" role="radiogroup" aria-label={t('settings.largeCount')}>
+                    <For each={LARGE_BOXES}>
+                      {(n) => (
+                        <FocusButton id={`settings-large-count-${n}`} class="layout-pick" selected={largeBoxes() === n} onSelect={() => setLargeBoxes(n)}>
+                          <BoxesSketch columns={boxGrid(n).columns} rows={boxGrid(n).rows} />
+                          <span class="layout-pick-label">
+                            <span class="option-card-title">{t('settings.largeCount.boxes', { n: formatNumber(n) })}</span>
+                            <Icon name={largeBoxes() === n ? 'checkCircle' : 'radioOff'} />
+                          </span>
+                        </FocusButton>
+                      )}
+                    </For>
+                  </div>
+                </Show>
                 <Show when={platform.systemUsage}>
                   <div class="setting-name setting-gap">{t('settings.usage')}</div>
                   <div class="setting-desc">{t('settings.usageDesc')}</div>
@@ -529,6 +620,20 @@ export function SettingsScreen(): JSX.Element {
                     )}
                   </For>
                 </div>
+                <div class="setting-name setting-gap">{t('settings.liveRecent')}</div>
+                <div class="setting-desc">{t('settings.liveRecentDesc')}</div>
+                <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
+                  <For each={[true, false]}>
+                    {(show) => (
+                      <FocusButton id={`settings-live-recent-${show}`} selected={liveShowRecent() === show} onSelect={() => setLiveShowRecent(show)}>
+                        <span class="option-card-text">
+                          <span class="option-card-title">{t(show ? 'settings.usage.on' : 'settings.usage.off')}</span>
+                        </span>
+                        <Icon name={liveShowRecent() === show ? 'checkCircle' : 'radioOff'} />
+                      </FocusButton>
+                    )}
+                  </For>
+                </div>
                 <Show when={detailMode() === 'inline'}>
                   <div class="setting-name setting-gap">{t('settings.keepOpen')}</div>
                   <div class="setting-desc">{t('settings.keepOpenDesc')}</div>
@@ -564,6 +669,18 @@ export function SettingsScreen(): JSX.Element {
                       </FocusButton>
                     )}
                   </For>
+                </div>
+                <div class="setting-name setting-gap">{t('rename.pageTitle')}</div>
+                <div class="setting-desc">{t('rename.settingsDesc')}</div>
+                <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
+                  <FocusButton id="settings-rename" onSelect={() => navigate({ name: 'rename-categories' })}>
+                    <Icon name="edit" />
+                    <span class="option-card-text">
+                      <span class="option-card-title">{t('tab.live')}</span>
+                      <span class="option-card-sub">{t('rename.count', { n: formatNumber(Object.keys(useCategoryNames('live').names()).length) })}</span>
+                    </span>
+                    <Icon name="chevronRight" />
+                  </FocusButton>
                 </div>
               </Card>
             </Show>

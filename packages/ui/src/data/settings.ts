@@ -99,6 +99,24 @@ export const [autoPlayNext, setAutoPlayNext] = persisted<boolean>('playback.auto
 /** Programme names on every channel row (a guide request per row), or only the selected channel. */
 export const [guideOnEveryRow, setGuideOnEveryRow] = persisted<boolean>('live.guideOnEveryRow', true);
 export const [liveGroupPicker, setLiveGroupPicker] = persisted<boolean>('live.groupPicker', true);
+/** The Recent category in Live TV. Home has its own Recently watched row. */
+export const [liveShowRecent, setLiveShowRecent] = persisted<boolean>('live.showRecent', false);
+
+/** Boxes (stored as `large`): categories, then channels, full screen and big, for reading from across the room. */
+export type LiveLayout = 'standard' | 'large';
+export const [liveLayout, setLiveLayout] = persisted<LiveLayout>('live.layout', 'standard');
+/** How many fit on the screen. Boxes are laid out as 2×2, 3×2, 3×3 and 4×3. */
+export const LARGE_BOXES = [4, 6, 9, 12];
+export const [largeBoxes, setLargeBoxes] = persisted<number>('live.largeBoxes', 6);
+
+/** Columns and visible rows. A value from another device's sync that isn't offered here falls back. */
+export function boxGrid(count: number): { columns: number; rows: number } {
+  if (count === 4) return { columns: 2, rows: 2 };
+  if (count === 9) return { columns: 3, rows: 3 };
+  if (count === 12) return { columns: 4, rows: 3 };
+  return { columns: 3, rows: 2 };
+}
+export const largeLayout = (): { columns: number; rows: number } => boxGrid(largeBoxes());
 
 export const MIN_TEXT_SCALE = 70;
 export const MAX_TEXT_SCALE = 150;

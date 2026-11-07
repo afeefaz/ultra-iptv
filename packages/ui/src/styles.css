@@ -978,6 +978,124 @@ h3 {
 }
 
 /* ---------- Live TV ---------- */
+/* Live TV, large layout: the boxes or rows fill what's left of the screen. */
+.live-large {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.live-large-tools {
+  padding: 0 0.5rem;
+}
+
+.live-large-area {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.live-large .vgrid-cell {
+  padding: 0.5rem;
+}
+
+.large-box {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 1rem 1.3rem;
+  overflow: hidden;
+  border: 2px solid var(--line);
+  border-radius: 1rem;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.large-box.is-current {
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+
+.is-focused > .large-box {
+  border-color: var(--strong);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.large-box > .icon {
+  margin-bottom: 0.4rem;
+  color: var(--muted);
+  font-size: 2.2rem;
+}
+
+.is-focused > .large-box > .icon {
+  color: inherit;
+}
+
+.large-box-name {
+  display: block;
+  max-height: 2.5em;
+  overflow: hidden;
+  color: var(--strong);
+  font-weight: 700;
+  line-height: 1.25;
+  word-wrap: break-word;
+}
+
+.is-focused > .large-box .large-box-name,
+.is-focused > .large-box .large-box-sub {
+  color: inherit;
+}
+
+.large-box-sub {
+  display: flex;
+  align-items: center;
+  margin-top: 0.4rem;
+  color: var(--muted);
+}
+
+.large-box-sub .fav-star,
+.large-box-sub .pin-mark,
+.large-box-sub .lock-icon {
+  margin-left: 0.5rem;
+}
+
+.large-number {
+  margin-right: 0.6rem;
+  opacity: 0.7;
+}
+
+.large-now {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.large-logo {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.large-channel .large-logo {
+  margin-bottom: 0.6rem;
+}
+
+.large-logo .logo {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: 0.6rem;
+  font-size: 1.6rem;
+}
+
 .live-header {
   display: flex;
   align-items: center;
@@ -2804,6 +2922,28 @@ h3 {
   box-shadow: 0 1.25rem 2.5rem rgba(0, 0, 0, 0.8);
 }
 
+.rename-dialog {
+  box-sizing: border-box;
+  width: 44rem;
+  max-width: 94%;
+}
+
+.rename-original {
+  margin: -0.6rem 0 1rem;
+}
+
+.rename-was {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.95rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.list-item.is-focused .rename-was {
+  color: inherit;
+}
+
 .dialog-title {
   margin: 0 0 1.2rem;
   color: var(--strong);
@@ -3064,6 +3204,110 @@ h3 {
   border-radius: 50%;
 }
 
+/* Layout choices drawn as small pictures of the screen; the blocks take the card's text colour. */
+.layout-picks {
+  margin-top: 0.8rem;
+}
+
+.option-cards > .btn.layout-pick {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0.8rem;
+}
+
+.sketch {
+  position: relative;
+  display: block;
+  padding-top: 56.25%;
+}
+
+.sketch-inner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  padding: 0.4rem;
+  box-sizing: border-box;
+  border-radius: 0.5rem;
+  background: var(--canvas);
+}
+
+.sketch-col {
+  display: flex;
+  flex-direction: column;
+  padding: 0 0.25rem;
+  box-sizing: border-box;
+}
+
+.sketch-rail {
+  width: 28%;
+}
+
+.sketch-list {
+  width: 38%;
+}
+
+.sketch-preview {
+  width: 34%;
+}
+
+.sketch-line,
+.sketch-video,
+.sketch-box {
+  display: block;
+  border-radius: 0.2rem;
+  background: currentColor;
+  opacity: 0.3;
+}
+
+.sketch-line {
+  height: 14%;
+  margin-bottom: 6%;
+}
+
+.sketch-line.short {
+  width: 60%;
+}
+
+.sketch-video {
+  height: 48%;
+  margin-bottom: 8%;
+  opacity: 0.5;
+}
+
+.sketch-boxes {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+  height: 100%;
+}
+
+.sketch-cell {
+  display: block;
+  padding: 0.2rem;
+  box-sizing: border-box;
+}
+
+.sketch-box {
+  width: 100%;
+  height: 100%;
+  border-radius: 0.3rem;
+  opacity: 0.4;
+}
+
+.layout-pick-label {
+  display: flex;
+  align-items: center;
+  margin-top: 0.6rem;
+}
+
+.layout-pick-label > .option-card-title,
+.layout-pick-label > .option-card-text {
+  flex: 1;
+}
+
 .option-card-text {
   display: flex;
   flex: 1;
@@ -3083,18 +3327,21 @@ h3 {
   font-weight: 500;
 }
 
-.option-cards > .btn > .icon {
+.option-cards > .btn > .icon,
+.layout-pick-label > .icon {
   margin-left: 0.8rem;
   color: var(--dim);
   font-size: 1.4rem;
 }
 
 .option-cards > .btn.is-selected > .icon,
+.option-cards > .btn.is-selected .layout-pick-label > .icon,
 .option-cards > .btn.is-selected .option-card-title {
   color: var(--accent-light);
 }
 
 .option-cards > .btn.is-focused > .icon,
+.option-cards > .btn.is-focused .layout-pick-label > .icon,
 .option-cards > .btn.is-focused .option-card-title,
 .option-cards > .btn.is-focused .option-card-sub {
   color: var(--on-accent);
@@ -4202,7 +4449,8 @@ h3 {
 .btn.is-focused::after,
 .player-button.is-focused::after,
 .field-box.is-focused::after,
-.is-focused > .poster::after {
+.is-focused > .poster::after,
+.is-focused > .large-box::after {
   content: '';
   position: absolute;
   top: 0.18rem;
@@ -4222,7 +4470,8 @@ h3 {
 .is-moving .btn.is-focused::after,
 .is-moving .player-button.is-focused::after,
 .is-moving .field-box.is-focused::after,
-.is-moving .is-focused > .poster::after {
+.is-moving .is-focused > .poster::after,
+.is-moving .is-focused > .large-box::after {
   will-change: auto;
   animation: none;
 }
@@ -4241,7 +4490,8 @@ h3 {
   .btn.is-focused::after,
   .player-button.is-focused::after,
   .field-box.is-focused::after,
-  .is-focused > .poster::after {
+  .is-focused > .poster::after,
+  .is-focused > .large-box::after {
     animation: none;
   }
 }

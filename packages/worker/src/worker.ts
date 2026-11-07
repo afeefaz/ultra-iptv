@@ -72,6 +72,7 @@ const api: WorkerApi = {
   catchupListings: (playlistId, streamId, days) => service.catchupListings(playlistId, streamId, days),
   togglePin: (playlistId, kind, categoryId) => service.togglePin(playlistId, kind, categoryId),
   setHiddenCategories: (playlistId, kind, categoryIds, rule) => service.setHiddenCategories(playlistId, kind, categoryIds, rule),
+  renameCategory: (playlistId, kind, categoryId, name) => service.renameCategory(playlistId, kind, categoryId, name),
   speedTargets: (playlistId) => service.speedTargets(playlistId),
   ensureSnapshot: (playlistId, kind) => service.ensureSnapshot(playlistId, kind),
   remoteEnable: () => service.remote.enable(),

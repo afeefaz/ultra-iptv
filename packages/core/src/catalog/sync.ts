@@ -6,7 +6,7 @@ import { deriveDeviceBoxes, DEVICE_TTL_SECONDS, normalizeDeviceId, normalizeDevi
 import type { SecretBox } from '../secure/secret-box';
 import { openUltraDb } from './db';
 import type { HiddenRule } from './groups';
-import { hiddenCategoriesKey, hiddenRuleKey, pinsKey, type ContentKind, type EncryptedBlob, type FavoriteRow, type LockRow, type PlaylistInput, type PlaylistRecord, type ProgressRow, type RecentRow } from './model';
+import { categoryNamesKey, hiddenCategoriesKey, hiddenRuleKey, pinsKey, type ContentKind, type EncryptedBlob, type FavoriteRow, type LockRow, type PlaylistInput, type PlaylistRecord, type ProgressRow, type RecentRow } from './model';
 import { listPlaylists } from './queries';
 
 const GROUP_SETTING = 'sync.group';
@@ -28,6 +28,8 @@ interface SyncedPlaylist extends RemotePlaylist {
   hidden: Partial<Record<ContentKind, string[]>>;
   /** Missing in a push from before whole groups could be hidden. */
   hiddenRules?: Partial<Record<ContentKind, HiddenRule>>;
+  /** Missing in a push from before categories could be renamed. */
+  names?: Partial<Record<ContentKind, Record<string, string>>>;
 }
 
 interface Snapshot {
@@ -225,6 +227,7 @@ export class SyncAccess {
         pins: {},
         hidden: {},
         hiddenRules: {},
+        names: {},
       };
       for (const kind of KINDS) {
         synced.favorites.push(...strip(await db.getAllFromIndex('favorites', 'byPlaylistKind', [record.id, kind])));
@@ -235,6 +238,8 @@ export class SyncAccess {
         if (hidden) synced.hidden[kind] = hidden;
         const rule = (await db.get('settings', hiddenRuleKey(record.id, kind))) as HiddenRule | undefined;
         if (rule) synced.hiddenRules![kind] = rule;
+        const names = (await db.get('settings', categoryNamesKey(record.id, kind))) as Record<string, string> | undefined;
+        if (names) synced.names![kind] = names;
       }
       out.push(synced);
     }
@@ -316,12 +321,15 @@ export class SyncAccess {
       await settings.delete(pinsKey(playlistId, kind));
       await settings.delete(hiddenCategoriesKey(playlistId, kind));
       await settings.delete(hiddenRuleKey(playlistId, kind));
+      await settings.delete(categoryNamesKey(playlistId, kind));
       const pins = playlist.pins[kind];
       const hidden = playlist.hidden[kind];
       if (pins) await settings.put(pins, pinsKey(playlistId, kind));
       if (hidden) await settings.put(hidden, hiddenCategoriesKey(playlistId, kind));
       const rule = playlist.hiddenRules?.[kind];
       if (rule) await settings.put(rule, hiddenRuleKey(playlistId, kind));
+      const names = playlist.names?.[kind];
+      if (names) await settings.put(names, categoryNamesKey(playlistId, kind));
     }
     for (const key of await progress.index('byPlaylist').getAllKeys(playlistId)) await progress.delete(key);
     for (const key of await locks.index('byPlaylist').getAllKeys(playlistId)) await locks.delete(key);

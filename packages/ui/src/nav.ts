@@ -9,6 +9,7 @@ export type Route =
   | { name: 'debug' }
   | { name: 'playlists' }
   | { name: 'hidden-categories'; kind: ContentKind }
+  | { name: 'rename-categories' }
   | { name: 'playlist-form'; id?: string }
   | { name: 'player'; tab?: Tab }
   | { name: 'vod-detail'; id: string }
@@ -43,6 +44,7 @@ export function tabOf(route: Route): Tab {
     case 'debug':
     case 'playlists':
     case 'hidden-categories':
+    case 'rename-categories':
     case 'playlist-form':
       return 'settings';
     case 'player':

@@ -20,6 +20,8 @@ export interface RailItem {
   locked: boolean;
   /** Fixed rows (Favourites, Recent, All…) carry an icon. */
   icon?: IconName;
+  /** The provider's name, when the user gave it another. */
+  original?: string;
 }
 
 export interface CategoryRailProps {
@@ -59,12 +61,15 @@ export function CategoryRail(props: CategoryRailProps): JSX.Element {
     const match = makeMatcher(query());
     const arranged = arrangeCategories(props.categories, sort(), pins(), locale());
     // While searching, only real categories are listed.
-    return match ? arranged.filter((c) => match(normalizeText(c.name))) : props.fixed.concat(arranged);
+    return match ? arranged.filter((c) => match(normalizeText(c.name)) || (!!c.original && match(normalizeText(c.original)))) : props.fixed.concat(arranged);
   });
   const isPinned = (id: string) => pins().indexOf(id) >= 0;
 
   // Live only: its lists get long enough to need this, and it can be turned off in Settings.
-  const groups = createMemo(() => (props.kind === 'live' && liveGroupPicker() ? (detectGroups(props.categories)?.groups ?? []) : []));
+  // Groups come from the provider's names: a renamed category stays in its group.
+  const groups = createMemo(() =>
+    props.kind === 'live' && liveGroupPicker() ? (detectGroups(props.categories.map((c) => (c.original ? { ...c, name: c.original } : c)))?.groups ?? []) : [],
+  );
 
   const jumpToGroup = (key: string) => {
     setGroupsOpen(false);

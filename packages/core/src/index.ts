@@ -17,6 +17,7 @@ export {
   librarySnapshot,
   hiddenCategories,
   hiddenRule,
+  categoryNames,
 } from './catalog/queries';
 export { versionKey } from './catalog/details';
 export { nowNext, type NowNext } from './catalog/epg';

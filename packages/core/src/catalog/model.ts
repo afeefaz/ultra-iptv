@@ -264,6 +264,10 @@ export const snapshotKey = (playlistId: string, kind: ContentKind) => `libsnap|$
 export const listHashKey = (playlistId: string, kind: ContentKind) => `listhash|${playlistId}|${kind}`;
 export const hiddenRuleKey = (playlistId: string, kind: ContentKind) => `cathiderule|${playlistId}|${kind}`;
 export const hiddenCategoriesKey = (playlistId: string, kind: ContentKind) => `cathidden|${playlistId}|${kind}`;
+/** Names the user gave categories, by category id. The provider's own names stay as they are. */
+export const categoryNamesKey = (playlistId: string, kind: ContentKind) => `catnames|${playlistId}|${kind}`;
+/** Longest name a category can be given. */
+export const MAX_CATEGORY_NAME = 60;
 
 export const RESUME_MIN_SECONDS = 120;
 export const WATCHED_RATIO = 0.92;

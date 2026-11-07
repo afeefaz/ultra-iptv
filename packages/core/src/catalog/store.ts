@@ -2,7 +2,7 @@ import type { IDBPDatabase } from 'idb';
 import type { Built } from './build';
 import { categoryRange, playlistRange, type UltraDb } from './db';
 import { rematchFavorites, type Rematch } from './favorites';
-import { hiddenCategoriesKey, hiddenRuleKey, listHashKey, pinsKey, snapshotKey, type CategoryRow, type ContentKind, type KindRows } from './model';
+import { categoryNamesKey, hiddenCategoriesKey, hiddenRuleKey, listHashKey, pinsKey, snapshotKey, type CategoryRow, type ContentKind, type KindRows } from './model';
 
 export interface WriteStats {
   added: number;
@@ -94,6 +94,7 @@ export async function deletePlaylistData(db: IDBPDatabase<UltraDb>, playlistId: 
     await tx.objectStore('settings').delete(pinsKey(playlistId, kind));
     await tx.objectStore('settings').delete(hiddenCategoriesKey(playlistId, kind));
     await tx.objectStore('settings').delete(hiddenRuleKey(playlistId, kind));
+    await tx.objectStore('settings').delete(categoryNamesKey(playlistId, kind));
     await tx.objectStore('settings').delete(listHashKey(playlistId, kind));
     await tx.objectStore('settings').delete(snapshotKey(playlistId, kind));
   }

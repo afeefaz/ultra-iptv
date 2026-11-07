@@ -5,7 +5,7 @@ import { FocusButton } from '../components/FocusButton';
 import { Icon } from '../components/Icon';
 import { TextField } from '../components/TextField';
 import { VirtualList, type VirtualListApi } from '../components/VirtualList';
-import { makeMatcher, normalizeText, useHiddenCategories } from '../data/categories';
+import { makeMatcher, normalizeText, useCategoryNames, useHiddenCategories } from '../data/categories';
 import { activePlaylist } from '../data/playlists';
 import { FocusZone } from '../focus';
 import { formatNumber, t, type MessageKey } from '../i18n';
@@ -42,7 +42,9 @@ export function HiddenCategoriesScreen(props: { kind: ContentKind }): JSX.Elemen
     ),
   );
 
-  const nameOf = (c: CategoryRow) => (c.id === UNCATEGORIZED ? t('live.uncategorized') : c.name);
+  const { names } = useCategoryNames(props.kind);
+  const providerName = (c: CategoryRow) => (c.id === UNCATEGORIZED ? t('live.uncategorized') : c.name);
+  const nameOf = (c: CategoryRow) => names()[c.id] ?? providerName(c);
   const grouped = createMemo(() => detectGroups(cats()));
   const groups = createMemo<Array<CategoryGroup<CategoryRow>>>(() => {
     const found = grouped();
@@ -52,7 +54,7 @@ export function HiddenCategoriesScreen(props: { kind: ContentKind }): JSX.Elemen
 
   const rows = createMemo<Row[]>(() => {
     const match = makeMatcher(query());
-    if (match) return cats().filter((c) => match(normalizeText(nameOf(c)))).map((category) => ({ category, child: false }));
+    if (match) return cats().filter((c) => match(normalizeText(nameOf(c))) || match(normalizeText(providerName(c)))).map((category) => ({ category, child: false }));
     if (!groups().length) return cats().map((category) => ({ category, child: false }));
     const out: Row[] = [];
     for (const group of groups()) {

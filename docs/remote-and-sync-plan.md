@@ -85,7 +85,7 @@ Decided: **on demand, and whoever pushes is the source of truth.** There is no m
 |---|---|
 | Playlists and logins, and their order | The device's own ID and key |
 | Favourites, watch progress, recently watched | Downloaded catalogues and guide data |
-| Pinned and hidden categories, locks | Usage counts and log settings |
+| Pinned, hidden and renamed categories, locks | Usage counts and log settings |
 | The parental PIN | |
 | Every other setting, including ones added later | |
 

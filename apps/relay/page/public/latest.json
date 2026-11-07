@@ -1,15 +1,21 @@
 {
-  "versionCode": 10,
-  "versionName": "0.5.5",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.5.5/UltraIPTV.apk",
-  "sha256": "e506e6e342c05e60d83e96052ee486c7acca9a8cf63cd821d67514fcc83225ac",
-  "size": 12462645,
+  "versionCode": 11,
+  "versionName": "0.6.0",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.6.0/UltraIPTV.apk",
+  "sha256": "6a421b905cb869b85cee4e55c9413260af195629dcdeaed2f37823019d6cf035",
+  "size": 12467817,
   "notes": {
     "en": [
-      "Fixes the Live preview staying black, with sound, on Android devices set to Hebrew or Arabic"
+      "Boxes layout for Live TV: categories, then channels, in big boxes that fill the screen. Settings → Appearance",
+      "Rename Live categories: Blue on a category, or Settings → Browsing",
+      "Search in the Boxes layout",
+      "Recent in Live TV is now hidden unless you turn it on in Settings → Browsing"
     ],
     "ar": [
-      "إصلاح بقاء معاينة البث المباشر سوداء مع وجود الصوت، على أجهزة Android المضبوطة على العبرية أو العربية"
+      "تخطيط المربعات للبث المباشر: الفئات ثم القنوات، في مربعات كبيرة تملأ الشاشة. الإعدادات ← المظهر",
+      "إعادة تسمية فئات البث المباشر: الأزرق على الفئة، أو الإعدادات ← التصفح",
+      "البحث في تخطيط المربعات",
+      "أصبحت فئة الأخيرة في البث المباشر مخفية إلا إذا شغّلتها من الإعدادات ← التصفح"
     ]
   }
 }

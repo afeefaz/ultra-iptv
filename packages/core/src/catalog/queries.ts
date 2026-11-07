@@ -7,6 +7,7 @@ import {
   catKey,
   hiddenCategoriesKey,
   hiddenRuleKey,
+  categoryNamesKey,
   pinsKey,
   type CategoryRow,
   type ContentKind,
@@ -92,6 +93,12 @@ export async function getProgress(playlistId: string, kind: ProgressKind, key: s
 
 export async function getItem<K extends ContentKind>(playlistId: string, kind: K, id: string): Promise<KindRows[K] | undefined> {
   return (await (await openUltraDb()).get(kind as 'live', [playlistId, id])) as unknown as KindRows[K] | undefined;
+}
+
+/** Names given to categories in Settings, by category id. */
+export async function categoryNames(playlistId: string, kind: ContentKind): Promise<Record<string, string>> {
+  const v = (await (await openUltraDb()).get('settings', categoryNamesKey(playlistId, kind))) as Record<string, string> | undefined;
+  return v && typeof v === 'object' ? v : {};
 }
 
 /** Whole groups hidden in Settings for one section. */

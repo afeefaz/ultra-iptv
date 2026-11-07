@@ -5,7 +5,7 @@ import { deriveDeviceBoxes, DEVICE_TTL_SECONDS, open, RelayClient, seal, type Re
 import { mockXtream } from '../testing/mock-provider';
 import { openUltraDb, useDatabaseName } from './db';
 import { hiddenCategoriesKey, pinsKey, type ProgressRow } from './model';
-import { hiddenRule, listPlaylists } from './queries';
+import { categoryNames, hiddenRule, listPlaylists } from './queries';
 import { PlaylistService } from './service';
 
 const ORIGIN = 'http://mock.test';
@@ -217,6 +217,18 @@ describe('sync', () => {
     await pull(b);
     const here = (await listPlaylists())[0]!.id;
     expect(await hiddenRule(here, 'live')).toEqual({ labels: ['AR'], shown: ['c2'] });
+  });
+
+  it('carries the names given to categories', async () => {
+    const a = device();
+    const b = device();
+    const { id } = await on(a).save(XTREAM);
+    await on(a).renameCategory(id, 'live', 'c1', 'Grandma news');
+    await linkTo(b, a);
+    await on(a).sync.push({}, null);
+    await pull(b);
+    const here = (await listPlaylists())[0]!.id;
+    expect(await categoryNames(here, 'live')).toEqual({ c1: 'Grandma news' });
   });
 
   it('keeps the order of the playlists', async () => {

@@ -1,4 +1,4 @@
-import { categoryPins, EMPTY_RULE, hiddenCategories, hiddenRule, log, normalizeText, type ContentKind, type HiddenRule } from '@ultra/core';
+import { categoryNames, categoryPins, EMPTY_RULE, hiddenCategories, hiddenRule, log, normalizeText, type ContentKind, type HiddenRule } from '@ultra/core';
 import { createEffect, createRoot, createSignal, on, type Accessor } from 'solid-js';
 import { catalog } from './catalog';
 import { track } from './usage';
@@ -109,6 +109,46 @@ export function useHiddenCategories(kind: ContentKind): { hidden: Accessor<strin
     if (id) void catalog().call('setHiddenCategories', id, kind, ids, rule);
   };
   return { hidden: store.hidden, rule: store.rule, setHidden };
+}
+
+// Names given to categories, shared like pins: Settings and the libraries stay in step.
+interface NamesStore {
+  names: Accessor<Record<string, string>>;
+  set: (names: Record<string, string>) => void;
+}
+
+const nameStores: Partial<Record<ContentKind, NamesStore>> = {};
+
+function namesStore(kind: ContentKind): NamesStore {
+  let store = nameStores[kind];
+  if (store) return store;
+  store = createRoot(() => {
+    const [names, setNames] = createSignal<Record<string, string>>({});
+    createEffect(
+      on(
+        () => activePlaylist()?.id,
+        (id) => {
+          if (!id) return setNames({});
+          categoryNames(id, kind).then(setNames, (e) => log.warn('categories', 'could not load names', { error: e }));
+        },
+      ),
+    );
+    return { names, set: setNames };
+  });
+  nameStores[kind] = store;
+  return store;
+}
+
+/** Names the user gave categories of the active playlist, by id, and a way to change one (null goes back to the provider's). */
+export function useCategoryNames(kind: ContentKind): { names: Accessor<Record<string, string>>; rename: (categoryId: string, name: string | null) => Promise<void> } {
+  const store = namesStore(kind);
+  const rename = async (categoryId: string, name: string | null) => {
+    const id = activePlaylist()?.id;
+    if (!id) return;
+    store.set(await catalog().call('renameCategory', id, kind, categoryId, name));
+    track(`renameCategory.${kind}`);
+  };
+  return { names: store.names, rename };
 }
 
 /** Items left once hidden categories are gone: one still listed elsewhere stays. */

@@ -13,7 +13,7 @@ import { parseSeriesInfo, parseVodInfo, versionKey } from './details';
 import { RemoteAccess } from './remote';
 import { SyncAccess } from './sync';
 import { applyHiddenRule, type HiddenRule } from './groups';
-import { hiddenCategories, hiddenRule, listCategories, listItems } from './queries';
+import { categoryNames, hiddenCategories, hiddenRule, listCategories, listItems } from './queries';
 import { epgIsFresh, parseShortEpg } from './epg';
 import { hash64 } from './hash';
 import {
@@ -22,6 +22,8 @@ import {
   maskUser,
   hiddenCategoriesKey,
   hiddenRuleKey,
+  categoryNamesKey,
+  MAX_CATEGORY_NAME,
   listHashKey,
   pinsKey,
   type AccountInfo,
@@ -509,6 +511,18 @@ export class PlaylistService {
     const db = await openUltraDb();
     await db.put('settings', categoryIds, hiddenCategoriesKey(playlistId, kind));
     await db.put('settings', rule, hiddenRuleKey(playlistId, kind));
+  }
+
+  /** Gives a category a name of the user's choosing; an empty name or null goes back to the provider's. */
+  async renameCategory(playlistId: string, kind: ContentKind, categoryId: string, name: string | null): Promise<Record<string, string>> {
+    const names = { ...(await categoryNames(playlistId, kind)) };
+    const clean = (name ?? '').replace(/\s+/g, ' ').trim().slice(0, MAX_CATEGORY_NAME);
+    if (clean) names[categoryId] = clean;
+    else delete names[categoryId];
+    const db = await openUltraDb();
+    if (Object.keys(names).length) await db.put('settings', names, categoryNamesKey(playlistId, kind));
+    else await db.delete('settings', categoryNamesKey(playlistId, kind));
+    return names;
   }
 
   /** A category the provider just added to a hidden group stays hidden. */

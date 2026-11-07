@@ -62,6 +62,7 @@ export interface WorkerApi {
   catchupListings(playlistId: string, streamId: string, days: number): Promise<EpgEntry[]>;
   togglePin(playlistId: string, kind: ContentKind, categoryId: string): Promise<boolean>;
   setHiddenCategories(playlistId: string, kind: ContentKind, categoryIds: string[], rule: HiddenRule): Promise<void>;
+  renameCategory(playlistId: string, kind: ContentKind, categoryId: string, name: string | null): Promise<Record<string, string>>;
   speedTargets(playlistId: string): Promise<SpeedTargets>;
   ensureSnapshot(playlistId: string, kind: ContentKind): Promise<void>;
   remoteEnable(): Promise<RemoteIdentity>;

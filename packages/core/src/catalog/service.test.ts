@@ -304,6 +304,24 @@ describe('PlaylistService (category pins)', () => {
     expect(await categoryPins(rec.id, 'live')).toEqual([]);
     expect(await categoryPins(rec.id, 'vod')).toEqual([]);
   });
+
+  it('renames categories, tidies the name, and goes back to the provider name', async () => {
+    const rec = await service.save(XTREAM);
+    const { categoryNames } = await import('./queries');
+    expect(await categoryNames(rec.id, 'live')).toEqual({});
+    expect(await service.renameCategory(rec.id, 'live', '3', '  My   news ')).toEqual({ '3': 'My news' });
+    await service.renameCategory(rec.id, 'live', '1', 'x'.repeat(100));
+    expect((await categoryNames(rec.id, 'live'))['1']).toHaveLength(60);
+    expect(await categoryNames(rec.id, 'vod')).toEqual({});
+    expect(await service.renameCategory(rec.id, 'live', '3', '   ')).toEqual({ '1': 'x'.repeat(60) });
+    await service.renameCategory(rec.id, 'live', '1', null);
+    expect(await categoryNames(rec.id, 'live')).toEqual({});
+    await service.renameCategory(rec.id, 'live', '2', 'Kept');
+    await service.refresh(rec.id);
+    expect(await categoryNames(rec.id, 'live')).toEqual({ '2': 'Kept' });
+    await service.remove(rec.id);
+    expect(await categoryNames(rec.id, 'live')).toEqual({});
+  });
 });
 
 describe('PlaylistService (M3U)', () => {

@@ -34,6 +34,7 @@ import { PlayerScreen } from './screens/PlayerScreen';
 import { PlaylistFormScreen } from './screens/PlaylistFormScreen';
 import { PlaylistsScreen } from './screens/PlaylistsScreen';
 import { HiddenCategoriesScreen } from './screens/HiddenCategoriesScreen';
+import { RenameCategoriesScreen } from './screens/RenameCategoriesScreen';
 import { SeriesDetailScreen } from './screens/SeriesDetailScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { VodDetailScreen } from './screens/VodDetailScreen';
@@ -219,6 +220,9 @@ export function App(props: { platform: Platform }): JSX.Element {
                 </Match>
                 <Match when={screenRoute().name === 'hidden-categories' && screenRoute()} keyed>
                   {(r) => <HiddenCategoriesScreen kind={(r as { kind: ContentKind }).kind} />}
+                </Match>
+                <Match when={screenRoute().name === 'rename-categories'}>
+                  <RenameCategoriesScreen />
                 </Match>
                 <Match when={screenRoute().name === 'playlists'}>
                   <PlaylistsScreen />
