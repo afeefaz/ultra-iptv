@@ -76,6 +76,9 @@ public class UltraPlayerPlugin extends Plugin {
     private static final long PROGRESS_MS = 500;
 
     private ExoPlayer player;
+    /** Always the size of the screen, so where its parent puts it doesn't matter. */
+    private FrameLayout layer;
+    /** The black box the video is in, placed inside `layer` from its absolute left. */
     private FrameLayout container;
     private AspectRatioFrameLayout aspect;
     private SubtitleView subtitles;
@@ -100,9 +103,10 @@ public class UltraPlayerPlugin extends Plugin {
         View webView = getBridge().getWebView();
         ViewGroup parent = (ViewGroup) webView.getParent();
 
+        layer = new FrameLayout(ctx);
+        layer.setVisibility(View.GONE);
         container = new FrameLayout(ctx);
         container.setBackgroundColor(Color.BLACK);
-        container.setVisibility(View.GONE);
         aspect = new AspectRatioFrameLayout(ctx);
         aspect.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FIT);
         SurfaceView surface = new SurfaceView(ctx);
@@ -112,7 +116,10 @@ public class UltraPlayerPlugin extends Plugin {
         subtitles.setUserDefaultStyle();
         subtitles.setUserDefaultTextSize();
         container.addView(subtitles, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        parent.addView(container, 0, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        // LEFT, not the default START: when the system language is Hebrew or Arabic, START is the
+        // right edge, and the preview box was placed off the screen (video with sound, but black).
+        layer.addView(container, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.LEFT | Gravity.TOP));
+        parent.addView(layer, 0, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         // The page paints its own background; it only becomes see-through for full-screen video.
         webView.setBackgroundColor(Color.TRANSPARENT);
 
@@ -250,9 +257,9 @@ public class UltraPlayerPlugin extends Plugin {
             getActivity().getWindow().getDecorView().setBackgroundColor(
                 "behind".equals(next) ? Color.BLACK : ContextCompat.getColor(getContext(), R.color.app_canvas));
             if ("hidden".equals(next)) {
-                container.setVisibility(View.GONE);
+                layer.setVisibility(View.GONE);
             } else if ("behind".equals(next)) {
-                container.setVisibility(View.VISIBLE);
+                layer.setVisibility(View.VISIBLE);
                 ViewGroup.LayoutParams lp = container.getLayoutParams();
                 lp.width = ViewGroup.LayoutParams.MATCH_PARENT;
                 lp.height = ViewGroup.LayoutParams.MATCH_PARENT;
@@ -262,7 +269,7 @@ public class UltraPlayerPlugin extends Plugin {
             } else {
                 // At the preview box, showing through the page's hole. The page's loading and
                 // error messages are drawn over it.
-                container.setVisibility(View.VISIBLE);
+                layer.setVisibility(View.VISIBLE);
                 ViewGroup.LayoutParams lp = container.getLayoutParams();
                 lp.width = Math.round((float) width * density);
                 lp.height = Math.round((float) height * density);

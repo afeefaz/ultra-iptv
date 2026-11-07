@@ -1,23 +1,15 @@
 {
-  "versionCode": 9,
-  "versionName": "0.5.4",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.5.4/UltraIPTV.apk",
-  "sha256": "120e16dfd7f47162b2c4e6d39ead4434075b4fa2c8274ba5c6d1eb9d8ba48efd",
+  "versionCode": 10,
+  "versionName": "0.5.5",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.5.5/UltraIPTV.apk",
+  "sha256": "e506e6e342c05e60d83e96052ee486c7acca9a8cf63cd821d67514fcc83225ac",
   "size": 12462645,
   "notes": {
     "en": [
-      "Choose the app's color: 8 colors in Settings → Appearance",
-      "Series: next and previous episode buttons, and the next episode starts after a 10-second countdown you can cancel",
-      "Settings are now organized into six pages",
-      "Smoother scrolling on TVs, and lists stop at the last item when you hold Down",
-      "On TVs, the big skip buttons on the picture are now hidden by default"
+      "Fixes the Live preview staying black, with sound, on Android devices set to Hebrew or Arabic"
     ],
     "ar": [
-      "اختر لون التطبيق: 8 ألوان في الإعدادات ← المظهر",
-      "المسلسلات: أزرار للحلقة التالية والسابقة، وتبدأ الحلقة التالية بعد عد تنازلي 10 ثوانٍ يمكنك إلغاؤه",
-      "أصبحت الإعدادات منظمة في ست صفحات",
-      "تمرير أكثر سلاسة على أجهزة التلفاز، وتتوقف القوائم عند آخر عنصر عند الاستمرار في الضغط لأسفل",
-      "على أجهزة التلفاز، أصبحت أزرار التخطي الكبيرة على الصورة مخفية افتراضيًا"
+      "إصلاح بقاء معاينة البث المباشر سوداء مع وجود الصوت، على أجهزة Android المضبوطة على العبرية أو العربية"
     ]
   }
 }
