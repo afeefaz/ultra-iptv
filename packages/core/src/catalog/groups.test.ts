@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyHiddenRule, detectGroups, groupKey, groupLabel } from './groups';
+import { applyHiddenRule, AUTO_COVERAGE, detectGroups, detectTags, groupKey, groupLabel, tagWords } from './groups';
 
 const named = (...names: string[]) => names.map((name, i) => ({ id: String(i), name }));
 
@@ -94,5 +94,57 @@ describe('applyHiddenRule', () => {
   it('leaves everything alone with no rule', () => {
     const ids = ['2'];
     expect(applyHiddenRule(cats, ids, { labels: [], shown: [] })).toBe(ids);
+  });
+});
+
+describe('auto mode', () => {
+  it('only groups when the pattern explains most of the list', () => {
+    const some = [...['AR| A', 'AR| B', 'AR| C', 'FR| A', 'FR| B', 'FR| C'].map((name) => ({ name })), ...Array.from({ length: 6 }, (_, i) => ({ name: `Other ${i}` }))];
+    expect(detectGroups(some)).not.toBeNull();
+    expect(detectGroups(some, AUTO_COVERAGE)).toBeNull();
+    const most = [...some.slice(0, 6), ...Array.from({ length: 2 }, (_, i) => ({ name: `Other ${i}` }))];
+    expect(detectGroups(most, AUTO_COVERAGE)).not.toBeNull();
+  });
+});
+
+describe('filters', () => {
+  const cats = [
+    ...['Alpha PPV', 'Beta Arena PPV', 'Gamma PPV', 'US| Delta PPV', 'UK| Epsilon Cup PPV'].map((name, i) => ({ id: `p${i}`, name })),
+    ...['Acme 4K', 'FR| ACME', 'GR - ACME', 'Acme Kids'].map((name, i) => ({ id: `n${i}`, name })),
+    ...['News', 'Music', 'Sports', 'Cooking', 'Gardening', 'Travel', 'Science', 'History', 'Comedy', 'Drama'].map((name, i) => ({ id: `o${i}`, name })),
+  ];
+
+  it('finds words that several categories share, whatever their group', () => {
+    const tags = detectTags(cats);
+    expect(tags[0].key).toBe('PPV');
+    expect(tags[0].ids).toHaveLength(5);
+    expect(tags.map((t) => t.key)).toContain('ACME');
+  });
+
+  it('ignores quality marks, group labels, and words in other scripts', () => {
+    expect(tagWords('AR| EXAMPLE ᴿᴬᵂ ▶ مثال')).toEqual(['EXAMPLE']);
+    expect(tagWords('Plain Movies - 2019 مثال')).toEqual(['PLAIN']);
+    expect(tagWords('Sample Series [ مثال ]')).toEqual(['SAMPLE']);
+    expect(tagWords('Acme Kids ⁴ᴷ ³⁸⁴⁰ᴾ')).toEqual(['ACME', 'KIDS']);
+  });
+
+  it('needs enough categories, and not most of the list', () => {
+    expect(detectTags([{ id: '1', name: 'Alpha Beta' }, { id: '2', name: 'Alpha Gamma' }])).toEqual([]);
+    const all = Array.from({ length: 8 }, (_, i) => ({ id: String(i), name: `Everything ${i}x` }));
+    expect(detectTags(all)).toEqual([]);
+  });
+
+  it('hides a filter\'s categories, including ones that arrive later, unless shown by hand', () => {
+    const rule = { labels: [], shown: ['p1'], tags: ['PPV'] };
+    const later = [...cats, { id: 'p9', name: 'CA| TSN PPV' }];
+    const hidden = applyHiddenRule(later, [], rule);
+    expect(hidden).toContain('p0');
+    expect(hidden).toContain('p9');
+    expect(hidden).not.toContain('p1');
+    expect(hidden).not.toContain('n0');
+  });
+
+  it('leaves a rule saved before filters alone', () => {
+    expect(applyHiddenRule(cats, ['x'], { labels: [], shown: [] })).toEqual(['x']);
   });
 });

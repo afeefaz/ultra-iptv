@@ -6,6 +6,7 @@ import { Icon } from './components/Icon';
 import { LoadingLine } from './components/LoadingProgress';
 import { PickerDialog } from './components/PickerDialog';
 import { PinHost } from './components/PinDialog';
+import { toastText } from './data/toast';
 import { SystemUsageReadout } from './components/SystemUsageReadout';
 import { VideoLayer } from './components/VideoLayer';
 import { setCatalogPlatform } from './data/catalog';
@@ -16,7 +17,7 @@ import { activePlaylist, playlists, setActivePlaylist, startPlaylists } from './
 import { startRemoteAccess } from './data/remoteAccess';
 import { startPerfRuntime } from './data/perfRuntime';
 import { accentColor, accentVariables } from './data/accent';
-import { accent, setDeviceIsTv, textScale } from './data/settings';
+import { accent, setDeviceIsTv, textScale, theme } from './data/settings';
 import { startUsage, track } from './data/usage';
 import { DebugScreen } from './debug/DebugScreen';
 import { CONTENT_ZONE, focusManager, FocusZone } from './focus';
@@ -45,6 +46,7 @@ const BASE_ROOT_VW = 0.8333;
 
 // Last focused content item per route, restored when coming back.
 const focusByRoute = new Map<string, string>();
+const BIG_TEXT_PERCENT = 125;
 
 export function App(props: { platform: Platform }): JSX.Element {
   applyLocaleToDocument();
@@ -61,14 +63,22 @@ export function App(props: { platform: Platform }): JSX.Element {
     const root = document.documentElement.style;
     root.fontSize = `${(BASE_ROOT_VW * textScale()) / 100}vw`;
     root.setProperty('--text-scale', String(textScale() / 100));
+    // Big text leaves less room: the Live preview shrinks and its key hints go.
+    document.documentElement.classList.toggle('big-text', textScale() >= BIG_TEXT_PERCENT);
     // Lists and the video preview measure in pixels; they re-measure on resize.
     if (scaled) window.dispatchEvent(new Event('resize'));
     scaled = true;
   });
 
   createRenderEffect(() => {
-    const vars = accentVariables(accentColor(accent()));
+    const vars = accentVariables(accentColor(accent()), theme());
     for (const name of Object.keys(vars)) document.documentElement.style.setProperty(name, vars[name]);
+  });
+
+  createRenderEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme());
+    const scheme = document.querySelector('meta[name="color-scheme"]');
+    if (scheme) scheme.setAttribute('content', theme());
   });
 
   const stopFocusTracking = focusManager.onChange((id) => {
@@ -99,7 +109,7 @@ export function App(props: { platform: Platform }): JSX.Element {
       case 'down':
       case 'left':
       case 'right':
-        focusManager.move(press.key);
+        focusManager.move(press.key, press.repeat);
         return true; // never let arrows scroll the page
       case 'ok':
         return focusManager.select();
@@ -248,6 +258,11 @@ export function App(props: { platform: Platform }): JSX.Element {
         </FocusZone>
         <VideoLayer />
         <PinHost />
+        <Show when={toastText()}>
+          <div class="toast" role="status">
+            {toastText()}
+          </div>
+        </Show>
       </div>
     </PlatformContext.Provider>
   );

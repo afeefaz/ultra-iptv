@@ -1,9 +1,9 @@
-import { detectGroups, type ContentKind } from '@ultra/core';
+import { type ContentKind } from '@ultra/core';
 import { createEffect, createMemo, createSignal, on, Show, type JSX } from 'solid-js';
 import { rememberedSearch, rememberSearch } from '../data/libraryMemory';
 import { activePlaylist } from '../data/playlists';
 import { liveGroupPicker } from '../data/settings';
-import { arrangeCategories, CATEGORY_SORTS, categorySort, makeMatcher, normalizeText, usePins } from '../data/categories';
+import { arrangeCategories, CATEGORY_SORTS, categorySort, groupsFor, makeMatcher, normalizeText, usePins } from '../data/categories';
 import { focusManager } from '../focus';
 import { formatNumber, locale, t } from '../i18n';
 import { useKeys } from '../keys';
@@ -35,6 +35,8 @@ export interface CategoryRailProps {
   selected: string;
   onFocusRow?: (item: RailItem) => void;
   onOpen: (item: RailItem) => void;
+  /** Hide the category the cursor was on. Missing where hiding isn't offered. */
+  onHide?: (item: RailItem) => void;
   ref?: (api: VirtualListApi) => void;
 }
 
@@ -56,6 +58,8 @@ export function CategoryRail(props: CategoryRailProps): JSX.Element {
   const [sort, setSort] = categorySort(props.kind);
   const { pins, toggle } = usePins(props.kind);
   let list: VirtualListApi | undefined;
+  /** The row the cursor was last on, for the buttons above the list. */
+  const [lastRow, setLastRow] = createSignal<RailItem | null>(null);
 
   const items = createMemo<RailItem[]>(() => {
     const match = makeMatcher(query());
@@ -68,7 +72,7 @@ export function CategoryRail(props: CategoryRailProps): JSX.Element {
   // Live only: its lists get long enough to need this, and it can be turned off in Settings.
   // Groups come from the provider's names: a renamed category stays in its group.
   const groups = createMemo(() =>
-    props.kind === 'live' && liveGroupPicker() ? (detectGroups(props.categories.map((c) => (c.original ? { ...c, name: c.original } : c)))?.groups ?? []) : [],
+    props.kind === 'live' && liveGroupPicker() ? (groupsFor(props.categories.map((c) => (c.original ? { ...c, name: c.original } : c)))?.groups ?? []) : [],
   );
 
   const jumpToGroup = (key: string) => {
@@ -112,7 +116,7 @@ export function CategoryRail(props: CategoryRailProps): JSX.Element {
 
   useKeys((press) => {
     // Nothing is to the left of this column, so Left is free.
-    if (press.key === 'left' && focusedItem() && groups().length) {
+    if (press.key === 'left' && !press.repeat && focusedItem() && groups().length) {
       setGroupsOpen(true);
       return true;
     }
@@ -135,6 +139,19 @@ export function CategoryRail(props: CategoryRailProps): JSX.Element {
         <FocusButton id={`${props.id}-sort`} class="icon-button" label={t('categories.sortTitle')} onSelect={() => setSortOpen(true)}>
           <Icon name="sort" />
         </FocusButton>
+        <Show when={props.onHide}>
+          <FocusButton
+            id={`${props.id}-hide`}
+            class="icon-button"
+            label={t('hidden.hideCategory')}
+            onSelect={() => {
+              const c = lastRow();
+              if (c && canPin(c.id)) props.onHide?.(c);
+            }}
+          >
+            <Icon name="eyeOff" />
+          </FocusButton>
+        </Show>
       </div>
       <VirtualList
         id={props.id}
@@ -147,7 +164,10 @@ export function CategoryRail(props: CategoryRailProps): JSX.Element {
           props.ref?.(api);
         }}
         rowClass={(c) => (c.id === props.selected ? 'list-item is-selected' : 'list-item')}
-        onFocusRow={(c) => props.onFocusRow?.(c)}
+        onFocusRow={(c) => {
+          setLastRow(c);
+          props.onFocusRow?.(c);
+        }}
         onSelect={(c) => props.onOpen(c)}
         empty={<p class="hint pane-empty">{t('search.noCategories')}</p>}
         renderRow={(c) => (

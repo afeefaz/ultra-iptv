@@ -105,6 +105,13 @@ export const [liveShowRecent, setLiveShowRecent] = persisted<boolean>('live.show
 /** Boxes (stored as `large`): categories, then channels, full screen and big, for reading from across the room. */
 export type LiveLayout = 'standard' | 'large';
 export const [liveLayout, setLiveLayout] = persisted<LiveLayout>('live.layout', 'standard');
+/** The same two layouts for Movies and Series. */
+export const [moviesLayout, setMoviesLayout] = persisted<LiveLayout>('movies.layout', 'standard');
+export const [seriesLayout, setSeriesLayout] = persisted<LiveLayout>('series.layout', 'standard');
+/** Posters across the screen in the Boxes layout of Movies and Series. */
+export const POSTER_COLUMNS = [4, 5, 6];
+export const [storedPosterColumns, setPosterColumns] = persisted<number>('large.posterColumns', 5);
+export const posterColumns = (): number => (POSTER_COLUMNS.indexOf(storedPosterColumns()) >= 0 ? storedPosterColumns() : 5);
 /** How many fit on the screen. Boxes are laid out as 2×2, 3×2, 3×3 and 4×3. */
 export const LARGE_BOXES = [4, 6, 9, 12];
 export const [largeBoxes, setLargeBoxes] = persisted<number>('live.largeBoxes', 6);
@@ -123,6 +130,14 @@ export const MAX_TEXT_SCALE = 150;
 export const TEXT_SCALE_STEP = 5;
 /** Percent. Scales the whole interface with its text, so every screen keeps its layout. */
 export const [textScale, setTextScale] = persisted<number>('display.textScale', 100);
+
+/** Dark is the default; light is easier on a bright screen or a bright room. */
+export type Theme = 'dark' | 'light';
+export const [theme, setTheme] = persisted<Theme>('display.theme', 'dark');
+
+/** How categories are grouped when hiding them: `auto` only when the names clearly follow a pattern. */
+export type CategoryGrouping = 'auto' | 'on' | 'off';
+export const [categoryGrouping, setCategoryGrouping] = persisted<CategoryGrouping>('categories.grouping', 'auto');
 
 /** The colour of the app, as the preset's hex (see accent.ts). */
 export const [accent, setAccent] = persisted<string>('display.accent', DEFAULT_ACCENT);

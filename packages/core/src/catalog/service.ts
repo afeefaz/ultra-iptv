@@ -528,7 +528,7 @@ export class PlaylistService {
   /** A category the provider just added to a hidden group stays hidden. */
   private async applyHiddenGroups(playlistId: string, kind: ContentKind): Promise<void> {
     const rule = await hiddenRule(playlistId, kind);
-    if (!rule.labels.length) return;
+    if (!rule.labels.length && !rule.tags?.length) return;
     const ids = await hiddenCategories(playlistId, kind);
     const next = applyHiddenRule(await listCategories(playlistId, kind), ids, rule);
     if (next.length !== ids.length) await (await openUltraDb()).put('settings', next, hiddenCategoriesKey(playlistId, kind));

@@ -1,6 +1,7 @@
-import { categoryNames, categoryPins, EMPTY_RULE, hiddenCategories, hiddenRule, log, normalizeText, type ContentKind, type HiddenRule } from '@ultra/core';
+import { AUTO_COVERAGE, categoryNames, categoryPins, detectGroups, EMPTY_RULE, hiddenCategories, hiddenRule, log, normalizeText, type ContentKind, type GroupedCategories, type HiddenRule } from '@ultra/core';
 import { createEffect, createRoot, createSignal, on, type Accessor } from 'solid-js';
 import { catalog } from './catalog';
+import { categoryGrouping } from './settings';
 import { track } from './usage';
 import { activePlaylist, versionOf } from './playlists';
 import {
@@ -99,8 +100,21 @@ function hiddenStore(kind: ContentKind): HiddenStore {
   return store;
 }
 
+/** The groups to show, or none when grouping is off, or on Auto and the names don't clearly follow a pattern. */
+export function groupsFor<T extends { name: string }>(items: T[]): GroupedCategories<T> | null {
+  const mode = categoryGrouping();
+  if (mode === 'off') return null;
+  return detectGroups(items, mode === 'auto' ? AUTO_COVERAGE : undefined);
+}
+
 /** Categories hidden in Settings for the active playlist and one section. */
-export function useHiddenCategories(kind: ContentKind): { hidden: Accessor<string[]>; rule: Accessor<HiddenRule>; setHidden: (ids: string[], rule: HiddenRule) => void } {
+export function useHiddenCategories(kind: ContentKind): {
+  hidden: Accessor<string[]>;
+  rule: Accessor<HiddenRule>;
+  setHidden: (ids: string[], rule: HiddenRule) => void;
+  /** Hides one category. Showing it again is in the Hidden list. */
+  hide: (categoryId: string) => void;
+} {
   const store = hiddenStore(kind);
   const setHidden = (ids: string[], rule: HiddenRule) => {
     store.set(ids, rule);
@@ -108,7 +122,12 @@ export function useHiddenCategories(kind: ContentKind): { hidden: Accessor<strin
     const id = activePlaylist()?.id;
     if (id) void catalog().call('setHiddenCategories', id, kind, ids, rule);
   };
-  return { hidden: store.hidden, rule: store.rule, setHidden };
+  const hide = (categoryId: string) => {
+    if (store.hidden().indexOf(categoryId) >= 0) return;
+    const rule = store.rule();
+    setHidden(store.hidden().concat(categoryId), { ...rule, shown: rule.shown.filter((id) => id !== categoryId) });
+  };
+  return { hidden: store.hidden, rule: store.rule, setHidden, hide };
 }
 
 // Names given to categories, shared like pins: Settings and the libraries stay in step.

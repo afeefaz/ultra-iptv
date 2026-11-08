@@ -23,6 +23,8 @@ export interface VirtualGridProps<T> {
   label?: string;
   /** Cell that takes focus when the grid appears (if nothing the user chose has focus). */
   autofocusIndex?: number;
+  /** Something is below the grid (a row of buttons): a new Down press on the last row goes there. */
+  leaveDown?: boolean;
 }
 
 const remToPx = (rem: number) => rem * parseFloat(getComputedStyle(document.documentElement).fontSize || '16');
@@ -84,6 +86,7 @@ export function VirtualGrid<T>(props: VirtualGridProps<T>): JSX.Element {
     if (press.key === 'down') {
       // On the last row, stay: the nearest thing below it was often in the next pane.
       if (row < rowCount() - 1) api.focusIndex(Math.min(n - 1, idx + cols)); // short last row: land on its last item
+      else if (props.leaveDown && !press.repeat) return false;
     } else if (press.key === 'up') {
       if (row > 0) api.focusIndex(idx - cols);
       else if (!press.repeat) return false; // a new press leaves upwards (sort button); holding the key stops here

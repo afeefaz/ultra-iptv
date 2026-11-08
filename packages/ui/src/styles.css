@@ -40,6 +40,12 @@
   --warn: #fbbf24;
   --error: #f87171;
   --glow: 0 0 1.5rem rgba(245, 158, 11, 0.45);
+  --canvas-rgb: 8, 10, 16;
+  --track: rgba(255, 255, 255, 0.12);
+  --ok-text: #a7f3d0;
+  --error-text: #fecaca;
+  --info-text: #bae6fd;
+  color-scheme: dark;
   --font-body: 'Space Grotesk', 'Cairo', 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Arabic', 'Geeza Pro', Arial, sans-serif;
   --font-display: 'Outfit', 'Cairo', 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Arabic', 'Geeza Pro', Arial, sans-serif;
 }
@@ -507,7 +513,7 @@ h3 {
   margin: 0.3rem 0 0.4rem;
   overflow: hidden;
   border-radius: 0.2rem;
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--track);
 }
 
 .progress-fill {
@@ -810,7 +816,8 @@ h3 {
   padding: 0.05rem 0.55rem;
   border-radius: 99rem;
   color: var(--muted);
-  font-size: 1rem;
+  font-size: 1.2rem;
+  font-weight: 700;
   text-align: center;
 }
 
@@ -988,6 +995,60 @@ h3 {
 
 .live-large-tools {
   padding: 0 0.5rem;
+}
+
+/* A search box that leaves room for Back, sort and pin on the same line. */
+.live-large-tools .field {
+  flex: 0 1 36rem;
+}
+
+.live-large-tools .back-chip {
+  margin-right: 0.8rem;
+}
+
+.live-large-tools .back-chip .icon {
+  margin-right: 0.4rem;
+}
+
+/* The remote's colour keys as buttons: a finger can use them, and so can a remote without the keys. */
+.large-legend {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0.6rem;
+}
+
+.large-legend .legend-chip {
+  margin: 0 0.5rem;
+  padding: 0.4rem 1.1rem;
+  border-radius: 99rem;
+  font-size: 1.15rem;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.6rem;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+}
+
+.legend-blue .legend-dot {
+  background: #3b82f6;
+}
+
+.legend-green .legend-dot {
+  background: #22c55e;
+}
+
+.legend-yellow .legend-dot {
+  background: #eab308;
+}
+
+.legend-red .legend-dot {
+  background: #ef4444;
 }
 
 .live-large-area {
@@ -1221,6 +1282,14 @@ h3 {
   text-align: center;
 }
 
+.big-text .preview-box {
+  height: calc(17rem / var(--text-scale, 1));
+}
+
+.big-text .keys-hint {
+  display: none;
+}
+
 .channel-info {
   display: flex;
   flex: 1;
@@ -1229,7 +1298,8 @@ h3 {
   padding: 1.2rem 1.4rem;
   border-radius: 0.9rem;
   background: var(--surface);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .channel-info-title {
@@ -1252,7 +1322,7 @@ h3 {
 }
 
 .channel-info .button-row {
-  margin-top: auto;
+  margin: 0.8rem 0 0.4rem;
 }
 
 .keys-hint {
@@ -1351,7 +1421,7 @@ h3 {
   right: 0;
   bottom: 0;
   left: 0;
-  background: linear-gradient(90deg, var(--canvas) 30%, rgba(8, 10, 16, 0.75) 55%, rgba(8, 10, 16, 0.2) 100%);
+  background: linear-gradient(90deg, var(--canvas) 30%, rgba(var(--canvas-rgb), 0.75) 55%, rgba(var(--canvas-rgb), 0.2) 100%);
 }
 
 .hero-shade-bottom {
@@ -1360,7 +1430,7 @@ h3 {
   bottom: 0;
   left: 0;
   height: 40%;
-  background: linear-gradient(rgba(8, 10, 16, 0), var(--canvas));
+  background: linear-gradient(rgba(var(--canvas-rgb), 0), var(--canvas));
 }
 
 .hero-body {
@@ -1915,7 +1985,7 @@ h3 {
   right: 0;
   bottom: 0;
   left: 0;
-  background: linear-gradient(rgba(8, 10, 16, 0.3), var(--canvas));
+  background: linear-gradient(rgba(var(--canvas-rgb), 0.3), var(--canvas));
 }
 
 .crumbs {
@@ -3206,6 +3276,7 @@ h3 {
 
 /* Layout choices drawn as small pictures of the screen; the blocks take the card's text colour. */
 .layout-picks {
+  max-width: 56rem;
   margin-top: 0.8rem;
 }
 
@@ -3251,6 +3322,113 @@ h3 {
 
 .sketch-preview {
   width: 34%;
+}
+
+/* Light theme: the same names, other values. */
+[data-theme='light'] {
+  --canvas: #f3f5f9;
+  --canvas-rgb: 243, 245, 249;
+  --well: #e8ecf3;
+  --surface: #ffffff;
+  --surface-2: #f7f9fc;
+  --surface-3: #e3e8f0;
+  --line: #cfd6e2;
+  --text: #1e293b;
+  --strong: #0b1220;
+  --muted: #475569;
+  --dim: #64748b;
+  --cyan: #0369a1;
+  --cyan-soft: rgba(3, 105, 161, 0.12);
+  --ok: #047857;
+  --warn: #92400e;
+  --error: #b91c1c;
+  --track: rgba(15, 23, 42, 0.14);
+  --ok-text: #065f46;
+  --error-text: #991b1b;
+  --info-text: #075985;
+  color-scheme: light;
+}
+
+/* What sits on video or photos stays dark in either theme, so its text stays light. */
+[data-theme='light'] .player-screen,
+[data-theme='light'] .video-status-text,
+[data-theme='light'] .zap-overlay,
+[data-theme='light'] .pill-resolution,
+[data-theme='light'] .cw-left,
+[data-theme='light'] .poster-rating,
+[data-theme='light'] .picture-skip {
+  --canvas: #080a10;
+  --canvas-rgb: 8, 10, 16;
+  --well: #0d111a;
+  --surface: #141923;
+  --surface-2: #1a2232;
+  --surface-3: #222c40;
+  --line: #222c40;
+  --text: #e2e8f0;
+  --strong: #ffffff;
+  --muted: #94a3b8;
+  --dim: #64748b;
+  --track: rgba(255, 255, 255, 0.12);
+  --accent-light: var(--accent-bright);
+  color-scheme: dark;
+}
+
+.theme-swatch {
+  flex: none;
+  width: 2.4rem;
+  height: 1.6rem;
+  margin-right: 0.8rem;
+  border: 2px solid var(--line);
+  border-radius: 0.4rem;
+}
+
+.theme-swatch-dark {
+  background: #080a10;
+}
+
+.theme-swatch-light {
+  background: #f3f5f9;
+}
+
+/* Quick filters in Hidden categories. */
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+
+.filter-label {
+  margin-right: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.filter-chip {
+  margin: 0 0.6rem 0.5rem 0;
+  padding: 0.35rem 1rem;
+  border-radius: 99rem;
+  font-size: 1.05rem;
+}
+
+.filter-chip .icon {
+  margin-right: 0.4rem;
+}
+
+.filter-count {
+  margin-left: 0.5rem;
+  opacity: 0.75;
+  font-weight: 700;
+}
+
+.legend-none .icon {
+  margin-right: 0.5rem;
+  font-size: 1.3rem;
+}
+
+.sketch-posters {
+  width: 72%;
 }
 
 .sketch-line,
@@ -3587,17 +3765,17 @@ h3 {
 
 .form-ok {
   background: rgba(52, 211, 153, 0.14);
-  color: #a7f3d0;
+  color: var(--ok-text);
 }
 
 .form-error {
   background: rgba(239, 68, 68, 0.16);
-  color: #fecaca;
+  color: var(--error-text);
 }
 
 .form-info {
   background: var(--cyan-soft);
-  color: #bae6fd;
+  color: var(--info-text);
 }
 
 .form-actions {
@@ -3841,7 +4019,7 @@ h3 {
   height: 0.3rem;
   overflow: hidden;
   border-radius: 0.2rem;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--track);
 }
 
 .loading-line-fill {

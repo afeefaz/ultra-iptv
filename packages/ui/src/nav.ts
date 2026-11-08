@@ -77,6 +77,10 @@ export function switchTab(tab: Tab): void {
 }
 
 let afterBack: ((route: Route) => void) | null = null;
+let backAt = 0;
+
+/** True right after a Back navigation: a screen that was left (a movie's page) is coming back, rather than being opened fresh. */
+export const justWentBack = (): boolean => Date.now() - backAt < 1000;
 
 /** Runs after any Back navigation (key or button), e.g. to restore focus. */
 export function onBackNavigated(fn: (route: Route) => void): void {
@@ -86,12 +90,11 @@ export function onBackNavigated(fn: (route: Route) => void): void {
 /** Returns false at the root so the caller can decide (e.g. exit dialog on TVs later). */
 export function goBack(): boolean {
   const s = stack();
-  if (s.length <= 1) {
-    if (s[0].name === 'home') return false;
-    setStack([{ name: 'home' }]);
-  } else {
-    setStack(s.slice(0, -1));
-  }
+  if (s.length <= 1 && s[0].name === 'home') return false;
+  // Before the stack changes: the screen coming back is built as it does.
+  backAt = Date.now();
+  if (s.length <= 1) setStack([{ name: 'home' }]);
+  else setStack(s.slice(0, -1));
   log.debug('nav', 'back', { route: currentRoute().name });
   afterBack?.(currentRoute());
   return true;

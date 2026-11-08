@@ -8,6 +8,7 @@
     <!-- Styles load with the JavaScript, which a TV takes seconds to start: this paints first. -->
     <style>
       html, body { margin: 0; background: #080a10; }
+      html[data-theme='light'], html[data-theme='light'] body { background: #f3f5f9; }
       #splash { position: fixed; top: 0; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: center; }
       #splash svg { width: 12vh; height: 12vh; }
     </style>
@@ -18,7 +19,10 @@
       // The chosen color, before the app has loaded. The value is one of the presets in data/accent.ts.
       try {
         var saved = JSON.parse(localStorage.getItem('ultraiptv.display.accent'));
+        var light = JSON.parse(localStorage.getItem('ultraiptv.display.theme')) === 'light';
+        if (saved === '#0f172a' && !light) saved = '#334155';
         if (/^#[0-9a-f]{6}$/.test(saved)) document.querySelector('#splash rect').setAttribute('fill', saved);
+        if (JSON.parse(localStorage.getItem('ultraiptv.display.theme')) === 'light') document.documentElement.setAttribute('data-theme', 'light');
       } catch (e) {}
     </script>
     <div id="root"></div>

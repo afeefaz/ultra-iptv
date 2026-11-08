@@ -9,14 +9,16 @@ import {
   type VodRow,
 } from '@ultra/core';
 import { createEffect, createMemo, createSignal, on, Show, type JSX } from 'solid-js';
+import { LargeBrowse, LargeLegend, LargeTools, type LargeBrowseApi, type LegendKey } from '../components/LargeBrowse';
 import { CategoryRail } from '../components/CategoryRail';
 import { FocusButton } from '../components/FocusButton';
 import { RemoteQrPanel } from '../components/RemoteQrPanel';
 import { PinButton } from '../components/PinButton';
-import { Icon } from '../components/Icon';
+import { Icon, type IconName } from '../components/Icon';
 import { TextField } from '../components/TextField';
+import { showToast } from '../data/toast';
 import { track } from '../data/usage';
-import { makeMatcher, useHiddenCategories, withoutHidden } from '../data/categories';
+import { arrangeCategories, CATEGORY_SORTS, categorySort, makeMatcher, normalizeText, useHiddenCategories, usePins, withoutHidden } from '../data/categories';
 import { cachedLibrary, loadLibrary, type Library } from '../data/libraryCache';
 import { enterLibrary, rememberedSearch, rememberSearch } from '../data/libraryMemory';
 import { PickerDialog } from '../components/PickerDialog';
@@ -26,12 +28,12 @@ import { catalog } from '../data/catalog';
 import { ensureUnlocked, isCategoryLocked, lockedCategories, unlocked } from '../data/parental';
 import { progressRatio, useProgress } from '../data/media';
 import { activePlaylist, refreshing, versionOf } from '../data/playlists';
-import { detailMode, keepTitleOpen, setVodSort, textScale, vodSort, type SortBy } from '../data/settings';
+import { detailMode, keepTitleOpen, moviesLayout, seriesLayout, setVodSort, textScale, vodSort, type SortBy } from '../data/settings';
 import { focusManager, FocusZone } from '../focus';
 import { formatLeft, statusText } from '../format';
 import { formatNumber, locale, t } from '../i18n';
 import { useKeys } from '../keys';
-import { navigate } from '../nav';
+import { justWentBack, navigate } from '../nav';
 import { SeriesDetailScreen } from './SeriesDetailScreen';
 import { VodDetailScreen } from './VodDetailScreen';
 
@@ -42,9 +44,10 @@ interface RailItem {
   name: string;
   count: number;
   locked: boolean;
+  icon?: IconName;
 }
 
-const VIRTUAL = ['continue', 'fav', 'all'];
+const VIRTUAL = ['continue', 'fav', 'all', 'hidden'];
 const NO_ROWS: Row[] = [];
 const NO_CATEGORIES: CategoryRow[] = [];
 const NO_KEYS = new Map<string, Row>();
@@ -55,6 +58,8 @@ const SORTS: SortBy[] = ['added', 'name', 'rating', 'year'];
 const lastCategory = new Map<string, string>();
 // Grid position per playlist+kind, so Back from a detail page lands on the same poster.
 const lastGridIndex = new Map<string, number | null>();
+// The Boxes layout was on the posters when a title was opened, so Back returns there.
+const lastLargeStep = new Map<string, 'categories' | 'items'>();
 // Title open next to the categories, so it's still open after playing it and coming back.
 const lastOpenId = new Map<string, string | null>();
 
@@ -65,7 +70,7 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
   // Already in memory on the way back from the player or a page, so the first paint has everything.
   const held = cachedLibrary<Row>(activePlaylist()?.id ?? null, props.kind);
   const [library, setLibrary] = createSignal<Library<Row> | undefined>(held);
-  const { hidden: hiddenCats } = useHiddenCategories(props.kind);
+  const { hidden: hiddenCats, hide } = useHiddenCategories(props.kind);
   const all = createMemo((): Row[] => withoutHidden(library()?.rows ?? NO_ROWS, hiddenCats()));
   const cats = (): CategoryRow[] => library()?.cats ?? NO_CATEGORIES;
   const [favKeys, setFavKeys] = createSignal<string[]>(held?.favs ?? []);
@@ -97,6 +102,20 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
   let seq = 0;
 
   const memoryKey = () => `${playlistId()}|${props.kind}`;
+
+  /** Settings → Appearance → Movies / Series layout. */
+  const large = () => (props.kind === 'vod' ? moviesLayout() : seriesLayout()) === 'large';
+  // Opens on the categories, unless Back brought us here from a title that was opened from the posters.
+  const [largeStep, setLargeStep] = createSignal<'categories' | 'items'>(
+    justWentBack() && lastLargeStep.get(`${activePlaylist()?.id ?? null}|${props.kind}`) === 'items' ? 'items' : 'categories',
+  );
+  const [largeStart, setLargeStart] = createSignal(0);
+  const [largeCatQuery, setLargeCatQuery] = createSignal('');
+  const [focusedCategory, setFocusedCategory] = createSignal<RailItem | null>(null);
+  let largeView: LargeBrowseApi | undefined;
+  const [catSort, setCatSort] = categorySort(props.kind);
+  const [catSortOpen, setCatSortOpen] = createSignal(false);
+  const { pins, toggle: togglePin } = usePins(props.kind);
   const favSet = createMemo(() => new Set(favKeys()));
   const byKey = () => library()?.byKey() ?? NO_KEYS;
 
@@ -146,9 +165,11 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
   const railItems = createMemo<RailItem[]>(() => {
     const locked = lockedCategories();
     return [
-      { id: 'continue', name: t('vod.continue'), count: continueRows().length, locked: false, icon: 'history' },
-      { id: 'fav', name: t('live.favorites'), count: favKeys().length, locked: false, icon: 'star' },
+      { id: 'continue', name: t('vod.continue'), count: continueRows().length, locked: false, icon: 'history' as IconName },
+      { id: 'fav', name: t('live.favorites'), count: favKeys().length, locked: false, icon: 'star' as IconName },
       { id: 'all', name: props.kind === 'vod' ? t('vod.allMovies') : t('vod.allSeries'), count: all().length, locked: false, icon: 'grid' },
+      // Only while something is hidden, so there's always a way back to it.
+      ...(hiddenCats().length ? [{ id: 'hidden', name: t('hidden.entry'), count: hiddenCats().length, locked: false, icon: 'eyeOff' as IconName }] : []),
       ...cats()
         .filter((c) => hiddenCats().indexOf(c.id) < 0)
         .map((c) => ({
@@ -175,7 +196,10 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
         setQuerySignal(rememberedSearch(searchKey()));
         setOpenIdSignal(detailMode() === 'inline' ? (lastOpenId.get(memoryKey()) ?? null) : null);
         const index = lastGridIndex.get(memoryKey());
-        if (index != null) setTimeout(() => grid?.focusIndex(index), 0);
+        if (large()) {
+          if (largeStep() === 'items') setLargeStart(index ?? 0);
+          else setLargeStart(Math.max(0, largeCategories().findIndex((c) => c.id === category())));
+        } else if (index != null) setTimeout(() => grid?.focusIndex(index), 0);
       } catch (e) {
         log.error('vod', 'could not load', { kind: props.kind, error: e });
       } finally {
@@ -204,7 +228,8 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
   }
 
   const open = (row: Row) => {
-    if (detailMode() === 'inline') return setOpenId(row.id);
+    lastLargeStep.set(memoryKey(), 'items');
+    if (detailMode() === 'inline' && !large()) return setOpenId(row.id);
     if (props.kind === 'vod') navigate({ name: 'vod-detail', id: row.id });
     else navigate({ name: 'series-detail', id: row.id });
   };
@@ -223,7 +248,92 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
     setFavKeys((keys) => (added ? keys.concat(row.key) : keys.filter((k) => k !== row.key)));
   };
 
+  const largeCategories = createMemo<RailItem[]>(() => {
+    const fixed = railItems().filter((c) => VIRTUAL.indexOf(c.id) >= 0);
+    return fixed.concat(arrangeCategories(railItems().filter((c) => VIRTUAL.indexOf(c.id) < 0), catSort(), pins(), locale()));
+  });
+  const largeShown = createMemo<RailItem[]>(() => {
+    const match = makeMatcher(largeCatQuery());
+    return match ? largeCategories().filter((c) => VIRTUAL.indexOf(c.id) < 0 && match(normalizeText(c.name))) : largeCategories();
+  });
+
+  /** Puts the cursor on a poster in whichever layout is showing. */
+  const focusItem = (index: number) => {
+    if (!large()) return void setTimeout(() => grid?.focusIndex(index), 0);
+    setLargeStart(index);
+    setLargeStep('items');
+    setTimeout(() => largeView?.focus(index), 0);
+  };
+
+  /** The full list of hidden categories. With a PIN set, it's the PIN that lets them back. */
+  const openHidden = async () => {
+    if (await ensureUnlocked()) navigate({ name: 'hidden-categories', kind: props.kind });
+  };
+
+  const hideCategory = (c: RailItem | null | undefined) => {
+    if (!c || VIRTUAL.indexOf(c.id) >= 0) return;
+    hide(c.id);
+    track(`hide.category.${props.kind}`);
+    showToast(t('hidden.done', { name: c.name }));
+  };
+
+  const openLargeCategory = async (c: RailItem) => {
+    if (c.id === 'hidden') return void openHidden();
+    if (c.locked && !(await ensureUnlocked())) return;
+    chooseCategory(c.id);
+    focusItem(0);
+  };
+
+  const backToLargeCategories = () => {
+    const index = Math.max(0, largeShown().findIndex((c) => c.id === category()));
+    setLargeStart(index);
+    setLargeStep('categories');
+    lastLargeStep.set(memoryKey(), 'categories');
+    setTimeout(() => largeView?.focus(index), 0);
+  };
+
+  /** The category Green acts on: the open one inside it, else the one the cursor is on. */
+  const pinTarget = () => {
+    const id = largeStep() === 'items' ? category() : focusedCategory()?.id;
+    if (id && VIRTUAL.indexOf(id) < 0) void togglePin(id);
+  };
+  const dialogOpen = () => !!document.querySelector('.dialog-backdrop');
+  const hideTarget = () => {
+    const inside = largeStep() === 'items';
+    const id = inside ? category() : focusedCategory()?.id;
+    const c = railItems().find((x) => x.id === id);
+    if (!c || VIRTUAL.indexOf(c.id) >= 0) return;
+    const index = largeShown().findIndex((x) => x.id === c.id);
+    hideCategory(c);
+    if (inside) backToLargeCategories();
+    else setTimeout(() => largeView?.focus(Math.max(0, Math.min(index, largeShown().length - 1))), 0);
+  };
+  const legendKeys = (): LegendKey[] => {
+    const keys: LegendKey[] = [
+      { id: 'vlegend-green', color: 'green', label: t('legend.pin'), onPress: pinTarget },
+      { id: 'vlegend-hide', icon: 'eyeOff', label: t('legend.hide'), onPress: hideTarget },
+    ];
+    if (largeStep() === 'items') keys.push({ id: 'vlegend-yellow', color: 'yellow', label: t('legend.favourite'), onPress: () => void toggleFavorite(focused()) });
+    return keys;
+  };
+
   useKeys((press) => {
+    if (large()) {
+      if (dialogOpen()) return false;
+      if (press.key === 'back' && largeStep() === 'items') {
+        backToLargeCategories();
+        return true;
+      }
+      if (press.key === 'green') {
+        pinTarget();
+        return true;
+      }
+      if (press.key === 'yellow') {
+        if (largeStep() === 'items') void toggleFavorite(focused());
+        return largeStep() === 'items';
+      }
+      return false;
+    }
     if (press.key === 'back' && openId()) {
       closeInline();
       return true;
@@ -262,21 +372,97 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
                 <bdi>{p().name}</bdi>
                 <span class="sep">•</span>
                 <span class="accent">
-                  <bdi>{railItems().filter((c) => c.id === category())[0]?.name ?? ''}</bdi>
+                  <bdi>{large() && largeStep() === 'categories' ? t('live.largeTitle') : (railItems().filter((c) => c.id === category())[0]?.name ?? '')}</bdi>
                 </span>
               </span>
-              <span class="hint">{statusText(p(), isRefreshing())}</span>
+              <span class="hint">{large() && largeStep() === 'items' ? t('live.largeBack') : statusText(p(), isRefreshing())}</span>
             </div>
+            <Show when={large()}>
+              <FocusZone id="vod-large" remember>
+                <LargeBrowse<Row>
+                  step={largeStep()}
+                  categoryId="vcat"
+                  itemId="vgrid"
+                  label={t(props.kind === 'vod' ? 'tab.movies' : 'tab.series')}
+                  categories={largeShown()}
+                  current={category()}
+                  pinned={(id) => pins().indexOf(id) >= 0}
+                  countLabel={(n) => t('vod.titles', { n: formatNumber(n) })}
+                  items={items()}
+                  itemShape="poster"
+                  renderItem={(row) => (
+                    <PosterTile
+                      title={row.name}
+                      poster={row.logo}
+                      year={row.year}
+                      rating={row.rating}
+                      progress={progressOf(row)}
+                      watched={props.kind === 'vod' && !!progress().get(`vod|${row.key}`)?.watched}
+                      favorite={favSet().has(row.key)}
+                    />
+                  )}
+                  startIndex={largeStart()}
+                  empty={
+                    <p class="hint pane-empty">
+                      {loading() || isRefreshing()
+                        ? t('vod.loading')
+                        : hidden()
+                          ? t('live.lockedCategory')
+                          : category() === 'fav'
+                            ? t('vod.emptyFav')
+                            : category() === 'continue'
+                              ? t('vod.emptyContinue')
+                              : t('vod.empty')}
+                    </p>
+                  }
+                  tools={
+                    largeStep() === 'categories' ? (
+                      <LargeTools id="vcat-search" query={largeCatQuery()} onQuery={setLargeCatQuery} label={t('search.categories')}>
+                        <FocusButton id="vcat-sort" class="icon-button" label={t('categories.sortTitle')} onSelect={() => setCatSortOpen(true)}>
+                          <Icon name="sort" />
+                        </FocusButton>
+                      </LargeTools>
+                    ) : (
+                      <LargeTools
+                        id="vgrid-search"
+                        query={query()}
+                        onQuery={setQuery}
+                        label={t('search.inCategory', { name: railItems().filter((c) => c.id === category())[0]?.name ?? '' })}
+                        onBack={backToLargeCategories}
+                      >
+                        <PinButton id="vgrid-pin" kind={props.kind} categoryId={category()} pinnable={VIRTUAL.indexOf(category()) < 0} />
+                        <FocusButton id="vgrid-sort" class="sort-chip" onSelect={() => setSortOpen(true)}>
+                          <span>{t('vod.sort', { by: t(`sort.${vodSort()}`) })}</span>
+                          <Icon name="down" />
+                        </FocusButton>
+                      </LargeTools>
+                    )
+                  }
+                  legend={<LargeLegend keys={legendKeys()} />}
+                  onOpenCategory={(c) => void openLargeCategory(c)}
+                  onFocusCategory={(c) => setFocusedCategory(c)}
+                  onSelectItem={open}
+                  onFocusItem={(row, index) => {
+                    setFocused(row);
+                    lastGridIndex.set(memoryKey(), index);
+                  }}
+                  ref={(api) => (largeView = api)}
+                />
+              </FocusZone>
+            </Show>
+            <Show when={!large()}>
             <div class="panes">
               <FocusZone id="vod-categories" remember>
                 <CategoryRail
                   kind={props.kind}
                   id="vcat"
                   label={t(props.kind === 'vod' ? 'tab.movies' : 'tab.series')}
-                  fixed={railItems().slice(0, VIRTUAL.length)}
-                  categories={railItems().slice(VIRTUAL.length)}
+                  fixed={railItems().filter((c) => VIRTUAL.indexOf(c.id) >= 0)}
+                  categories={railItems().filter((c) => VIRTUAL.indexOf(c.id) < 0)}
                   selected={category()}
+                  onHide={hideCategory}
                   onOpen={async (c) => {
+                    if (c.id === 'hidden') return void openHidden();
                     if (c.locked && !(await ensureUnlocked())) return;
                     chooseCategory(c.id);
                     // Remote: move into the grid. Touch: stay put (the finger is free to go anywhere).
@@ -357,8 +543,22 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
                 </div>
               </FocusZone>
             </div>
+            </Show>
           </>
         )}
+      </Show>
+      <Show when={catSortOpen()}>
+        <PickerDialog
+          id="vod-cat-sort-picker"
+          title={t('categories.sortTitle')}
+          options={CATEGORY_SORTS.map((x) => ({ id: x, label: t(`categories.sort.${x}`) }))}
+          selected={catSort()}
+          onCancel={() => setCatSortOpen(false)}
+          onPick={(id) => {
+            setCatSortOpen(false);
+            setCatSort(id as (typeof CATEGORY_SORTS)[number]);
+          }}
+        />
       </Show>
       <Show when={sortOpen()}>
         <PickerDialog

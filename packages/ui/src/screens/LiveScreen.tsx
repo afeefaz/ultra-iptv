@@ -9,15 +9,18 @@ import {
 } from '@ultra/core';
 import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, type JSX } from 'solid-js';
 import { CategoryRail } from '../components/CategoryRail';
-import { LiveLarge, type LiveLargeApi } from '../components/LiveLarge';
+import { ChannelBox } from '../components/ChannelBox';
+import { LargeBrowse, LargeLegend, LargeTools, type LargeBrowseApi, type LegendKey } from '../components/LargeBrowse';
+import { PickerDialog } from '../components/PickerDialog';
 import { ChannelLogo } from '../components/ChannelLogo';
 import { PinButton } from '../components/PinButton';
 import { RenameDialog } from '../components/RenameDialog';
 import { Icon, type IconName } from '../components/Icon';
 import { TextField } from '../components/TextField';
 import { guideOnEveryRow, liveLayout, liveShowRecent } from '../data/settings';
+import { showToast as showMessage } from '../data/toast';
 import { track } from '../data/usage';
-import { arrangeCategories, categorySort, makeMatcher, normalizeText, useCategoryNames, useHiddenCategories, usePins, withoutHidden } from '../data/categories';
+import { arrangeCategories, CATEGORY_SORTS, categorySort, makeMatcher, normalizeText, useCategoryNames, useHiddenCategories, usePins, withoutHidden } from '../data/categories';
 import { cachedLibrary, loadLibrary, type Library } from '../data/libraryCache';
 import { enterLibrary, rememberedSearch, rememberSearch } from '../data/libraryMemory';
 import { FocusButton } from '../components/FocusButton';
@@ -57,7 +60,7 @@ interface CategoryItem {
   original?: string;
 }
 
-const VIRTUAL = ['fav', 'recent', 'all'];
+const VIRTUAL = ['fav', 'recent', 'all', 'hidden'];
 const NO_CHANNELS: ChannelRow[] = [];
 const NO_CATEGORIES: CategoryRow[] = [];
 const ZAP_DELAY_MS = 1500;
@@ -77,7 +80,7 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
   // Already in memory on the way back from full screen, so the first paint has everything.
   const held = cachedLibrary<ChannelRow>(activePlaylist()?.id ?? null, 'live');
   const [library, setLibrary] = createSignal<Library<ChannelRow> | undefined>(held);
-  const { hidden } = useHiddenCategories('live');
+  const { hidden, hide } = useHiddenCategories('live');
   const cats = (): CategoryRow[] => library()?.cats ?? NO_CATEGORIES;
   const all = createMemo((): ChannelRow[] => withoutHidden(library()?.rows ?? NO_CHANNELS, hidden()));
   const [favKeys, setFavKeys] = createSignal<string[]>(held?.favs ?? []);
@@ -103,9 +106,9 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
   const large = () => liveLayout() === 'large';
   // Always opens on the categories (from Home, on the channel it was asked for). The screen stays
   // alive under the player, so the step survives watching a channel.
-  const [largeStep, setLargeStep] = createSignal<'categories' | 'channels'>(props.focusKey ? 'channels' : 'categories');
+  const [largeStep, setLargeStep] = createSignal<'categories' | 'items'>(props.focusKey ? 'items' : 'categories');
   const [largeStart, setLargeStart] = createSignal(0);
-  let largeView: LiveLargeApi | undefined;
+  let largeView: LargeBrowseApi | undefined;
   // Coming back from full screen lands on the playing channel.
   let pendingFocusKey = props.focusKey ?? playingChannel()?.key ?? lastChannelKey.get(activePlaylist()?.id ?? '');
   let loadSeq = 0;
@@ -145,6 +148,8 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
       { id: 'fav', name: t('live.favorites'), count: favKeys().length, locked: false, icon: 'star' },
       ...(liveShowRecent() ? [{ id: 'recent', name: t('live.recent'), count: fromKeys(recent()).length, locked: false, icon: 'history' as IconName }] : []),
       { id: 'all', name: t('live.all'), count: all().length, locked: false, icon: 'grid' },
+      // Only while something is hidden, so there's always a way back to it.
+      ...(hidden().length ? [{ id: 'hidden', name: t('hidden.entry'), count: hidden().length, locked: false, icon: 'eyeOff' as IconName }] : []),
       ...cats()
         .filter((c) => hidden().indexOf(c.id) < 0)
         .map((c) => {
@@ -154,7 +159,8 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
     ];
   });
 
-  const [catSort] = categorySort('live');
+  const [catSort, setCatSort] = categorySort('live');
+  const [sortOpen, setSortOpen] = createSignal(false);
   const { pins, toggle: togglePin } = usePins('live');
   /** Same order as the standard rail: Favourites, Recent and All first, then pinned, then sorted. */
   const largeCategories = createMemo(() =>
@@ -179,11 +185,12 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
       return;
     }
     setLargeStart(index);
-    setLargeStep('channels');
+    setLargeStep('items');
     setTimeout(() => largeView?.focus(index), delay);
   };
 
   const openLargeCategory = async (c: CategoryItem) => {
+    if (c.id === 'hidden') return void openHidden();
     if (c.locked && !(await ensureUnlocked())) return;
     chooseCategory(c.id);
     track('live.large.category');
@@ -306,7 +313,20 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
     channelList?.scrollToIndex(0);
   }
 
+  /** The full list of hidden categories. With a PIN set, it's the PIN that lets them back. */
+  const openHidden = async () => {
+    if (await ensureUnlocked()) navigate({ name: 'hidden-categories', kind: 'live' });
+  };
+
+  const hideCategory = (c: CategoryItem | null) => {
+    if (!c || VIRTUAL.indexOf(c.id) >= 0) return;
+    hide(c.id);
+    track('hide.category.live');
+    showMessage(t('hidden.done', { name: c.original ?? c.name }));
+  };
+
   const openCategory = async (c: CategoryItem) => {
+    if (c.id === 'hidden') return void openHidden();
     if (c.locked && !(await ensureUnlocked())) return;
     chooseCategory(c.id);
     // Remote: move into the channels. Touch: stay put.
@@ -387,6 +407,43 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
     toastTimer = setTimeout(() => setToast(''), 2500);
   };
 
+  /** The category Blue and Green act on: the open one inside it, else the one the cursor is on. */
+  const targetCategory = (): CategoryItem | null => {
+    const id = largeStep() === 'items' ? category() : focusedCategory()?.id;
+    const c = categoryItems().find((x) => x.id === id);
+    return c && VIRTUAL.indexOf(c.id) < 0 ? c : null;
+  };
+  const renameTarget = () => {
+    const c = targetCategory();
+    if (c) setRenaming(c);
+  };
+  const pinTarget = () => {
+    const c = targetCategory();
+    if (c) void togglePin(c.id);
+  };
+  const hideTarget = () => {
+    const c = targetCategory();
+    if (!c) return;
+    const inside = largeStep() === 'items';
+    const index = largeShown().findIndex((x) => x.id === c.id);
+    hideCategory(c);
+    if (inside) backToLargeCategories();
+    else setTimeout(() => largeView?.focus(Math.max(0, Math.min(index, largeShown().length - 1))), 0);
+  };
+  const favouriteFocused = () => {
+    if (largeStep() === 'items') void toggleFavorite(focused());
+  };
+  const legendKeys = (): LegendKey[] => {
+    const keys: LegendKey[] = [
+      { id: 'llegend-blue', color: 'blue', label: t('legend.rename'), onPress: renameTarget },
+      { id: 'llegend-green', color: 'green', label: t('legend.pin'), onPress: pinTarget },
+      { id: 'llegend-hide', icon: 'eyeOff', label: t('legend.hide'), onPress: hideTarget },
+    ];
+    if (largeStep() === 'items') keys.push({ id: 'llegend-yellow', color: 'yellow', label: t('legend.favourite'), onPress: favouriteFocused });
+    return keys;
+  };
+  const dialogOpen = () => !!document.querySelector('.dialog-backdrop');
+
   useKeys((press) => {
     if (press.key.indexOf('digit') === 0) {
       setDigits((d) => (d + press.key.slice(5)).slice(-5));
@@ -404,6 +461,11 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
       return true;
     }
     if (press.key === 'yellow') {
+      if (large()) {
+        if (dialogOpen() || largeStep() !== 'items') return false;
+        void toggleFavorite(focused());
+        return true;
+      }
       void toggleFavorite(focused());
       return true;
     }
@@ -412,20 +474,25 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
       return true;
     }
     // Blue renames the category the cursor is on (Settings → Browsing has the same, for touch).
+    if (press.key === 'blue' && large()) {
+      if (dialogOpen()) return false;
+      renameTarget();
+      return true;
+    }
     if (press.key === 'blue') {
       const c = focusedCategory();
       if (!c || VIRTUAL.indexOf(c.id) >= 0 || !/^lcat-\d+$/.test(focusManager.currentId ?? '')) return false;
       setRenaming(c);
       return true;
     }
-    if (large() && press.key === 'back' && largeStep() === 'channels') {
+    if (large() && press.key === 'back' && largeStep() === 'items') {
       backToLargeCategories();
       return true;
     }
     // The standard layout pins from its category rail.
-    if (large() && press.key === 'green' && largeStep() === 'categories') {
-      const c = focusedCategory();
-      if (c && VIRTUAL.indexOf(c.id) < 0 && /^lcat-\d+$/.test(focusManager.currentId ?? '')) void togglePin(c.id);
+    if (large() && press.key === 'green') {
+      if (dialogOpen()) return false;
+      pinTarget();
       return true;
     }
     return false;
@@ -477,30 +544,51 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
                 </span>
               </span>
               <span class="hint">
-                {large() && largeStep() === 'channels' ? t('live.largeBack') : statusText(p(), isRefreshing())}
+                {large() && largeStep() === 'items' ? t('live.largeBack') : statusText(p(), isRefreshing())}
               </span>
             </div>
             <Show when={large()}>
               <FocusZone id="live-large" remember>
-                <LiveLarge
+                <LargeBrowse<ChannelRow>
                   step={largeStep()}
+                  categoryId="lcat"
+                  itemId="lch"
+                  label={t('tab.live')}
                   categories={largeShown()}
-                  query={largeStep() === 'categories' ? largeCatQuery() : channelQuery()}
-                  onQuery={(q) => (largeStep() === 'categories' ? setLargeCatQuery(q) : setChannelQuery(q))}
-                  searchLabel={largeStep() === 'categories' ? t('search.categories') : t('search.inCategory', { name: categoryName(category()) })}
                   current={category()}
-                  channels={channels()}
-                  startIndex={largeStart()}
                   pinned={(id) => pins().indexOf(id) >= 0}
-                  favorite={(key) => favSet().has(key)}
-                  locked={rowLocked}
-                  playing={(key) => playingChannel()?.key === key}
-                  guide={rowGuide()}
+                  countLabel={(n) => (n === 1 ? t('live.channelCountOne') : t('live.channelCount', { n: formatNumber(n) }))}
+                  items={channels()}
+                  itemShape="box"
+                  renderItem={(c, size) => (
+                    <ChannelBox channel={c} size={size} guide={rowGuide()} favorite={favSet().has(c.key)} locked={rowLocked(c)} playing={playingChannel()?.key === c.key} />
+                  )}
+                  startIndex={largeStart()}
                   empty={<p class="hint pane-empty">{emptyText()}</p>}
+                  tools={
+                    largeStep() === 'categories' ? (
+                      <LargeTools id="lcat-search" query={largeCatQuery()} onQuery={setLargeCatQuery} label={t('search.categories')}>
+                        <FocusButton id="lcat-sort" class="icon-button" label={t('categories.sortTitle')} onSelect={() => setSortOpen(true)}>
+                          <Icon name="sort" />
+                        </FocusButton>
+                      </LargeTools>
+                    ) : (
+                      <LargeTools
+                        id="lch-search"
+                        query={channelQuery()}
+                        onQuery={setChannelQuery}
+                        label={t('search.inCategory', { name: categoryName(category()) })}
+                        onBack={backToLargeCategories}
+                      >
+                        <PinButton id="lch-pin" kind="live" categoryId={category()} pinnable={VIRTUAL.indexOf(category()) < 0} />
+                      </LargeTools>
+                    )
+                  }
+                  legend={<LargeLegend keys={legendKeys()} />}
                   onOpenCategory={(c) => void openLargeCategory(c)}
                   onFocusCategory={(c) => setFocusedCategory(c)}
-                  onPlay={(c) => void playLarge(c)}
-                  onFocusChannel={(c) => {
+                  onSelectItem={(c) => void playLarge(c)}
+                  onFocusItem={(c) => {
                     setFocused(c);
                     lastChannelKey.set(c.playlistId, c.key);
                   }}
@@ -520,6 +608,7 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
                   selected={category()}
                   onFocusRow={(c) => setFocusedCategory(c)}
                   onOpen={(c) => void openCategory(c)}
+                  onHide={(c) => hideCategory(categoryItems().find((x) => x.id === c.id) ?? null)}
                 />
               </FocusZone>
               <FocusZone id="live-channels" remember>
@@ -575,7 +664,6 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
                             {t('live.catchup', { n: formatNumber(c().catchupDays!) })}
                           </Show>
                         </div>
-                        <NowNextView data={focusedEpg()} />
                         <div class="button-row">
                           <FocusButton id="live-fav" class={favSet().has(c().key) ? 'btn-primary' : ''} onSelect={() => void toggleFavorite(focused())}>
                             <Icon name={favSet().has(c().key) ? 'starFill' : 'star'} />
@@ -588,6 +676,7 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
                             </FocusButton>
                           </Show>
                         </div>
+                        <NowNextView data={focusedEpg()} />
                       </div>
                     )}
                   </Show>
@@ -598,6 +687,19 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
             </Show>
           </>
         )}
+      </Show>
+      <Show when={sortOpen()}>
+        <PickerDialog
+          id="live-large-sort"
+          title={t('categories.sortTitle')}
+          options={CATEGORY_SORTS.map((x) => ({ id: x, label: t(`categories.sort.${x}`) }))}
+          selected={catSort()}
+          onCancel={() => setSortOpen(false)}
+          onPick={(id) => {
+            setSortOpen(false);
+            setCatSort(id as (typeof CATEGORY_SORTS)[number]);
+          }}
+        />
       </Show>
       <Show when={renaming()}>
         {(c) => (

@@ -7,7 +7,8 @@ import { PosterTile, qualityOf } from '../components/PosterTile';
 import { catalog } from '../data/catalog';
 import { movieItem, progressRatio, resumePosition, useProgress, watch } from '../data/media';
 import { activePlaylist } from '../data/playlists';
-import { FocusZone } from '../focus';
+import { focusManager, FocusZone } from '../focus';
+import { useKeys } from '../keys';
 import { formatDuration, formatLeft, timeAgo } from '../format';
 import { formatNumber, t } from '../i18n';
 import { navigate } from '../nav';
@@ -69,6 +70,20 @@ export function VodDetailScreen(props: DetailProps): JSX.Element {
         .then((v) => props.id === id && setVersions(v), (e) => log.warn('vod', 'versions failed', { error: e }));
     }),
   );
+
+  // Up and Down step between Play, the versions and "More in", one section at a time. By distance
+  // alone, Up from the posters skipped Play for the top bar, and Down from them left the page.
+  const SECTIONS = ['detail-actions', 'detail-versions', 'detail-more'];
+  useKeys((press) => {
+    if (press.key !== 'up' && press.key !== 'down') return false;
+    const id = focusManager.currentId;
+    const at = id ? SECTIONS.findIndex((z) => focusManager.isInZone(id, z)) : -1;
+    if (at < 0) return false;
+    const step = press.key === 'down' ? 1 : -1;
+    for (let i = at + step; i >= 0 && i < SECTIONS.length; i += step) if (focusManager.focusZone(SECTIONS[i])) return true;
+    // Nothing further: Up goes on to the Back button above, Down stays where it is.
+    return press.key === 'down';
+  });
 
   const saved = createMemo(() => {
     const r = row();

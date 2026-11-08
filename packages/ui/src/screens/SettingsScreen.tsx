@@ -15,10 +15,23 @@ import { activePlaylist } from '../data/playlists';
 import {
   accent,
   autoPlayNext,
+  categoryGrouping,
+  setCategoryGrouping,
+  setTheme,
+  theme,
+  type CategoryGrouping,
+  type Theme,
   boxGrid,
   LARGE_BOXES,
   largeBoxes,
   liveLayout,
+  moviesLayout,
+  POSTER_COLUMNS,
+  posterColumns,
+  seriesLayout,
+  setMoviesLayout,
+  setPosterColumns,
+  setSeriesLayout,
   setLargeBoxes,
   setLiveLayout,
   type LiveLayout,
@@ -212,26 +225,67 @@ function Stepper(props: {
   );
 }
 
-/** A small picture of the Live screen in each layout, so the choice is seen rather than read. */
-function LayoutSketch(props: { layout: LiveLayout }): JSX.Element {
+/** A small picture of the screen in each layout, so the choice is seen rather than read. */
+function LayoutSketch(props: { layout: LiveLayout; kind: 'live' | 'vod' }): JSX.Element {
   return (
     <span class="sketch" aria-hidden="true">
       <span class="sketch-inner">
-        <Show when={props.layout === 'standard'} fallback={<BoxesCells columns={3} rows={2} />}>
+        <Show when={props.layout === 'standard'} fallback={<BoxesCells columns={props.kind === 'live' ? 3 : 4} rows={props.kind === 'live' ? 2 : 1} />}>
           <span class="sketch-col sketch-rail">
             <For each={[1, 2, 3, 4, 5]}>{() => <span class="sketch-line" />}</For>
           </span>
-          <span class="sketch-col sketch-list">
-            <For each={[1, 2, 3, 4, 5]}>{() => <span class="sketch-line" />}</For>
-          </span>
-          <span class="sketch-col sketch-preview">
-            <span class="sketch-video" />
-            <span class="sketch-line" />
-            <span class="sketch-line short" />
-          </span>
+          <Show
+            when={props.kind === 'live'}
+            fallback={
+              <span class="sketch-col sketch-posters">
+                <BoxesCells columns={4} rows={2} />
+              </span>
+            }
+          >
+            <span class="sketch-col sketch-list">
+              <For each={[1, 2, 3, 4, 5]}>{() => <span class="sketch-line" />}</For>
+            </span>
+            <span class="sketch-col sketch-preview">
+              <span class="sketch-video" />
+              <span class="sketch-line" />
+              <span class="sketch-line short" />
+            </span>
+          </Show>
         </Show>
       </span>
     </span>
+  );
+}
+
+/** Standard or Boxes for one library. */
+function LayoutPicker(props: {
+  title: MessageKey;
+  desc?: MessageKey;
+  kind: 'live' | 'vod';
+  value: LiveLayout;
+  onPick: (layout: LiveLayout) => void;
+}): JSX.Element {
+  return (
+    <>
+      <div class="setting-name setting-gap">{t(props.title)}</div>
+      <Show when={props.desc}>{(d) => <div class="setting-desc">{t(d())}</div>}</Show>
+      <div class="option-cards layout-picks" role="radiogroup" aria-label={t(props.title)}>
+        <For each={['standard', 'large'] as LiveLayout[]}>
+          {(l) => (
+            <FocusButton id={`settings-${props.title}-${l}`} class="layout-pick" selected={props.value === l} onSelect={() => props.onPick(l)}>
+              <LayoutSketch layout={l} kind={props.kind} />
+              <span class="layout-pick-label">
+                <span class="option-card-text">
+                  <span class="option-card-title">{t(`settings.liveLayout.${l}`)}</span>
+                  <span class="option-card-sub">{t(`settings.liveLayout.${l}Sub`)}</span>
+                </span>
+                <Icon name={props.value === l ? 'checkCircle' : 'radioOff'} />
+              </span>
+            </FocusButton>
+          )}
+        </For>
+      </div>
+    </>
   );
 }
 
@@ -477,6 +531,22 @@ export function SettingsScreen(): JSX.Element {
                   reset={100}
                   onChange={setTextScale}
                 />
+                <div class="setting-name setting-gap">{t('settings.theme')}</div>
+                <div class="setting-desc">{t('settings.themeDesc')}</div>
+                <div class="option-cards" role="radiogroup" aria-label={t('settings.theme')} style={{ 'margin-top': '0.8rem' }}>
+                  <For each={['dark', 'light'] as Theme[]}>
+                    {(mode) => (
+                      <FocusButton id={`settings-theme-${mode}`} selected={theme() === mode} onSelect={() => setTheme(mode)}>
+                        <span class={`theme-swatch theme-swatch-${mode}`} />
+                        <span class="option-card-text">
+                          <span class="option-card-title">{t(`settings.theme.${mode}`)}</span>
+                          <span class="option-card-sub">{t(`settings.theme.${mode}Sub`)}</span>
+                        </span>
+                        <Icon name={theme() === mode ? 'checkCircle' : 'radioOff'} />
+                      </FocusButton>
+                    )}
+                  </For>
+                </div>
                 <div class="setting-name setting-gap">{t('settings.appColor')}</div>
                 <div class="setting-desc">{t('settings.appColorDesc')}</div>
                 <div class="option-cards option-cards-wrap" role="radiogroup" aria-label={t('settings.appColor')}>
@@ -492,26 +562,12 @@ export function SettingsScreen(): JSX.Element {
                     )}
                   </For>
                 </div>
-                <div class="setting-name setting-gap">{t('settings.liveLayout')}</div>
-                <div class="setting-desc">{t('settings.liveLayoutDesc')}</div>
-                <div class="option-cards layout-picks" role="radiogroup" aria-label={t('settings.liveLayout')}>
-                  <For each={['standard', 'large'] as LiveLayout[]}>
-                    {(l) => (
-                      <FocusButton id={`settings-live-layout-${l}`} class="layout-pick" selected={liveLayout() === l} onSelect={() => setLiveLayout(l)}>
-                        <LayoutSketch layout={l} />
-                        <span class="layout-pick-label">
-                          <span class="option-card-text">
-                            <span class="option-card-title">{t(`settings.liveLayout.${l}`)}</span>
-                            <span class="option-card-sub">{t(`settings.liveLayout.${l}Sub`)}</span>
-                          </span>
-                          <Icon name={liveLayout() === l ? 'checkCircle' : 'radioOff'} />
-                        </span>
-                      </FocusButton>
-                    )}
-                  </For>
-                </div>
-                <Show when={liveLayout() === 'large'}>
+                <LayoutPicker title="settings.liveLayout" desc="settings.liveLayoutDesc" kind="live" value={liveLayout()} onPick={setLiveLayout} />
+                <LayoutPicker title="settings.moviesLayout" kind="vod" value={moviesLayout()} onPick={setMoviesLayout} />
+                <LayoutPicker title="settings.seriesLayout" kind="vod" value={seriesLayout()} onPick={setSeriesLayout} />
+                <Show when={liveLayout() === 'large' || moviesLayout() === 'large' || seriesLayout() === 'large'}>
                   <div class="setting-name setting-gap">{t('settings.largeCount')}</div>
+                  <div class="setting-desc">{t('settings.largeCountDesc')}</div>
                   <div class="option-cards layout-picks" role="radiogroup" aria-label={t('settings.largeCount')}>
                     <For each={LARGE_BOXES}>
                       {(n) => (
@@ -520,6 +576,23 @@ export function SettingsScreen(): JSX.Element {
                           <span class="layout-pick-label">
                             <span class="option-card-title">{t('settings.largeCount.boxes', { n: formatNumber(n) })}</span>
                             <Icon name={largeBoxes() === n ? 'checkCircle' : 'radioOff'} />
+                          </span>
+                        </FocusButton>
+                      )}
+                    </For>
+                  </div>
+                </Show>
+                <Show when={moviesLayout() === 'large' || seriesLayout() === 'large'}>
+                  <div class="setting-name setting-gap">{t('settings.posterColumns')}</div>
+                  <div class="setting-desc">{t('settings.posterColumnsDesc')}</div>
+                  <div class="option-cards layout-picks" role="radiogroup" aria-label={t('settings.posterColumns')}>
+                    <For each={POSTER_COLUMNS}>
+                      {(n) => (
+                        <FocusButton id={`settings-poster-columns-${n}`} class="layout-pick" selected={posterColumns() === n} onSelect={() => setPosterColumns(n)}>
+                          <BoxesSketch columns={n} rows={1} />
+                          <span class="layout-pick-label">
+                            <span class="option-card-title">{t('settings.posterColumns.n', { n: formatNumber(n) })}</span>
+                            <Icon name={posterColumns() === n ? 'checkCircle' : 'radioOff'} />
                           </span>
                         </FocusButton>
                       )}
@@ -666,6 +739,21 @@ export function SettingsScreen(): JSX.Element {
                           <span class="option-card-sub">{t('hidden.summary', { n: formatNumber(useHiddenCategories(k.kind).hidden().length) })}</span>
                         </span>
                         <Icon name="chevronRight" />
+                      </FocusButton>
+                    )}
+                  </For>
+                </div>
+                <div class="setting-name setting-gap">{t('settings.grouping')}</div>
+                <div class="setting-desc">{t('settings.groupingDesc')}</div>
+                <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
+                  <For each={['auto', 'on', 'off'] as CategoryGrouping[]}>
+                    {(mode) => (
+                      <FocusButton id={`settings-grouping-${mode}`} selected={categoryGrouping() === mode} onSelect={() => setCategoryGrouping(mode)}>
+                        <span class="option-card-text">
+                          <span class="option-card-title">{t(`settings.grouping.${mode}`)}</span>
+                          <span class="option-card-sub">{t(`settings.grouping.${mode}Sub`)}</span>
+                        </span>
+                        <Icon name={categoryGrouping() === mode ? 'checkCircle' : 'radioOff'} />
                       </FocusButton>
                     )}
                   </For>

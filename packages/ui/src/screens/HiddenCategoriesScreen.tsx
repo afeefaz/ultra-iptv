@@ -1,15 +1,18 @@
-import { detectGroups, groupKey, listCategories, log, UNCATEGORIZED, type CategoryGroup, type CategoryRow, type ContentKind, type HiddenRule } from '@ultra/core';
-import { createEffect, createMemo, createSignal, on, Show, type JSX } from 'solid-js';
+import { detectTags, groupKey, listCategories, tagWords, log, UNCATEGORIZED, type CategoryGroup, type CategoryRow, type ContentKind, type HiddenRule } from '@ultra/core';
+import { createEffect, createMemo, createSignal, For, on, onMount, Show, type JSX } from 'solid-js';
 import { BackButton } from '../components/BackButton';
 import { FocusButton } from '../components/FocusButton';
 import { Icon } from '../components/Icon';
 import { TextField } from '../components/TextField';
 import { VirtualList, type VirtualListApi } from '../components/VirtualList';
-import { makeMatcher, normalizeText, useCategoryNames, useHiddenCategories } from '../data/categories';
+import { groupsFor, makeMatcher, normalizeText, useCategoryNames, useHiddenCategories } from '../data/categories';
+import { ensureUnlocked } from '../data/parental';
+import { categoryGrouping, setCategoryGrouping, type CategoryGrouping } from '../data/settings';
 import { activePlaylist } from '../data/playlists';
 import { FocusZone } from '../focus';
 import { formatNumber, t, type MessageKey } from '../i18n';
 import { useKeys } from '../keys';
+import { goBack } from '../nav';
 
 const TITLES: Record<ContentKind, MessageKey> = { live: 'tab.live', vod: 'tab.movies', series: 'tab.series' };
 const MAX_UNDO = 20;
@@ -32,6 +35,13 @@ export function HiddenCategoriesScreen(props: { kind: ContentKind }): JSX.Elemen
   const [undo, setUndo] = createSignal<Saved[]>([]);
   let list: VirtualListApi | undefined;
 
+  // With a PIN set, what's hidden stays hidden from whoever doesn't know it.
+  onMount(() => {
+    void ensureUnlocked().then((ok) => {
+      if (!ok) goBack();
+    });
+  });
+
   createEffect(
     on(
       () => activePlaylist()?.id,
@@ -45,12 +55,15 @@ export function HiddenCategoriesScreen(props: { kind: ContentKind }): JSX.Elemen
   const { names } = useCategoryNames(props.kind);
   const providerName = (c: CategoryRow) => (c.id === UNCATEGORIZED ? t('live.uncategorized') : c.name);
   const nameOf = (c: CategoryRow) => names()[c.id] ?? providerName(c);
-  const grouped = createMemo(() => detectGroups(cats()));
+  const grouped = createMemo(() => groupsFor(cats()));
   const groups = createMemo<Array<CategoryGroup<CategoryRow>>>(() => {
     const found = grouped();
     if (!found) return [];
     return found.other.length ? found.groups.concat({ key: OTHER, label: t('hidden.other'), items: found.other }) : found.groups;
   });
+
+  /** Words many categories share, as one-press filters. Only with grouping on, and only when there are any. */
+  const tags = createMemo(() => (categoryGrouping() === 'off' ? [] : detectTags(cats().map((c) => ({ id: c.id, name: providerName(c) })))));
 
   const rows = createMemo<Row[]>(() => {
     const match = makeMatcher(query());
@@ -67,18 +80,23 @@ export function HiddenCategoriesScreen(props: { kind: ContentKind }): JSX.Elemen
   const isHidden = (id: string) => hidden().indexOf(id) >= 0;
   const hiddenIn = (group: CategoryGroup<CategoryRow>) => group.items.filter((c) => isHidden(c.id)).length;
 
+  /** The rule, with the filters it already had. */
+  const ruleOf = (labels: string[], shown: string[], tagKeys: string[] = rule().tags ?? []): HiddenRule => ({ labels, shown, tags: tagKeys });
+  const tagHidden = (tag: { ids: string[] }) => tag.ids.every((id) => isHidden(id));
+
   const save = (ids: string[], next: HiddenRule) => {
     setUndo((u) => u.concat({ ids: hidden(), rule: rule() }).slice(-MAX_UNDO));
     setHidden(ids, next);
   };
 
   const toggleCategory = (c: CategoryRow) => {
-    const inRule = rule().labels.indexOf(groupKey(c.name) ?? OTHER) >= 0;
+    const byTag = tagWords(c.name).some((w) => (rule().tags ?? []).indexOf(w) >= 0);
+    const inRule = rule().labels.indexOf(groupKey(c.name) ?? OTHER) >= 0 || byTag;
     if (isHidden(c.id)) {
-      // Shown by hand inside a hidden group: remember that, or a refresh would hide it again.
-      save(hidden().filter((id) => id !== c.id), { labels: rule().labels, shown: inRule ? rule().shown.concat(c.id) : rule().shown });
+      // Shown by hand inside a hidden group or filter: remember that, or a refresh would hide it again.
+      save(hidden().filter((id) => id !== c.id), ruleOf(rule().labels, inRule ? rule().shown.concat(c.id) : rule().shown));
     } else {
-      save(hidden().concat(c.id), { labels: rule().labels, shown: rule().shown.filter((id) => id !== c.id) });
+      save(hidden().concat(c.id), ruleOf(rule().labels, rule().shown.filter((id) => id !== c.id)));
     }
   };
 
@@ -87,15 +105,25 @@ export function HiddenCategoriesScreen(props: { kind: ContentKind }): JSX.Elemen
     const shown = rule().shown.filter((id) => ids.indexOf(id) < 0);
     const labels = rule().labels.filter((l) => l !== group.key);
     if (hiddenIn(group) === group.items.length) {
-      save(hidden().filter((id) => ids.indexOf(id) < 0), { labels, shown });
+      save(hidden().filter((id) => ids.indexOf(id) < 0), ruleOf(labels, shown));
     } else {
       const others = hidden().filter((id) => ids.indexOf(id) < 0);
-      save(others.concat(ids), { labels: group.key === OTHER ? labels : labels.concat(group.key), shown });
+      save(others.concat(ids), ruleOf(group.key === OTHER ? labels : labels.concat(group.key), shown));
     }
   };
 
-  const hideAll = () => save(cats().map((c) => c.id), { labels: groups().map((g) => g.key).filter((k) => k !== OTHER), shown: [] });
-  const showAll = () => save([], { labels: [], shown: [] });
+  const toggleTag = (tag: { key: string; ids: string[] }) => {
+    const shown = rule().shown.filter((id) => tag.ids.indexOf(id) < 0);
+    const others = (rule().tags ?? []).filter((k) => k !== tag.key);
+    if (tagHidden(tag)) {
+      save(hidden().filter((id) => tag.ids.indexOf(id) < 0), ruleOf(rule().labels, shown, others));
+    } else {
+      save(hidden().filter((id) => tag.ids.indexOf(id) < 0).concat(tag.ids), ruleOf(rule().labels, shown, others.concat(tag.key)));
+    }
+  };
+
+  const hideAll = () => save(cats().map((c) => c.id), ruleOf(groups().map((g) => g.key).filter((k) => k !== OTHER), [], []));
+  const showAll = () => save([], ruleOf([], [], []));
   const undoLast = () => {
     const last = undo()[undo().length - 1];
     if (!last) return;
@@ -155,6 +183,9 @@ export function HiddenCategoriesScreen(props: { kind: ContentKind }): JSX.Elemen
     return true;
   });
 
+  const MODES: CategoryGrouping[] = ['auto', 'on', 'off'];
+  const cycleGrouping = () => setCategoryGrouping(MODES[(MODES.indexOf(categoryGrouping()) + 1) % MODES.length]);
+
   const rowClass = (row: Row) => {
     if ('group' in row) return hiddenIn(row.group) === row.group.items.length ? 'list-item hidden-group is-off' : 'list-item hidden-group';
     return `list-item${row.child ? ' hidden-child' : ''}${isHidden(row.category.id) ? ' is-off' : ''}`;
@@ -186,8 +217,27 @@ export function HiddenCategoriesScreen(props: { kind: ContentKind }): JSX.Elemen
           <FocusButton id="hidden-undo" onSelect={undoLast}>
             {t('hidden.undo')}
           </FocusButton>
+          <FocusButton id="hidden-grouping" onSelect={cycleGrouping}>
+            {t('hidden.grouping', { mode: t(`settings.grouping.${categoryGrouping()}`) })}
+          </FocusButton>
         </div>
       </FocusZone>
+      <Show when={tags().length}>
+        <FocusZone id="hidden-filters">
+          <div class="filter-row">
+            <span class="filter-label">{t('hidden.filters')}</span>
+            <For each={tags()}>
+              {(tag) => (
+                <FocusButton id={`hidden-tag-${tag.key.replace(/[^A-Z0-9]/g, '_')}`} class="filter-chip" selected={tagHidden(tag)} onSelect={() => toggleTag(tag)}>
+                  <Icon name={tagHidden(tag) ? 'eyeOff' : 'check'} />
+                  <span>{tag.key}</span>
+                  <span class="filter-count">{formatNumber(tag.ids.length)}</span>
+                </FocusButton>
+              )}
+            </For>
+          </div>
+        </FocusZone>
+      </Show>
       <FocusZone id="hidden-list" remember>
         <div class="hidden-list">
           <VirtualList

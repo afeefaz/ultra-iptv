@@ -163,7 +163,12 @@ export class FocusManager {
     if (current) current.el.classList.toggle(FOCUSED_CLASS, !touching);
   }
 
-  move(dir: Direction): boolean {
+  /**
+   * `held`: the key is being held down (a repeat). Held, focus keeps to the zone it's in, so holding
+   * a direction runs to the end of a list or row and stops there, instead of carrying on into
+   * the next pane, the search box or the top bar. A new press leaves as usual.
+   */
+  move(dir: Direction, held = false): boolean {
     this.pointerMode = false;
     this.setTouching(false);
     const pool = this.eligible().filter((i) => isVisible(i.el));
@@ -180,6 +185,7 @@ export class FocusManager {
       const opposite = sameZone.filter((c) => inBeam(from, c.rect, dir) && !isAhead(from, c.rect, dir));
       next = pickWrap(from, opposite, dir);
     }
+    if (held) return next ? this.focus(next.id) : false;
     // Something straight across in another zone (the next pane) beats a diagonal jump inside
     // this one (e.g. Right from a category row goes to the channels, not the sort button above).
     if (!next || !inBeam(from, rectOf(next.el), dir)) {

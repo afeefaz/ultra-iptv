@@ -1,21 +1,23 @@
 {
-  "versionCode": 11,
-  "versionName": "0.6.0",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.6.0/UltraIPTV.apk",
-  "sha256": "6a421b905cb869b85cee4e55c9413260af195629dcdeaed2f37823019d6cf035",
-  "size": 12467817,
+  "versionCode": 12,
+  "versionName": "0.7.0",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.7.0/UltraIPTV.apk",
+  "sha256": "99dee254f0fe6e6ee94ab6b0e945fdb520c50b70b631ac23f9cfa8a974fafe39",
+  "size": 12475129,
   "notes": {
     "en": [
-      "Boxes layout for Live TV: categories, then channels, in big boxes that fill the screen. Settings → Appearance",
-      "Rename Live categories: Blue on a category, or Settings → Browsing",
-      "Search in the Boxes layout",
-      "Recent in Live TV is now hidden unless you turn it on in Settings → Browsing"
+      "Light theme: Settings → Appearance → Theme, and a Black app color",
+      "Hide a category with one button. A Hidden entry in the list brings it back, and your PIN protects it",
+      "Boxes layout for Movies and Series too, with a Back button, sort, pin, and colour buttons for rename, pin and favourite",
+      "Category groups can be Auto, On or Off, with quick filters for words like PPV or Netflix",
+      "Holding a direction key stops at the end of a list, and the movie page moves between its sections properly"
     ],
     "ar": [
-      "تخطيط المربعات للبث المباشر: الفئات ثم القنوات، في مربعات كبيرة تملأ الشاشة. الإعدادات ← المظهر",
-      "إعادة تسمية فئات البث المباشر: الأزرق على الفئة، أو الإعدادات ← التصفح",
-      "البحث في تخطيط المربعات",
-      "أصبحت فئة الأخيرة في البث المباشر مخفية إلا إذا شغّلتها من الإعدادات ← التصفح"
+      "المظهر الفاتح: الإعدادات ← المظهر ← السمة، ولون التطبيق الأسود",
+      "إخفاء فئة بزر واحد. تعيدها خانة المخفية في القائمة، ويحميها رمز PIN",
+      "تخطيط المربعات للأفلام والمسلسلات أيضًا، مع زر رجوع وترتيب وتثبيت، وأزرار ملونة لإعادة التسمية والتثبيت والمفضلة",
+      "مجموعات الفئات: تلقائي أو تشغيل أو إيقاف، مع فلاتر سريعة لكلمات مثل PPV أو Netflix",
+      "الضغط المستمر على زر الاتجاه يتوقف عند نهاية القائمة، وتتنقل صفحة الفيلم بين أقسامها بشكل صحيح"
     ]
   }
 }
