@@ -24,6 +24,9 @@ const strings = {
     deviceKey: 'Device key',
     deviceName: 'Name (optional)',
     deviceNameHint: 'For example, Mum’s TV',
+    nameThis: 'Name this TV (optional)',
+    rename: 'Rename',
+    saveName: 'Save name',
     badId: 'That ID doesn’t look right. It has 12 letters and numbers, like 02:AB:CD:EF:01:23.',
     badKey: 'That key doesn’t look right. It has 8 letters and numbers.',
     next: 'Continue',
@@ -66,6 +69,9 @@ const strings = {
     deviceKey: 'مفتاح الجهاز',
     deviceName: 'الاسم (اختياري)',
     deviceNameHint: 'مثل: تلفاز أمي',
+    nameThis: 'سمِّ هذا التلفاز (اختياري)',
+    rename: 'إعادة التسمية',
+    saveName: 'حفظ الاسم',
     badId: 'المعرّف غير صحيح. يتكوّن من 12 حرفًا ورقمًا، مثل 02:AB:CD:EF:01:23.',
     badKey: 'المفتاح غير صحيح. يتكوّن من 8 أحرف وأرقام.',
     next: 'متابعة',
@@ -138,6 +144,13 @@ function saveDevices(devices: SavedDevice[]): void {
 function rememberDevice(device: SavedDevice): void {
   const previous = loadDevices().filter((d) => d.id === device.id)[0];
   saveDevices([...loadDevices().filter((d) => d.id !== device.id), { ...device, label: device.label ?? previous?.label }]);
+}
+
+/** The name only ever lives in this browser: someone scanning a TV's QR code never typed one. */
+function renameDevice(device: SavedDevice, label: string): SavedDevice {
+  const next: SavedDevice = { ...device, label: label.trim() || undefined };
+  saveDevices(loadDevices().map((d) => (d.id === device.id ? next : d)));
+  return next;
 }
 
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<HTMLElementTagNameMap[K]> = {}, ...children: Array<Node | string>): HTMLElementTagNameMap[K] {
@@ -214,6 +227,19 @@ function copyLine(label: string, value: string): HTMLElement {
   return element('div', { className: 'id-line' }, element('div', { className: 'id-text' }, element('div', { className: 'id-label' }, label), shown), copy);
 }
 
+/** A name for this TV, for someone who got here by its QR code or hasn't named it yet. */
+function nameForm(device: SavedDevice, onDone: (device: SavedDevice) => void, onCancel?: () => void): HTMLElement {
+  const name = field(device.label ? text.rename : text.nameThis, 'device-name', { placeholder: text.deviceNameHint, value: device.label ?? '' });
+  const actions: HTMLElement[] = [element('button', { className: 'small', type: 'submit' }, text.saveName)];
+  if (onCancel) actions.push(button(text.cancel, 'small', onCancel));
+  const form = element('form', { className: 'name-form' }, name.row, element('div', { className: 'name-actions' }, ...actions));
+  form.onsubmit = (e) => {
+    e.preventDefault();
+    onDone(renameDevice(device, name.input.value));
+  };
+  return form;
+}
+
 function deviceLines(device: SavedDevice): HTMLElement {
   return element('div', { className: 'id-lines' }, copyLine(text.deviceId, device.id), copyLine(text.deviceKey, formatDeviceKey(device.key)));
 }
@@ -271,12 +297,17 @@ async function changePlaylists(boxes: DeviceBoxes, change: (list: RemotePlaylist
   await relay.put(boxes.stateBox, await seal(boxes.key, state), DEVICE_TTL_SECONDS);
 }
 
-async function showDevice(device: SavedDevice, message?: HTMLElement): Promise<void> {
+async function showDevice(device: SavedDevice, message?: HTMLElement, renaming = false): Promise<void> {
   const mine = ++view;
   const title = device.label ?? text.playlists;
 
+  /** Unnamed, or being renamed: the form is on the page. A named TV has a Rename button instead. */
+  const naming = () =>
+    !device.label || renaming ? [nameForm(device, (next) => void showDevice(next), device.label ? () => void showDevice(device) : undefined)] : [];
+
   const footer = () => {
     const parts = [button(text.addDevice, 'link', () => showLogin())];
+    if (device.label && !renaming) parts.unshift(button(text.rename, 'link', () => void showDevice(device, undefined, true)));
     if (loadDevices().length > 1) parts.unshift(button(text.allDevices, 'link', showHome));
     parts.push(
       button(text.forget, 'link', () => {
@@ -311,9 +342,9 @@ async function showDevice(device: SavedDevice, message?: HTMLElement): Promise<v
     });
     const messages = message ? [message] : playlists ? [] : [notice(text.nothingYet)];
     const body = rows.length || !playlists ? rows : [element('p', { className: 'sub' }, text.none)];
-    app.replaceChildren(...heading(title), deviceLines(device), ...messages, ...body, button(text.add, 'primary', () => showForm(device, boxes)), ...footer());
+    app.replaceChildren(...heading(title), deviceLines(device), ...naming(), ...messages, ...body, button(text.add, 'primary', () => showForm(device, boxes)), ...footer());
   } catch {
-    if (mine === view) app.replaceChildren(...heading(title), deviceLines(device), notice(text.noRelay, 'bad'), ...footer());
+    if (mine === view) app.replaceChildren(...heading(title), deviceLines(device), ...naming(), notice(text.noRelay, 'bad'), ...footer());
   }
 }
 

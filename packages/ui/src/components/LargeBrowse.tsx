@@ -17,6 +17,7 @@ export interface LargeCategory {
 
 export interface LargeBrowseApi {
   focus(index: number): void;
+  top(): void;
 }
 
 export interface LargeBrowseProps<T> {
@@ -34,6 +35,8 @@ export interface LargeBrowseProps<T> {
   /** Boxes (channels) fill the screen by the chosen count; posters are sized by how many fit across. */
   itemShape: 'box' | 'poster';
   renderItem: (item: T, size: CellSize) => JSX.Element;
+  /** In a narrower pane: no more boxes across than this, with more rows for the same number. */
+  columnsCap?: number;
   /** Box or poster the step opens on. */
   startIndex: number;
   empty: JSX.Element;
@@ -70,7 +73,7 @@ export function LargeBrowse<T>(props: LargeBrowseProps<T>): JSX.Element {
   });
 
   let grid: VirtualGridApi | undefined;
-  props.ref?.({ focus: (index) => grid?.focusIndex(index) });
+  props.ref?.({ focus: (index) => grid?.focusIndex(index), top: () => grid?.scrollToIndex(0) });
 
   const geometry = () => {
     const wide = areaWide();
@@ -81,7 +84,9 @@ export function LargeBrowse<T>(props: LargeBrowseProps<T>): JSX.Element {
       // A 2:3 cover with its title under it, but never taller than the screen.
       return { columns, width, height: Math.min(high, (width - 1) * 1.5 + 5) };
     }
-    const { columns, rows } = largeLayout();
+    const chosen = largeLayout();
+    const columns = props.columnsCap ? Math.min(chosen.columns, props.columnsCap) : chosen.columns;
+    const rows = Math.ceil((chosen.columns * chosen.rows) / columns);
     return { columns, width: wide / columns, height: high / rows };
   };
   // Remounted when the shape or the space changes: the grid measures its rows once.

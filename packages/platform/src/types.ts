@@ -208,6 +208,11 @@ export interface PlayerAdapter {
   seek(seconds: number): void;
   /** Seconds; duration is 0 for live or unknown. */
   position(): { current: number; duration: number };
+  /**
+   * When the engine's clock last moved, in ms since the epoch, or undefined if it doesn't report
+   * one. A stream that stops without an error or a buffering event shows up here and nowhere else.
+   */
+  lastProgressAt?(): number | undefined;
   tracks(): PlayerTracks;
   selectAudio(id: string): void;
   selectText(id: string | null): void;

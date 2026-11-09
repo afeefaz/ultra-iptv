@@ -3,6 +3,7 @@ import { CANNOT_CONNECT, type Platform, type PlayerAdapter, type PlayerError, ty
 import { createSignal } from 'solid-js';
 import { resolutionLabel } from '../format';
 import { catalog } from './catalog';
+import { HEARTBEAT_EVERY_MS, isFrozen, WATCH_EVERY_MS } from './stallWatch';
 import { track } from './usage';
 import { ensureUnlocked, isChannelLocked } from './parental';
 import { autoPlayNext, bufferProfile, preferredAudio, preferredText, setPreferredAudio, setPreferredText, streamFormat } from './settings';
@@ -137,6 +138,38 @@ function readVideoSize(): void {
   }
 }
 
+let playingSince = 0;
+let lastHeartbeat = 0;
+
+/**
+ * Catches a stream that stops without telling anyone. The reconnect logic only reacts to an error or
+ * to buffering, and a provider that holds the connection open while sending nothing gives neither:
+ * the picture just freezes. The player's own clock gives it away.
+ */
+function watchProgress(): void {
+  if (!player || !isActive() || state() !== 'playing' || (typeof document !== 'undefined' && document.hidden)) {
+    playingSince = 0;
+    return;
+  }
+  const now = Date.now();
+  if (!playingSince) {
+    playingSince = now;
+    lastHeartbeat = now;
+  }
+  const at = player.lastProgressAt?.();
+  if (isFrozen(now, at, true, status()?.kind === 'reconnecting')) {
+    perf.count('player.frozen');
+    log.warn('player', 'frozen', { quietSeconds: Math.round((now - (at ?? now)) / 1000), afterMinutes: Math.round((now - playingSince) / 60_000) });
+    playingSince = 0;
+    scheduleReconnect();
+    return;
+  }
+  if (now - lastHeartbeat >= HEARTBEAT_EVERY_MS) {
+    lastHeartbeat = now;
+    log.info('player', 'heartbeat', { playingMinutes: Math.round((now - playingSince) / 60_000), quietSeconds: at ? Math.round((now - at) / 1000) : undefined });
+  }
+}
+
 export function initPlayback(p: Platform, layer: HTMLElement): void {
   if (player) {
     player.attach(layer); // the layer was re-created (hot reload in development)
@@ -150,6 +183,7 @@ export function initPlayback(p: Platform, layer: HTMLElement): void {
   player.on('tracks', onTracks);
   player.on('firstFrame', onFirstFrame);
   setInterval(readVideoSize, RESOLUTION_POLL_MS);
+  setInterval(watchProgress, WATCH_EVERY_MS);
   window.addEventListener('offline', () => {
     if (isActive()) setStatus({ kind: 'offline' });
     log.warn('player', 'network offline');

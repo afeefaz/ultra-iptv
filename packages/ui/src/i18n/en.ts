@@ -416,6 +416,8 @@ export const en = {
   'settings.theme.darkSub': 'Easy on the eyes in the evening',
   'settings.theme.light': 'Light',
   'settings.theme.lightSub': 'Bright background, dark text',
+  'settings.liveLayout.split': 'Split',
+  'settings.liveLayout.splitSub': 'A big category list, with the channels as boxes beside it',
   'settings.textSize': 'Text size',
   'settings.textSizeDesc': 'Scales the whole app with its text, so every screen keeps its layout.',
   'settings.usage': 'Memory readout',

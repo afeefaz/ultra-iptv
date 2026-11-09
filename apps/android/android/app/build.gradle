@@ -12,8 +12,8 @@ android {
         applicationId "com.ultraiptv.player"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 12
-        versionName "0.7.0"
+        versionCode 13
+        versionName "0.7.1"
         // Only for scripts/perf on a device that has the release build; never publish one of these.
         buildConfigField "boolean", "PERF_BUILD", project.hasProperty('perfBuild') ? "true" : "false"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

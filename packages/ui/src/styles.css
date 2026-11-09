@@ -732,6 +732,25 @@ h3 {
   flex-shrink: 0;
 }
 
+.pane-categories-big {
+  width: calc(32% + (var(--text-scale, 1) - 1) * 14%);
+}
+
+.pane-categories-big .vrow {
+  font-size: 1.45rem;
+}
+
+.pane-categories-big .list-count {
+  font-size: 1.4rem;
+}
+
+.pane-split {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .pane-channels {
   width: calc(30% + (var(--text-scale, 1) - 1) * 10%);
 }
@@ -3276,8 +3295,12 @@ h3 {
 
 /* Layout choices drawn as small pictures of the screen; the blocks take the card's text colour. */
 .layout-picks {
-  max-width: 56rem;
+  max-width: 44rem;
   margin-top: 0.8rem;
+}
+
+.layout-picks-three {
+  max-width: 60rem;
 }
 
 .option-cards > .btn.layout-pick {
@@ -3425,6 +3448,14 @@ h3 {
 .legend-none .icon {
   margin-right: 0.5rem;
   font-size: 1.3rem;
+}
+
+.sketch-rail-big {
+  width: 26%;
+}
+
+.sketch-line-tall {
+  height: 20%;
 }
 
 .sketch-posters {

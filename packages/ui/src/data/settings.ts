@@ -102,8 +102,11 @@ export const [liveGroupPicker, setLiveGroupPicker] = persisted<boolean>('live.gr
 /** The Recent category in Live TV. Home has its own Recently watched row. */
 export const [liveShowRecent, setLiveShowRecent] = persisted<boolean>('live.showRecent', false);
 
-/** Boxes (stored as `large`): categories, then channels, full screen and big, for reading from across the room. */
-export type LiveLayout = 'standard' | 'large';
+/**
+ * `large` is Boxes: categories, then channels, full screen and big, for reading from across the room.
+ * `split` is a big category list beside the channels as boxes, with no preview. Live only.
+ */
+export type LiveLayout = 'standard' | 'large' | 'split';
 export const [liveLayout, setLiveLayout] = persisted<LiveLayout>('live.layout', 'standard');
 /** The same two layouts for Movies and Series. */
 export const [moviesLayout, setMoviesLayout] = persisted<LiveLayout>('movies.layout', 'standard');

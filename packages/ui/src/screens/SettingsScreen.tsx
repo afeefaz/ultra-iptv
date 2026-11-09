@@ -230,7 +230,15 @@ function LayoutSketch(props: { layout: LiveLayout; kind: 'live' | 'vod' }): JSX.
   return (
     <span class="sketch" aria-hidden="true">
       <span class="sketch-inner">
-        <Show when={props.layout === 'standard'} fallback={<BoxesCells columns={props.kind === 'live' ? 3 : 4} rows={props.kind === 'live' ? 2 : 1} />}>
+        <Show when={props.layout === 'split'}>
+          <span class="sketch-col sketch-rail-big">
+            <For each={[1, 2, 3, 4]}>{() => <span class="sketch-line sketch-line-tall" />}</For>
+          </span>
+          <span class="sketch-col sketch-posters">
+            <BoxesCells columns={3} rows={2} />
+          </span>
+        </Show>
+        <Show when={props.layout === 'standard'} fallback={props.layout === 'large' ? <BoxesCells columns={props.kind === 'live' ? 3 : 4} rows={props.kind === 'live' ? 2 : 1} /> : undefined}>
           <span class="sketch-col sketch-rail">
             <For each={[1, 2, 3, 4, 5]}>{() => <span class="sketch-line" />}</For>
           </span>
@@ -262,6 +270,8 @@ function LayoutPicker(props: {
   title: MessageKey;
   desc?: MessageKey;
   kind: 'live' | 'vod';
+  /** Which layouts this library offers. */
+  options: LiveLayout[];
   value: LiveLayout;
   onPick: (layout: LiveLayout) => void;
 }): JSX.Element {
@@ -269,8 +279,8 @@ function LayoutPicker(props: {
     <>
       <div class="setting-name setting-gap">{t(props.title)}</div>
       <Show when={props.desc}>{(d) => <div class="setting-desc">{t(d())}</div>}</Show>
-      <div class="option-cards layout-picks" role="radiogroup" aria-label={t(props.title)}>
-        <For each={['standard', 'large'] as LiveLayout[]}>
+      <div class="option-cards layout-picks" classList={{ 'layout-picks-three': props.options.length > 2 }} role="radiogroup" aria-label={t(props.title)}>
+        <For each={props.options}>
           {(l) => (
             <FocusButton id={`settings-${props.title}-${l}`} class="layout-pick" selected={props.value === l} onSelect={() => props.onPick(l)}>
               <LayoutSketch layout={l} kind={props.kind} />
@@ -562,10 +572,10 @@ export function SettingsScreen(): JSX.Element {
                     )}
                   </For>
                 </div>
-                <LayoutPicker title="settings.liveLayout" desc="settings.liveLayoutDesc" kind="live" value={liveLayout()} onPick={setLiveLayout} />
-                <LayoutPicker title="settings.moviesLayout" kind="vod" value={moviesLayout()} onPick={setMoviesLayout} />
-                <LayoutPicker title="settings.seriesLayout" kind="vod" value={seriesLayout()} onPick={setSeriesLayout} />
-                <Show when={liveLayout() === 'large' || moviesLayout() === 'large' || seriesLayout() === 'large'}>
+                <LayoutPicker title="settings.liveLayout" desc="settings.liveLayoutDesc" kind="live" options={['standard', 'large', 'split']} value={liveLayout()} onPick={setLiveLayout} />
+                <LayoutPicker title="settings.moviesLayout" kind="vod" options={['standard', 'large']} value={moviesLayout()} onPick={setMoviesLayout} />
+                <LayoutPicker title="settings.seriesLayout" kind="vod" options={['standard', 'large']} value={seriesLayout()} onPick={setSeriesLayout} />
+                <Show when={liveLayout() !== 'standard' || moviesLayout() === 'large' || seriesLayout() === 'large'}>
                   <div class="setting-name setting-gap">{t('settings.largeCount')}</div>
                   <div class="setting-desc">{t('settings.largeCountDesc')}</div>
                   <div class="option-cards layout-picks" role="radiogroup" aria-label={t('settings.largeCount')}>

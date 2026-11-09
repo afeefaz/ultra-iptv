@@ -104,6 +104,8 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
   let channelList: VirtualListApi | undefined;
   /** Settings → Appearance → Live TV layout. */
   const large = () => liveLayout() === 'large';
+  /** Settings → Appearance → Live TV layout → Split: a big category list, and the channels as boxes beside it. */
+  const split = () => liveLayout() === 'split';
   // Always opens on the categories (from Home, on the channel it was asked for). The screen stays
   // alive under the player, so the step survives watching a channel.
   const [largeStep, setLargeStep] = createSignal<'categories' | 'items'>(props.focusKey ? 'items' : 'categories');
@@ -180,6 +182,10 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
 
   /** Puts the cursor on a channel of the open category, in whichever layout is showing. */
   const focusChannel = (index: number, delay = 0) => {
+    if (split()) {
+      setTimeout(() => largeView?.focus(index), delay);
+      return;
+    }
     if (!large()) {
       setTimeout(() => channelList?.focusIndex(index), delay);
       return;
@@ -311,6 +317,7 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
     const pid = playlistId();
     if (pid) lastCategory.set(pid, id);
     channelList?.scrollToIndex(0);
+    largeView?.top();
   }
 
   /** The full list of hidden categories. With a PIN set, it's the PIN that lets them back. */
@@ -330,7 +337,7 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
     if (c.locked && !(await ensureUnlocked())) return;
     chooseCategory(c.id);
     // Remote: move into the channels. Touch: stay put.
-    if (!focusManager.pointerMode) setTimeout(() => channelList?.focusIndex(0), 0);
+    if (!focusManager.pointerMode) focusChannel(0);
   };
 
   /** OK on a channel plays it in the preview; OK on the playing channel goes full screen. */
@@ -409,7 +416,7 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
 
   /** The category Blue and Green act on: the open one inside it, else the one the cursor is on. */
   const targetCategory = (): CategoryItem | null => {
-    const id = largeStep() === 'items' ? category() : focusedCategory()?.id;
+    const id = largeStep() === 'items' || split() ? category() : focusedCategory()?.id;
     const c = categoryItems().find((x) => x.id === id);
     return c && VIRTUAL.indexOf(c.id) < 0 ? c : null;
   };
@@ -424,14 +431,14 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
   const hideTarget = () => {
     const c = targetCategory();
     if (!c) return;
-    const inside = largeStep() === 'items';
+    const inside = largeStep() === 'items' && !split();
     const index = largeShown().findIndex((x) => x.id === c.id);
     hideCategory(c);
     if (inside) backToLargeCategories();
     else setTimeout(() => largeView?.focus(Math.max(0, Math.min(index, largeShown().length - 1))), 0);
   };
   const favouriteFocused = () => {
-    if (largeStep() === 'items') void toggleFavorite(focused());
+    if (largeStep() === 'items' || split()) void toggleFavorite(focused());
   };
   const legendKeys = (): LegendKey[] => {
     const keys: LegendKey[] = [
@@ -439,7 +446,7 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
       { id: 'llegend-green', color: 'green', label: t('legend.pin'), onPress: pinTarget },
       { id: 'llegend-hide', icon: 'eyeOff', label: t('legend.hide'), onPress: hideTarget },
     ];
-    if (largeStep() === 'items') keys.push({ id: 'llegend-yellow', color: 'yellow', label: t('legend.favourite'), onPress: favouriteFocused });
+    if (largeStep() === 'items' || split()) keys.push({ id: 'llegend-yellow', color: 'yellow', label: t('legend.favourite'), onPress: favouriteFocused });
     return keys;
   };
   const dialogOpen = () => !!document.querySelector('.dialog-backdrop');
@@ -596,7 +603,61 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
                 />
               </FocusZone>
             </Show>
-            <Show when={!large()}>
+            <Show when={split()}>
+              <div class="panes">
+                <FocusZone id="live-categories" remember>
+                  <CategoryRail
+                    big
+                    kind="live"
+                    id="lcat"
+                    label={t('tab.live')}
+                    fixed={fixedItems()}
+                    categories={realItems()}
+                    selected={category()}
+                    onFocusRow={(c) => setFocusedCategory(c)}
+                    onOpen={(c) => void openCategory(c)}
+                    onHide={(c) => hideCategory(categoryItems().find((x) => x.id === c.id) ?? null)}
+                  />
+                </FocusZone>
+                <FocusZone id="live-split" remember>
+                  <div class="pane pane-split">
+                    <LargeBrowse<ChannelRow>
+                      step="items"
+                      categoryId="lcatx"
+                      itemId="lch"
+                      label={t('tab.live')}
+                      categories={[]}
+                      current={category()}
+                      pinned={() => false}
+                      countLabel={() => ''}
+                      items={channels()}
+                      itemShape="box"
+                      columnsCap={3}
+                      renderItem={(c, size) => (
+                        <ChannelBox channel={c} size={size} guide={rowGuide()} favorite={favSet().has(c.key)} locked={rowLocked(c)} playing={playingChannel()?.key === c.key} />
+                      )}
+                      startIndex={0}
+                      empty={<p class="hint pane-empty">{emptyText()}</p>}
+                      tools={
+                        <LargeTools id="lch-search" query={channelQuery()} onQuery={setChannelQuery} label={t('search.inCategory', { name: categoryName(category()) })}>
+                          <PinButton id="lch-pin" kind="live" categoryId={category()} pinnable={VIRTUAL.indexOf(category()) < 0} />
+                        </LargeTools>
+                      }
+                      legend={<LargeLegend keys={legendKeys()} />}
+                      onOpenCategory={() => undefined}
+                      onFocusCategory={() => undefined}
+                      onSelectItem={(c) => void playLarge(c)}
+                      onFocusItem={(c) => {
+                        setFocused(c);
+                        lastChannelKey.set(c.playlistId, c.key);
+                      }}
+                      ref={(api) => (largeView = api)}
+                    />
+                  </div>
+                </FocusZone>
+              </div>
+            </Show>
+            <Show when={!large() && !split()}>
             <div class="panes">
               <FocusZone id="live-categories" remember>
                 <CategoryRail

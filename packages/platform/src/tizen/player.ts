@@ -52,6 +52,9 @@ export class AvPlayPlayer implements PlayerAdapter {
   private seq = 0;
   private opened = false;
   private playing = false;
+  /** AVPlay reports its play time every half second; when that last changed. */
+  private progressAt = 0;
+  private lastPlayMs = -1;
   private started = false;
   private live = false;
   private textTrack: string | null = null;
@@ -107,6 +110,8 @@ export class AvPlayPlayer implements PlayerAdapter {
     const mine = ++this.seq;
     this.close();
     this.live = source.live;
+    this.lastPlayMs = -1;
+    this.progressAt = Date.now();
     this.pos = { current: options.startAt ?? 0, duration: 0 };
     this.emit('state', 'loading');
     try {
@@ -121,6 +126,10 @@ export class AvPlayPlayer implements PlayerAdapter {
         },
         oncurrentplaytime: (ms) => {
           if (mine !== this.seq) return;
+          if (ms !== this.lastPlayMs) {
+            this.lastPlayMs = ms;
+            this.progressAt = Date.now();
+          }
           this.pos = { current: ms / 1000, duration: this.pos.duration };
           if (this.playing) this.markPlaying();
         },
@@ -165,6 +174,7 @@ export class AvPlayPlayer implements PlayerAdapter {
   play(): void {
     if (!this.opened) return;
     this.guard(() => this.av.play());
+    this.progressAt = Date.now();
     this.playing = true;
     this.emit('state', 'playing');
   }
@@ -191,6 +201,10 @@ export class AvPlayPlayer implements PlayerAdapter {
 
   position(): { current: number; duration: number } {
     return this.pos;
+  }
+
+  lastProgressAt(): number | undefined {
+    return this.opened ? this.progressAt : undefined;
   }
 
   tracks(): PlayerTracks {

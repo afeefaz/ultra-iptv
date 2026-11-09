@@ -418,6 +418,8 @@ export const ar: Record<MessageKey, string> = {
   'settings.theme.darkSub': 'مريح للعين في المساء',
   'settings.theme.light': 'فاتح',
   'settings.theme.lightSub': 'خلفية مضيئة ونص داكن',
+  'settings.liveLayout.split': 'مقسّم',
+  'settings.liveLayout.splitSub': 'قائمة فئات كبيرة، والقنوات في مربعات بجانبها',
   'settings.textSize': 'حجم النص',
   'settings.textSizeDesc': 'يغيّر حجم التطبيق كله مع النص، فتبقى كل الشاشات منظمة.',
   'settings.usage': 'عرض الذاكرة',

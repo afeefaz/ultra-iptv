@@ -35,6 +35,8 @@ export interface CategoryRailProps {
   selected: string;
   onFocusRow?: (item: RailItem) => void;
   onOpen: (item: RailItem) => void;
+  /** Taller rows and bigger text, for the Split layout. */
+  big?: boolean;
   /** Hide the category the cursor was on. Missing where hiding isn't offered. */
   onHide?: (item: RailItem) => void;
   ref?: (api: VirtualListApi) => void;
@@ -128,7 +130,7 @@ export function CategoryRail(props: CategoryRailProps): JSX.Element {
   });
 
   return (
-    <div class="pane pane-categories">
+    <div class="pane pane-categories" classList={{ 'pane-categories-big': !!props.big }}>
       <div class="pane-tools">
         <TextField id={`${props.id}-search`} compact label={t('search.categories')} value={query()} onChange={setQuery} />
         <Show when={groups().length}>
@@ -157,7 +159,7 @@ export function CategoryRail(props: CategoryRailProps): JSX.Element {
         id={props.id}
         label={props.label}
         items={items()}
-        rowHeight={3}
+        rowHeight={props.big ? 4.6 : 3}
         autofocusIndex={Math.max(0, items().findIndex((c) => c.id === props.selected))}
         ref={(api) => {
           list = api;
