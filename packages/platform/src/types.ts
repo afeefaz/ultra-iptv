@@ -97,6 +97,11 @@ export interface Platform {
    * database 80 MB). Missing where the database has room enough.
    */
   catalogFiles?: CatalogFiles;
+  /**
+   * Whether Fast (files) is the starting choice. Samsung needs it (its database is too small for big
+   * providers); on Android the database has room, so Classic stays the default and Fast is a choice.
+   */
+  catalogFilesByDefault?: boolean;
   /** Device and app memory, for the optional readout next to the playlist. */
   systemUsage?: () => Promise<SystemUsage>;
   /** Reads a URL natively without keeping the data (speed test). Others read it with `fetch`. */

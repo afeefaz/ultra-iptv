@@ -1,19 +1,19 @@
 {
-  "versionCode": 13,
-  "versionName": "0.7.1",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.7.1/UltraIPTV.apk",
-  "sha256": "b360164fc5ee5afb454972bbaa927c55f0a7aefc0625d242732a6f87c970eddf",
-  "size": 12475973,
+  "versionCode": 14,
+  "versionName": "0.8.0",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.8.0/UltraIPTV.apk",
+  "sha256": "d9842aaabb0d290d7d15403db41b38aee04088204a8d7b7e0a29203bc69e9bdb",
+  "size": 12496191,
   "notes": {
     "en": [
-      "New Split layout for Live TV: a big category list with the channels as boxes beside it. Settings → Appearance",
-      "On Samsung TVs, a channel that freezes without any error now reconnects by itself after about 20 seconds",
-      "Smaller layout choices in Settings"
+      "Fast loading: very large playlists now load on Samsung TVs, where they failed before (a 56,000-channel, 184,000-movie provider in under a minute).",
+      "Fast is the default on Samsung. On Android it is a choice in Settings → Playlists & devices → Loading, for weak boxes and very large playlists.",
+      "Categories open straight away, and only what is on screen is kept in memory."
     ],
     "ar": [
-      "تخطيط جديد مقسّم للبث المباشر: قائمة فئات كبيرة والقنوات في مربعات بجانبها. الإعدادات ← المظهر",
-      "على تلفازات Samsung، القناة التي تتجمّد دون أي خطأ تعيد الاتصال الآن تلقائيًا بعد نحو 20 ثانية",
-      "خيارات تخطيط أصغر في الإعدادات"
+      "التحميل السريع: القوائم الكبيرة جدًا تُحمَّل الآن على تلفزيونات سامسونج بعد أن كانت تفشل (مزوّد بـ 56 ألف قناة و184 ألف فيلم في أقل من دقيقة).",
+      "السريع هو الافتراضي على سامسونج. على أندرويد يمكن اختياره من الإعدادات ← القوائم والأجهزة ← التحميل، للأجهزة الضعيفة والقوائم الكبيرة جدًا.",
+      "تفتح الفئات فورًا، ولا يُحفظ في الذاكرة إلا ما يظهر على الشاشة."
     ]
   }
 }

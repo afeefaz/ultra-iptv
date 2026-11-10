@@ -44,10 +44,13 @@ const RELOAD_ALL_KEY = 'ultraiptv.playlists.reloadAll';
 export type StorageMode = 'classic' | 'fast';
 
 export function storageMode(): StorageMode {
+  // Samsung starts on Fast; Android, where the database has room, starts on Classic.
+  const fallback: StorageMode = platform && platform.catalogFilesByDefault === false ? 'classic' : 'fast';
   try {
-    return localStorage.getItem(STORAGE_KEY) === 'classic' ? 'classic' : 'fast';
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved === 'classic' || saved === 'fast' ? saved : fallback;
   } catch {
-    return 'fast';
+    return fallback;
   }
 }
 

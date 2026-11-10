@@ -3,7 +3,7 @@ import { CapacitorHttp } from '@capacitor/core';
 import type { DeviceInfo, Platform } from '../types';
 import { jsHeapUsed } from '../usage';
 import { webPlatform } from '../web';
-import { UltraPlayer, UltraUpdater } from './plugin';
+import { UltraFiles, UltraPlayer, UltraUpdater } from './plugin';
 import { NativePlayer } from './player';
 
 /**
@@ -32,6 +32,16 @@ export const androidPlatform: Platform = {
       };
     },
   },
+  // Fast loading keeps the catalogue in the app's own files (Settings → Playlists → Loading).
+  catalogFiles: {
+    write: (path, text) => UltraFiles.write({ path, text }),
+    append: (path, text, start) => UltraFiles.append({ path, text, start }),
+    readSlice: (path, offset, count) => UltraFiles.readSlice({ path, offset, count }).then((r) => (typeof r.text === 'string' ? r.text : null)),
+    read: (path) => UltraFiles.read({ path }).then((r) => (typeof r.text === 'string' ? r.text : null)),
+    removeDir: (path) => UltraFiles.removeDir({ path }),
+    freeBytes: () => UltraFiles.freeBytes().then((r) => r.bytes, () => undefined),
+  },
+  catalogFilesByDefault: false,
   fileExport: {
     async exportText(filename, mimeType, text) {
       await UltraPlayer.shareText({ filename, mimeType, text });

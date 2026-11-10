@@ -56,3 +56,15 @@ export interface UltraUpdaterPlugin {
 }
 
 export const UltraUpdater = registerPlugin<UltraUpdaterPlugin>('UltraUpdater');
+
+/** Native side: apps/android/android/app/src/main/java/com/ultraiptv/player/UltraFilesPlugin.java */
+export interface UltraFilesPlugin {
+  write(options: { path: string; text: string }): Promise<void>;
+  append(options: { path: string; text: string; start: boolean }): Promise<void>;
+  readSlice(options: { path: string; offset: number; count: number }): Promise<{ text?: string }>;
+  read(options: { path: string }): Promise<{ text?: string }>;
+  removeDir(options: { path: string }): Promise<void>;
+  freeBytes(): Promise<{ bytes: number }>;
+}
+
+export const UltraFiles = registerPlugin<UltraFilesPlugin>('UltraFiles');
