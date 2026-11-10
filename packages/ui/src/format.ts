@@ -54,6 +54,8 @@ export function errorText(e: unknown): string {
       return t('error.format');
     case 'secure-storage':
       return t('error.secure');
+    case 'storage':
+      return t('error.storage');
     case 'invalid-input':
       return info.message;
     default:

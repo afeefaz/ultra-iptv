@@ -1,9 +1,29 @@
-import { librarySnapshot, listCategories, listItems, log, perf, type CategoryRow, type ContentKind } from '@ultra/core';
+import {
+  categoriesOfKeys,
+  categoryRowsFromFiles,
+  librarySnapshot,
+  listCategories,
+  listItems,
+  log,
+  perf,
+  sectionFiles,
+  type CategoryRow,
+  type ContentKind,
+} from '@ultra/core';
 import { catalog } from './catalog';
 import { normalizeText } from './categories';
 import { versionOf } from './playlists';
 
 const MAX_SORTED = 8;
+/** A section stored in files keeps at most this many rows in memory; the oldest categories go first. */
+const MAX_RESIDENT_ROWS = 60_000;
+
+/** A section kept in files (Samsung): which categories are in memory, and how many items there are in all. */
+export interface FileSection {
+  items: number;
+  /** Category ids in memory, oldest first. */
+  loaded: string[];
+}
 
 /**
  * One section's catalogue, held in memory for the active playlist. Reading tens of thousands of
@@ -22,7 +42,14 @@ export class Library<R extends { key: string; name: string }> {
     readonly version: number,
     readonly cats: CategoryRow[],
     readonly rows: R[],
+    /** Set when the section is in files: then `rows` holds only the categories read so far. */
+    readonly files?: FileSection,
   ) {}
+
+  /** How many items the section has, whether or not they are in memory. */
+  total(): number {
+    return this.files ? this.files.items : this.rows.length;
+  }
 
   byKey(): Map<string, R> {
     if (!this.keyMap) this.keyMap = perf.timedSync('library.byKey', () => new Map(this.rows.map((r) => [r.key, r] as [string, R])));
@@ -63,6 +90,13 @@ export async function loadLibrary<R extends { key: string; name: string }>(playl
   if (held) return held;
   const version = versionOf(playlistId);
   const span = perf.span(`library.load.${kind}`);
+  const section = await sectionFiles(playlistId, kind);
+  if (section) {
+    // In files: only the category list now; each category is read when it's shown.
+    const library = new Library<R>(version, await listCategories(playlistId, kind), [], { items: section.items, loaded: [] });
+    span.end({ rows: 0, files: true });
+    return hold(playlistId, kind, library);
+  }
   const snapshot = await librarySnapshot(playlistId, kind);
   let cats: CategoryRow[];
   let rows: unknown[];
@@ -83,10 +117,65 @@ export async function loadLibrary<R extends { key: string; name: string }>(playl
       .catch((e) => log.warn('library', 'could not save the fast copy', { error: e }));
   }
   span.end({ rows: rows.length });
-  const library = new Library<R>(version, cats, rows as unknown as R[]);
+  return hold(playlistId, kind, new Library<R>(version, cats, rows as unknown as R[]));
+}
+
+function hold<R extends { key: string; name: string }>(playlistId: string, kind: ContentKind, library: Library<R>): Library<R> {
   // Only the active playlist stays in memory.
   if (heldPlaylist !== playlistId) libraries.clear();
   heldPlaylist = playlistId;
   libraries.set(kind, library as unknown as Library<never>);
   return library;
+}
+
+/**
+ * A section in files: the library with these categories read in, or undefined if they already
+ * were (or the section isn't in files). `ids` is everything on screen now: when memory is short,
+ * only categories outside it are let go, so what's shown is never dropped. The newest held copy is
+ * extended, so two calls at once both end up in it.
+ */
+export async function withCategories<R extends { key: string; name: string; categoryIds: string[] }>(
+  base: Library<R>,
+  playlistId: string,
+  kind: ContentKind,
+  ids: string[],
+): Promise<Library<R> | undefined> {
+  if (!base.files) return undefined;
+  const wanted = ids.filter((id, i) => ids.indexOf(id) === i && base.files!.loaded.indexOf(id) < 0);
+  if (!wanted.length) return undefined;
+  const added: R[] = [];
+  for (const id of wanted) {
+    const rows = await perf.timed(`library.categoryFile.${kind}`, () => categoryRowsFromFiles(playlistId, kind, id));
+    if (rows) for (const r of rows as unknown as R[]) added.push(r);
+  }
+  const current = cachedLibrary<R>(playlistId, kind) ?? base;
+  if (current.version !== base.version || !current.files) return undefined;
+  let loaded = current.files.loaded.filter((id) => wanted.indexOf(id) < 0).concat(wanted);
+  let rows = current.rows;
+  // Too many in memory: let go of what isn't on screen (it's read again when shown).
+  if (rows.length + added.length > MAX_RESIDENT_ROWS) {
+    const keep = new Set(ids);
+    loaded = loaded.filter((id) => keep.has(id));
+    rows = rows.filter((r) => r.categoryIds.some((c) => keep.has(c)));
+  }
+  const seen = new Set(rows.map((r) => r.key));
+  const merged = rows.concat(added.filter((r) => !seen.has(r.key) && (seen.add(r.key), true)));
+  const next = new Library<R>(current.version, current.cats, merged, { items: current.files.items, loaded });
+  next.favs = current.favs;
+  next.recent = current.recent;
+  return hold(playlistId, kind, next);
+}
+
+/** The same for some items' keys (favourites, recents, continue watching, search results). */
+export async function withKeys<R extends { key: string; name: string; categoryIds: string[] }>(
+  base: Library<R>,
+  playlistId: string,
+  kind: ContentKind,
+  keys: string[],
+): Promise<Library<R> | undefined> {
+  if (!base.files || !keys.length) return undefined;
+  const have = base.byKey();
+  const missing = keys.filter((k) => !have.has(k));
+  if (!missing.length) return undefined;
+  return withCategories(base, playlistId, kind, await categoriesOfKeys(playlistId, kind, missing));
 }

@@ -1,7 +1,10 @@
 import { toKey } from '../keymap';
 import type { DeviceInfo, Platform } from '../types';
 import { tizenGlobals } from './api';
+import { tizenCatalogFiles } from './files';
 import { AvPlayPlayer } from './player';
+
+let files: ReturnType<typeof tizenCatalogFiles> | null = null;
 
 // Everything the app reacts to besides the keys every remote sends without asking (arrows, OK, Back).
 const WANTED_KEYS = [
@@ -87,6 +90,11 @@ export const tizenPlatform: Platform = {
         );
       });
     },
+  },
+  // Looked up when first used: the TV's APIs are only there once the page has loaded.
+  get catalogFiles() {
+    if (files === null) files = tizenCatalogFiles();
+    return files;
   },
   async systemUsage() {
     const info = tizenGlobals().tizen?.systeminfo;

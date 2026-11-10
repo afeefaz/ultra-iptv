@@ -1,6 +1,6 @@
 import { toKey } from '../keymap';
 import { jsHeapUsed } from '../usage';
-import type { DeviceInfo, Key, Platform } from '../types';
+import type { CatalogFiles, DeviceInfo, Key, Platform } from '../types';
 import { WebPlayer } from './player';
 
 // Keys that keep their normal meaning while typing in a text field.
@@ -14,7 +14,36 @@ function isEditable(target: EventTarget | null): boolean {
 // `?tv=1` makes the browser behave like a TV (on-screen keyboard), for testing on the Mac.
 const tvMode = typeof location !== 'undefined' && /[?&]tv=1(&|$)/.test(location.search);
 
+// `?files=1` keeps the catalogue in (in-memory) files like a Samsung TV does, for testing on the Mac.
+const filesMode = typeof location !== 'undefined' && /[?&]files=1(&|$)/.test(location.search);
+
+function memoryCatalogFiles(): CatalogFiles {
+  const files = new Map<string, string>();
+  return {
+    write: async (path, text) => {
+      files.set(path, text);
+    },
+    read: async (path) => (files.has(path) ? (files.get(path) as string) : null),
+    append: async (path, text, start) => {
+      files.set(path, (start ? '' : (files.get(path) ?? '')) + text);
+    },
+    // Like the TV: a UTF-8 byte position, then a number of code points.
+    readSlice: async (path, byteOffset, count) => {
+      if (!files.has(path)) return null;
+      const bytes = new TextEncoder().encode(files.get(path) as string).subarray(byteOffset);
+      return Array.from(new TextDecoder().decode(bytes)).slice(0, count).join('');
+    },
+    removeDir: async (path) => {
+      files.forEach((_, key) => {
+        if (key === path || key.indexOf(`${path}/`) === 0) files.delete(key);
+      });
+    },
+    freeBytes: async () => undefined,
+  };
+}
+
 export const webPlatform: Platform = {
+  catalogFiles: filesMode ? memoryCatalogFiles() : undefined,
   id: 'web',
   textInput: tvMode ? 'osk' : 'native',
   isTv: () => tvMode,

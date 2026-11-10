@@ -2,6 +2,7 @@ import type { IDBPDatabase } from 'idb';
 import type { Built } from './build';
 import { categoryRange, playlistRange, type UltraDb } from './db';
 import { rematchFavorites, type Rematch } from './favorites';
+import { fileIndexKey } from './fileStore';
 import { categoryNamesKey, hiddenCategoriesKey, hiddenRuleKey, listHashKey, pinsKey, snapshotKey, type CategoryRow, type ContentKind, type KindRows } from './model';
 
 export interface WriteStats {
@@ -97,6 +98,7 @@ export async function deletePlaylistData(db: IDBPDatabase<UltraDb>, playlistId: 
     await tx.objectStore('settings').delete(categoryNamesKey(playlistId, kind));
     await tx.objectStore('settings').delete(listHashKey(playlistId, kind));
     await tx.objectStore('settings').delete(snapshotKey(playlistId, kind));
+    await tx.objectStore('settings').delete(fileIndexKey(playlistId, kind));
   }
   await tx.objectStore('epg').delete(playlistRange(playlistId));
   for (const type of ['category', 'channel'] as const) {

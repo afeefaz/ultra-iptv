@@ -18,6 +18,8 @@ export type ErrorCode =
   | 'invalid-input'
   | 'secure-storage'
   | 'not-found'
+  /** The device has no room left for the catalogue. */
+  | 'storage'
   | 'internal';
 
 export interface AccountInfo {

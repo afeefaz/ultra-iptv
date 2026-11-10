@@ -21,6 +21,15 @@ const COMBINING = /[̀-ͯ]/g;
 
 /** Lowercased, accent/diacritic-free, single-spaced text for keys and search. */
 export function normalizeText(text: string): string {
+  // Plain ASCII has no accents or Arabic marks: skip the expensive part (most names; ~290,000 of them in a big catalogue).
+  if (!NON_ASCII.test(text)) return text.toLowerCase().replace(/\s+/g, ' ').trim();
+  return normalizeSlowly(text);
+}
+
+const NON_ASCII = /[\u0080-\uffff]/;
+
+/** The full version, for any text. */
+export function normalizeSlowly(text: string): string {
   let s = text.toLowerCase();
   if (typeof s.normalize === 'function') s = s.normalize('NFD').replace(COMBINING, '');
   return s.replace(ARABIC_MARKS, '').replace(/\s+/g, ' ').trim();

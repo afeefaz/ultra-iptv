@@ -49,6 +49,7 @@ export interface TizenGlobals {
       getCapability(key: string): string;
       getTotalMemory(): number;
       getAvailableMemory(): number;
+      getPropertyValue?(property: 'STORAGE', ok: (s: { units: Array<{ type: string; capacity: number; availableCapacity: number }> }) => void, fail?: (e: unknown) => void): void;
     };
     filesystem?: {
       resolve(
@@ -57,12 +58,27 @@ export interface TizenGlobals {
         fail: (e: unknown) => void,
         mode: string,
       ): void;
+      /** Tizen 5.0+. Paths start with a virtual root such as `wgt-private`. */
+      openFile?(path: string, mode: 'r' | 'w' | 'a' | 'rw' | 'rwo'): TizenFileHandle;
+      /** Runs in the background: done when `ok` is called, not when it returns. */
+      createDirectory?(path: string, makeParents?: boolean, ok?: (path: string) => void, fail?: (e: { name: string; message: string }) => void): void;
+      /** Runs in the background, like `createDirectory`. */
+      deleteDirectory?(path: string, recursive?: boolean, ok?: (path: string) => void, fail?: (e: { name: string; message: string }) => void): void;
+      pathExists?(path: string): boolean;
     };
   };
   webapis?: {
     avplay?: AvPlay;
     productinfo?: { getRealModel(): string };
   };
+}
+
+export interface TizenFileHandle {
+  readString(count?: number, encoding?: string): string;
+  /** Bytes from the start. */
+  seek(offset: number, whence?: 'BEGIN' | 'CURRENT' | 'END'): number;
+  writeString(text: string, encoding?: string): number;
+  close(): void;
 }
 
 export const tizenGlobals = (): TizenGlobals => window as unknown as TizenGlobals;

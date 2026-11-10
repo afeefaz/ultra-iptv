@@ -36,7 +36,8 @@ import type {
 /** Methods the catalogue worker exposes. Every write to the catalogue goes through here. */
 export interface WorkerApi {
   /** `nativeHttp`: send network requests to the main thread (platform native HTTP) instead of `fetch`. */
-  init(args: { saltHex: string; keepHosts: string[]; logLevel: LogLevel; nativeHttp?: boolean }): Promise<void>;
+  /** `catalogFiles`: the page can keep the catalogue in files (Samsung), outside the small web database. */
+  init(args: { saltHex: string; keepHosts: string[]; logLevel: LogLevel; nativeHttp?: boolean; catalogFiles?: boolean; sectionWorkerUrl?: string; sectionWorkerModule?: boolean }): Promise<void>;
   setLogLevel(level: LogLevel): Promise<void>;
   testPlaylist(input: PlaylistInput): Promise<TestResult>;
   savePlaylist(input: PlaylistInput): Promise<PlaylistRecord>;
@@ -98,7 +99,19 @@ export type WorkerEvent =
   | { event: 'changed'; playlistId: string | null; kinds: ContentKind[] }
   | { event: 'progress'; progress: RefreshProgress }
   | { event: 'secrets'; secrets: string[]; hosts: string[] }
-  | { event: 'http'; reqId: number; url: string; headers?: Record<string, string>; timeoutMs: number };
+  | { event: 'http'; reqId: number; url: string; headers?: Record<string, string>; timeoutMs: number }
+  | { event: 'file'; reqId: number; op: FileOp; path: string; text?: string; start?: boolean; offset?: number; count?: number };
+
+/** What the worker asks the main thread to do with the app's own files (Samsung's file API is only there). */
+export type FileOp = 'write' | 'append' | 'read' | 'readSlice' | 'removeDir' | 'freeBytes';
+
+/** Main thread's answer to a `file` event. */
+export interface FileReplyMessage {
+  fileReply: number;
+  text?: string | null;
+  bytes?: number;
+  error?: string;
+}
 
 /** Main thread's answer to an `http` event. */
 export interface HttpReplyMessage {
@@ -109,5 +122,5 @@ export interface HttpReplyMessage {
   error?: string;
 }
 
-export type ToWorker = RequestMessage | HttpReplyMessage;
+export type ToWorker = RequestMessage | HttpReplyMessage | FileReplyMessage;
 export type FromWorker = ResponseMessage | WorkerEvent;

@@ -28,17 +28,50 @@ export interface Built<K extends ContentKind> {
 /** Stable keys: kind + normalised name + first group, with a suffix for exact duplicates (spec §6). */
 class KeyMaker {
   private seen = new Map<string, number>();
+  /** A few hundred category names, each normalised once instead of once per item in it. */
+  private groups = new Map<string, string>();
   constructor(private readonly kind: ContentKind) {}
   make(name: string, group: string): string {
-    const base = hash64(`${this.kind}|${normalizeText(name)}|${normalizeText(group)}`);
+    let g = this.groups.get(group);
+    if (g === undefined) {
+      g = normalizeText(group);
+      this.groups.set(group, g);
+    }
+    const base = hash64(`${this.kind}|${normalizeText(name)}|${g}`);
     const n = (this.seen.get(base) ?? 0) + 1;
     this.seen.set(base, n);
     return n === 1 ? base : `${base}~${n}`;
   }
 }
 
+let signing = true;
+
+/**
+ * Builds rows for files: no per-row signature and no database index keys. Both only serve the
+ * database (telling changed rows apart, finding a category's rows); a catalogue in files is
+ * rewritten whole and sliced by category, and each costs seconds on a TV for a big list.
+ */
+export function unsigned<T>(build: () => T): T {
+  signing = false;
+  try {
+    return build();
+  } finally {
+    signing = true;
+  }
+}
+
+const catKeysFor = (playlistId: string, ids: string[]) => (signing ? ids.map((c) => catKey(playlistId, c)) : []);
+
 function sign<T extends { sig: string }>(row: T): T {
   row.sig = '';
+  if (!signing) {
+    // Left out of the file (JSON skips undefined); the reader puts the playlist back.
+    const slim = row as unknown as { sig?: string; catKeys?: string[]; playlistId?: string };
+    slim.sig = undefined;
+    slim.catKeys = undefined;
+    slim.playlistId = undefined;
+    return row;
+  }
   row.sig = hash64(JSON.stringify(row));
   return row;
 }
@@ -101,7 +134,7 @@ export function buildXtreamLive(playlistId: string, cats: XtreamCategory[], stre
       name: s.name,
       logo: s.stream_icon || undefined,
       categoryIds,
-      catKeys: categoryIds.map((c) => catKey(playlistId, c)),
+      catKeys: catKeysFor(playlistId, categoryIds),
       added: timestamp(s.added),
       num: toNumber(s.num) ?? i + 1,
       tvgId: s.epg_channel_id || undefined,
@@ -125,7 +158,7 @@ export function buildXtreamVod(playlistId: string, cats: XtreamCategory[], strea
       name: s.name,
       logo: s.stream_icon || undefined,
       categoryIds,
-      catKeys: categoryIds.map((c) => catKey(playlistId, c)),
+      catKeys: catKeysFor(playlistId, categoryIds),
       added: timestamp(s.added),
       rating: toNumber(s.rating),
       year: toNumber(s.year),
@@ -148,7 +181,7 @@ export function buildXtreamSeries(playlistId: string, cats: XtreamCategory[], li
       name: s.name,
       logo: s.cover || undefined,
       categoryIds,
-      catKeys: categoryIds.map((c) => catKey(playlistId, c)),
+      catKeys: catKeysFor(playlistId, categoryIds),
       added: timestamp(s.last_modified),
       seriesId: String(s.series_id),
       rating: toNumber(s.rating),

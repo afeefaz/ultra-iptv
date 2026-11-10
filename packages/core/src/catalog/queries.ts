@@ -1,3 +1,5 @@
+import { catalogFiles } from './files';
+import { readCategoryFile, readFileIndex, readNames, rowByIdFromFiles, rowsByKeysFromFiles } from './fileStore';
 // Read-only queries used by the UI thread. All writes go through the worker (catalog/service.ts).
 import { perf } from '../perf/perf';
 import { openUltraDb, playlistRange } from './db';
@@ -60,6 +62,11 @@ export async function listItems<K extends ContentKind>(
 /** A few items by their stable keys, in that order, without reading the whole catalogue. */
 export async function itemsByKeys<K extends 'live' | 'vod'>(playlistId: string, kind: K, keys: string[]): Promise<KindRows[K][]> {
   const db = await openUltraDb();
+  const files = catalogFiles();
+  if (files) {
+    const fromFiles = await rowsByKeysFromFiles(db, files, playlistId, kind, keys);
+    if (fromFiles) return fromFiles;
+  }
   const span = perf.span(`db.itemsByKeys.${kind}`);
   const rows = await Promise.all(keys.map((key) => db.getFromIndex(kind as 'live', 'byKey', [playlistId, key])));
   span.end({ rows: rows.length });
@@ -92,7 +99,13 @@ export async function getProgress(playlistId: string, kind: ProgressKind, key: s
 }
 
 export async function getItem<K extends ContentKind>(playlistId: string, kind: K, id: string): Promise<KindRows[K] | undefined> {
-  return (await (await openUltraDb()).get(kind as 'live', [playlistId, id])) as unknown as KindRows[K] | undefined;
+  const db = await openUltraDb();
+  const files = catalogFiles();
+  if (files) {
+    const fromFiles = await rowByIdFromFiles(db, files, playlistId, kind, id);
+    if (fromFiles !== null) return fromFiles;
+  }
+  return (await db.get(kind as 'live', [playlistId, id])) as unknown as KindRows[K] | undefined;
 }
 
 /** Names given to categories in Settings, by category id. */
@@ -117,4 +130,54 @@ export async function hiddenCategories(playlistId: string, kind: ContentKind): P
 export async function categoryPins(playlistId: string, kind: ContentKind): Promise<string[]> {
   const v = await (await openUltraDb()).get('settings', pinsKey(playlistId, kind));
   return Array.isArray(v) ? (v as string[]) : [];
+}
+
+/** A section stored in files (Samsung): its index, or undefined when it's in the database. */
+export async function sectionFiles(playlistId: string, kind: ContentKind): Promise<{ items: number } | undefined> {
+  const files = catalogFiles();
+  if (!files) return undefined;
+  const index = await readFileIndex(await openUltraDb(), playlistId, kind);
+  return index ? { items: index.items } : undefined;
+}
+
+/** One category's rows from its file, or null if the section isn't in files. */
+export async function categoryRowsFromFiles<K extends ContentKind>(playlistId: string, kind: K, categoryId: string): Promise<KindRows[K][] | null> {
+  const files = catalogFiles();
+  if (!files) return null;
+  return readCategoryFile(await openUltraDb(), files, playlistId, kind, categoryId);
+}
+
+/** Keys → the categories they are in, for a section stored in files. */
+export async function categoriesOfKeys(playlistId: string, kind: ContentKind, keys: string[]): Promise<string[]> {
+  const files = catalogFiles();
+  if (!files) return [];
+  const lookup = await readNames(await openUltraDb(), files, playlistId, kind);
+  if (!lookup) return [];
+  const cats = new Set<string>();
+  for (const k of keys) {
+    const e = lookup.byKey.get(k);
+    if (e) cats.add(e[2]);
+  }
+  return Array.from(cats);
+}
+
+/** Every item's key, name and category in a section stored in files, for searching all of it. */
+export async function sectionNames(playlistId: string, kind: ContentKind): Promise<Array<[string, string, string, string]> | null> {
+  const files = catalogFiles();
+  if (!files) return null;
+  const lookup = await readNames(await openUltraDb(), files, playlistId, kind);
+  return lookup ? lookup.entries : null;
+}
+
+/**
+ * Forgets which lists were saved and where, so every playlist loads in full on its next refresh.
+ * For changing where the catalogue is kept (Settings → Playlists → Loading).
+ */
+export async function forgetSavedLists(): Promise<void> {
+  const db = await openUltraDb();
+  const tx = db.transaction('settings', 'readwrite');
+  for (const key of await tx.store.getAllKeys()) {
+    if (typeof key === 'string' && (key.indexOf('listhash|') === 0 || key.indexOf('catfiles|') === 0)) await tx.store.delete(key);
+  }
+  await tx.done;
 }

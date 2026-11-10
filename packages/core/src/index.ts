@@ -18,6 +18,11 @@ export {
   hiddenCategories,
   hiddenRule,
   categoryNames,
+  categoriesOfKeys,
+  categoryRowsFromFiles,
+  sectionFiles,
+  sectionNames,
+  forgetSavedLists,
 } from './catalog/queries';
 export { versionKey } from './catalog/details';
 export { nowNext, type NowNext } from './catalog/epg';
@@ -31,6 +36,7 @@ export type { ApplyResult, FetchResult, LinkResult, PushResult, SyncStatus } fro
 export { fillUrl } from './catalog/stream-creds';
 export { normalizeText } from './catalog/hash';
 export { AppError, setFallbackFetch, setFetch, toErrorInfo } from './net/http';
+export { catalogFiles, measure, memoryFiles, setCatalogFiles, setSectionWorkers, sliceLikeTv, type CatalogFileStore, type SectionWorkerLike } from './catalog/files';
 export { parseXtreamUrl } from './sources/xtream';
 export {
   fetchDownload,

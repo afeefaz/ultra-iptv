@@ -54,6 +54,24 @@ export interface DeviceInfo {
   osVersion?: string;
 }
 
+/** Text files under one folder of the app's own storage. Paths are relative, `/`-separated. */
+export interface CatalogFiles {
+  write(path: string, text: string): Promise<void>;
+  /** Adds to the end of a file; `start` empties it first. */
+  append(path: string, text: string, start: boolean): Promise<void>;
+  /**
+   * `count` characters (code points: an emoji is one) from `byteOffset` (UTF-8 bytes), or null
+   * when the file doesn't exist.
+   */
+  readSlice(path: string, byteOffset: number, count: number): Promise<string | null>;
+  /** Null when the file doesn't exist. */
+  read(path: string): Promise<string | null>;
+  /** Removes a folder and everything in it; nothing happens if it's missing. */
+  removeDir(path: string): Promise<void>;
+  /** Free space on the device, in bytes, when the platform can tell. */
+  freeBytes(): Promise<number | undefined>;
+}
+
 export interface Platform {
   id: PlatformId;
   keys: KeysAdapter;
@@ -74,6 +92,11 @@ export interface Platform {
    * requests are sent through it instead of the page's `fetch`.
    */
   http?: (request: HttpRequest) => Promise<HttpResponse>;
+  /**
+   * Files in the app's own folder, outside the browser's storage limit (a Samsung TV gives the web
+   * database 80 MB). Missing where the database has room enough.
+   */
+  catalogFiles?: CatalogFiles;
   /** Device and app memory, for the optional readout next to the playlist. */
   systemUsage?: () => Promise<SystemUsage>;
   /** Reads a URL natively without keeping the data (speed test). Others read it with `fetch`. */

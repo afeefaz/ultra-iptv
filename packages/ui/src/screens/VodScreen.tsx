@@ -19,6 +19,7 @@ import { TextField } from '../components/TextField';
 import { showToast } from '../data/toast';
 import { track } from '../data/usage';
 import { arrangeCategories, CATEGORY_SORTS, categorySort, makeMatcher, normalizeText, useHiddenCategories, usePins, withoutHidden } from '../data/categories';
+import { useFileSection } from '../data/fileSection';
 import { cachedLibrary, loadLibrary, type Library } from '../data/libraryCache';
 import { enterLibrary, rememberedSearch, rememberSearch } from '../data/libraryMemory';
 import { PickerDialog } from '../components/PickerDialog';
@@ -137,6 +138,24 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
     return out;
   });
 
+  // Samsung, catalogue in files: read in just what's shown.
+  useFileSection<Row>({
+    kind: props.kind,
+    playlistId,
+    library,
+    setLibrary,
+    categories: () => (VIRTUAL.indexOf(category()) < 0 ? [category()] : []),
+    keys: () => {
+      const keys = favKeys().slice();
+      progress().forEach((p) => {
+        const key = props.kind === 'vod' ? (p.kind === 'vod' ? p.key : null) : p.kind === 'episode' ? p.seriesKey : null;
+        if (key) keys.push(key);
+      });
+      return keys;
+    },
+    search: () => (category() === 'all' ? query() : ''),
+  });
+
   const hidden = () => !VIRTUAL.includes(category()) && isCategoryLocked(category()) && !unlocked();
 
   const inCategory = createMemo<Row[]>(() => {
@@ -167,7 +186,7 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
     return [
       { id: 'continue', name: t('vod.continue'), count: continueRows().length, locked: false, icon: 'history' as IconName },
       { id: 'fav', name: t('live.favorites'), count: favKeys().length, locked: false, icon: 'star' as IconName },
-      { id: 'all', name: props.kind === 'vod' ? t('vod.allMovies') : t('vod.allSeries'), count: all().length, locked: false, icon: 'grid' },
+      { id: 'all', name: props.kind === 'vod' ? t('vod.allMovies') : t('vod.allSeries'), count: library()?.files ? library()!.total() : all().length, locked: false, icon: 'grid' },
       // Only while something is hidden, so there's always a way back to it.
       ...(hiddenCats().length ? [{ id: 'hidden', name: t('hidden.entry'), count: hiddenCats().length, locked: false, icon: 'eyeOff' as IconName }] : []),
       ...cats()
@@ -192,7 +211,8 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
         lib.favs = favs;
         setLibrary(lib);
         setFavKeys(favs);
-        setCategory(lastCategory.get(memoryKey()) ?? 'all');
+        // In files (Samsung), "All" holds only what's been read: open on a category instead.
+        setCategory(lastCategory.get(memoryKey()) ?? (lib.files && lib.cats.length ? lib.cats[0].id : 'all'));
         setQuerySignal(rememberedSearch(searchKey()));
         setOpenIdSignal(detailMode() === 'inline' ? (lastOpenId.get(memoryKey()) ?? null) : null);
         const index = lastGridIndex.get(memoryKey());
@@ -412,7 +432,9 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
                             ? t('vod.emptyFav')
                             : category() === 'continue'
                               ? t('vod.emptyContinue')
-                              : t('vod.empty')}
+                              : category() === 'all' && library()?.files
+                                ? t('files.allHint', { count: formatNumber(library()!.total()) })
+                                : t('vod.empty')}
                     </p>
                   }
                   tools={
@@ -514,7 +536,9 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
                                   ? t('vod.emptyFav')
                                   : category() === 'continue'
                                     ? t('vod.emptyContinue')
-                                    : t('vod.empty')}
+                                    : category() === 'all' && library()?.files
+                                      ? t('files.allHint', { count: formatNumber(library()!.total()) })
+                                      : t('vod.empty')}
                           </p>
                         }
                         renderItem={(row) => (

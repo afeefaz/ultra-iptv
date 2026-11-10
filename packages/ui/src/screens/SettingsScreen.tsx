@@ -11,6 +11,7 @@ import { SpeedTestCard } from '../components/SpeedTestCard';
 import { ACCENT_COLORS, accentColor } from '../data/accent';
 import { CATEGORY_SORTS, useCategoryNames, useHiddenCategories } from '../data/categories';
 import { lockedCategories, lockedChannels, pinSet, requestPin } from '../data/parental';
+import { changeStorageMode, fastStorageAvailable, storageMode, type StorageMode } from '../data/catalog';
 import { activePlaylist } from '../data/playlists';
 import {
   accent,
@@ -855,6 +856,23 @@ export function SettingsScreen(): JSX.Element {
                     <span>{t('playlists.manage')}</span>
                   </FocusButton>
                 </div>
+                <Show when={fastStorageAvailable()}>
+                  <div class="setting-name setting-gap">{t('settings.storage')}</div>
+                  <div class="setting-desc">{t('settings.storageDesc')}</div>
+                  <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
+                    <For each={['fast', 'classic'] as StorageMode[]}>
+                      {(mode) => (
+                        <FocusButton id={`settings-storage-${mode}`} selected={storageMode() === mode} onSelect={() => void changeStorageMode(mode)}>
+                          <span class="option-card-text">
+                            <span class="option-card-title">{t(`settings.storage.${mode}`)}</span>
+                            <span class="option-card-sub">{t(`settings.storage.${mode}Sub`)}</span>
+                          </span>
+                          <Icon name={storageMode() === mode ? 'checkCircle' : 'radioOff'} />
+                        </FocusButton>
+                      )}
+                    </For>
+                  </div>
+                </Show>
               </Card>
             </Show>
 

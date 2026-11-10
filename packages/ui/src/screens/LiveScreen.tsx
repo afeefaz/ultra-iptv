@@ -21,6 +21,7 @@ import { guideOnEveryRow, liveLayout, liveShowRecent } from '../data/settings';
 import { showToast as showMessage } from '../data/toast';
 import { track } from '../data/usage';
 import { arrangeCategories, CATEGORY_SORTS, categorySort, makeMatcher, normalizeText, useCategoryNames, useHiddenCategories, usePins, withoutHidden } from '../data/categories';
+import { useFileSection } from '../data/fileSection';
 import { cachedLibrary, loadLibrary, type Library } from '../data/libraryCache';
 import { enterLibrary, rememberedSearch, rememberSearch } from '../data/libraryMemory';
 import { FocusButton } from '../components/FocusButton';
@@ -115,6 +116,17 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
   let pendingFocusKey = props.focusKey ?? playingChannel()?.key ?? lastChannelKey.get(activePlaylist()?.id ?? '');
   let loadSeq = 0;
 
+  // Samsung, catalogue in files: read in just what's shown.
+  useFileSection<ChannelRow>({
+    kind: 'live',
+    playlistId,
+    library,
+    setLibrary,
+    categories: () => (VIRTUAL.indexOf(category()) < 0 ? [category()] : []),
+    keys: () => favKeys().concat(recent()),
+    search: () => (category() === 'all' ? channelQuery() : ''),
+  });
+
   const favSet = createMemo(() => new Set(favKeys()));
   const fromKeys = (keys: string[]) => {
     const rows = library()?.byKey();
@@ -149,7 +161,7 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
     return [
       { id: 'fav', name: t('live.favorites'), count: favKeys().length, locked: false, icon: 'star' },
       ...(liveShowRecent() ? [{ id: 'recent', name: t('live.recent'), count: fromKeys(recent()).length, locked: false, icon: 'history' as IconName }] : []),
-      { id: 'all', name: t('live.all'), count: all().length, locked: false, icon: 'grid' },
+      { id: 'all', name: t('live.all'), count: library()?.files ? library()!.total() : all().length, locked: false, icon: 'grid' },
       // Only while something is hidden, so there's always a way back to it.
       ...(hidden().length ? [{ id: 'hidden', name: t('hidden.entry'), count: hidden().length, locked: false, icon: 'eyeOff' as IconName }] : []),
       ...cats()
@@ -258,8 +270,10 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
         setRecent(rec);
         const remembered = lastCategory.get(id);
         setChannelQuerySignal(rememberedSearch(searchKey(id)));
-        if (pendingFocusKey && !(remembered && channelsIn(remembered).some((ch) => ch.key === pendingFocusKey))) setCategory('all');
-        else setCategory(remembered && (remembered !== 'recent' || liveShowRecent()) ? remembered : favs.length ? 'fav' : 'all');
+        // In files (Samsung), "All" holds only what's been read: open on a list that has something in it.
+        const allOr = lib.files ? (pendingFocusKey && rec.indexOf(pendingFocusKey) >= 0 ? 'recent' : pendingFocusKey && favs.indexOf(pendingFocusKey) >= 0 ? 'fav' : (lib.cats[0]?.id ?? 'all')) : 'all';
+        if (pendingFocusKey && !(remembered && channelsIn(remembered).some((ch) => ch.key === pendingFocusKey))) setCategory(allOr);
+        else setCategory(remembered && (remembered !== 'recent' || liveShowRecent()) ? remembered : favs.length ? 'fav' : allOr);
         timer.end({ channels: lib.rows.length, categories: lib.cats.length }, 'debug');
       } catch (e) {
         log.error('live', 'could not load channels', { error: e });
@@ -515,7 +529,9 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
           ? t('live.emptyFav')
           : category() === 'recent'
             ? t('live.emptyRecent')
-            : t('live.empty');
+            : category() === 'all' && library()?.files
+              ? t('files.allHint', { count: formatNumber(library()!.total()) })
+              : t('live.empty');
   const focusedEpg = useNowNext(() => (isXtream() && focused()?.stream.t === 'x' ? focused()!.id : null), true);
   // Keep the lock maps reactive in row rendering.
   const rowLocked = (c: ChannelRow) => (lockedChannels(), lockedCategories(), isChannelLocked(c));

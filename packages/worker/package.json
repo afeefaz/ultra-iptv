@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/client.ts",
-    "./worker": "./src/worker.ts"
+    "./worker": "./src/worker.ts",
+    "./section": "./src/section.ts"
   },
   "dependencies": {
     "@ultra/core": "workspace:*"

@@ -17,11 +17,14 @@ export interface Rematch {
  * duplicate order changed) are re-attached by EPG id + name, then by a unique name (spec §6).
  */
 export function rematchFavorites(favorites: FavoriteRow[], items: MatchTarget[]): Rematch {
+  if (!favorites.length) return { moved: [], lost: [] };
   const keys = new Set<string>();
+  for (const item of items) keys.add(item.key);
+  // Usually every favourite is still there: then no names need comparing (seconds for a big list on a TV).
+  if (favorites.every((f) => keys.has(f.key))) return { moved: [], lost: [] };
   const byIdAndName = new Map<string, MatchTarget>();
   const byName = new Map<string, MatchTarget | null>();
   for (const item of items) {
-    keys.add(item.key);
     const name = normalizeText(item.name);
     if (item.tvgId) byIdAndName.set(item.tvgId.toLowerCase() + '|' + name, item);
     byName.set(name, byName.has(name) ? null : item); // null = ambiguous

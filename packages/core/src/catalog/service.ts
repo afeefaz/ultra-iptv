@@ -7,8 +7,25 @@ import { checkPin, hashPin, isValidPin, type PinHash } from '../secure/pin';
 import { SecretBox } from '../secure/secret-box';
 import { M3uParser, type M3uEntry } from '../sources/m3u';
 import { normalizeServer, parseXtreamUrl, XtreamApi, type XtreamCreds } from '../sources/xtream';
-import { buildM3u, buildXtreamLive, buildXtreamSeries, buildXtreamVod, type Built } from './build';
+import { buildM3u, buildXtreamLive, buildXtreamSeries, buildXtreamVod, unsigned, type Built } from './build';
 import { openUltraDb, playlistRange } from './db';
+import { catalogFiles, sectionWorkers, type SectionWorkerLike } from './files';
+import {
+  checkRoom,
+  commitSection,
+  fileIndexKey,
+  NAMES_FILE,
+  newSectionFolder,
+  pipeWriter,
+  readCategoryFile,
+  readFileIndex,
+  readNames,
+  removePlaylistFiles,
+  rowByIdFromFiles,
+  writeKindToFiles,
+  type EncodedSection,
+} from './fileStore';
+import type { SectionJob, SectionMessage, SectionReply } from './sectionJob';
 import { parseSeriesInfo, parseVodInfo, versionKey } from './details';
 import { RemoteAccess } from './remote';
 import { SyncAccess } from './sync';
@@ -279,6 +296,8 @@ export class PlaylistService {
 
   async remove(id: string): Promise<void> {
     await deletePlaylistData(await openUltraDb(), id);
+    const files = catalogFiles();
+    if (files) await removePlaylistFiles(files, id).catch((e) => log.warn('playlist', 'could not delete its files', { error: e }));
     this.searchCache.delete(id);
     this.versionIndexes.delete(id);
     log.info('playlist', 'deleted', { playlist: id });
@@ -415,6 +434,8 @@ export class PlaylistService {
 
   /** Writes the fast copy of a section if it's missing (first launch after an update). */
   async ensureSnapshot(playlistId: string, kind: ContentKind): Promise<void> {
+    // Stored in files: there is no database copy to make, and no room for one.
+    if (catalogFiles() || (await (await openUltraDb()).get('settings', fileIndexKey(playlistId, kind)))) return;
     if (!(await readSnapshot(await openUltraDb(), playlistId, kind))) await this.saveSnapshot(playlistId, kind);
   }
 
@@ -425,14 +446,13 @@ export class PlaylistService {
 
   /** Same title in other categories. The first call reads every movie, here off the main thread. */
   async vodVersions(playlistId: string, id: string): Promise<Array<{ row: VodRow; category: string }>> {
-    const db = await openUltraDb();
-    const row = await db.get('vod', [playlistId, id]);
+    const row = await this.vodRow(playlistId, id);
     if (!row) return [];
     const index = await this.versionIndexFor(playlistId);
     const ids = (index.get(versionKey(row.name)) ?? []).filter((other) => other !== id).slice(0, MAX_VERSIONS);
     if (!ids.length) return [];
     const names = await this.categoryNames(playlistId);
-    const rows = await Promise.all(ids.map((other) => db.get('vod', [playlistId, other])));
+    const rows = await Promise.all(ids.map((other) => this.vodRow(playlistId, other)));
     return rows
       .filter((r): r is VodRow => !!r)
       .map((r) => ({ row: r, category: r.categoryIds.map((c) => names.get(c) ?? '').join(' · ') }));
@@ -441,15 +461,28 @@ export class PlaylistService {
   /** Other movies from the same category: only that category is read. */
   async vodMore(playlistId: string, id: string): Promise<{ category: string; more: VodRow[] }> {
     const db = await openUltraDb();
-    const row = await db.get('vod', [playlistId, id]);
+    const row = await this.vodRow(playlistId, id);
     const categoryId = row?.categoryIds[0];
     if (!row || !categoryId) return { category: '', more: [] };
-    const rows = await db.getAllFromIndex('vod', 'byCat', catKey(playlistId, categoryId), MAX_MORE + MAX_VERSIONS);
+    const files = catalogFiles();
+    const fromFile = files ? await readCategoryFile(db, files, playlistId, 'vod', categoryId) : null;
+    const rows = fromFile ? fromFile.slice(0, MAX_MORE + MAX_VERSIONS) : await db.getAllFromIndex('vod', 'byCat', catKey(playlistId, categoryId), MAX_MORE + MAX_VERSIONS);
     const vk = versionKey(row.name);
     return {
       category: (await this.categoryNames(playlistId)).get(categoryId) ?? '',
       more: rows.filter((o) => o.key !== row.key && versionKey(o.name) !== vk).slice(0, MAX_MORE),
     };
+  }
+
+  /** A movie by id, from the database or, on a Samsung with the catalogue in files, from its file. */
+  private async vodRow(playlistId: string, id: string): Promise<VodRow | undefined> {
+    const db = await openUltraDb();
+    const files = catalogFiles();
+    if (files) {
+      const row = await rowByIdFromFiles(db, files, playlistId, 'vod', id);
+      if (row !== null) return row;
+    }
+    return db.get('vod', [playlistId, id]);
   }
 
   private async categoryNames(playlistId: string): Promise<Map<string, string>> {
@@ -461,6 +494,19 @@ export class PlaylistService {
     let index = this.versionIndexes.get(playlistId);
     if (!index) {
       index = perf.timed('worker.versionIndex', async () => {
+        const files = catalogFiles();
+        const lookup = files ? await readNames(await openUltraDb(), files, playlistId, 'vod') : null;
+        if (lookup) {
+          // In files: the names list is enough; no movie needs reading.
+          const byName = new Map<string, string[]>();
+          for (const e of lookup.entries) {
+            const vk = versionKey(e[1]);
+            const list = byName.get(vk);
+            if (list) list.push(e[3]);
+            else byName.set(vk, [e[3]]);
+          }
+          return byName;
+        }
         const rows = await (await openUltraDb()).getAll('vod', playlistRange(playlistId));
         const out = new Map<string, string[]>();
         for (const r of rows) {
@@ -541,7 +587,13 @@ export class PlaylistService {
     if (!record) throw new AppError({ code: 'not-found', message: 'Playlist not found' });
     const secret = await this.secret(playlistId);
     const range = IDBKeyRange.bound([playlistId, ''], [playlistId, '\uffff']);
-    const movies = await db.getAll('vod', range, SPEED_MOVIES);
+    let movies = await db.getAll('vod', range, SPEED_MOVIES);
+    const files = catalogFiles();
+    const index = files && !movies.length ? await readFileIndex(db, playlistId, 'vod') : undefined;
+    if (files && index) {
+      const first = Object.keys(index.files)[0];
+      movies = first ? ((await readCategoryFile(db, files, playlistId, 'vod', first)) ?? []).slice(0, SPEED_MOVIES) : [];
+    }
     const downloads: SpeedTargets['downloads'] = [];
     for (const movie of movies) {
       const ref: MediaRef = movie.stream.t === 'x' ? { t: 'movie', id: movie.stream.id, ext: movie.stream.ext } : { t: 'url', url: movie.stream.url };
@@ -683,17 +735,25 @@ export class PlaylistService {
     };
     try {
       const secret = await this.secret(id);
-      const write = async <K extends ContentKind>(kind: K, built: Built<K>) => {
-        const stats = await perf.timed(`refresh.write.${kind}`, () => writeKind(db, id, kind, built), { items: built.items.length });
-        await perf.timed(`refresh.snapshot.${kind}`, () => this.saveSnapshot(id, kind));
-        counts[kind] = built.items.length;
+      /** A section is saved: counts, hidden groups, caches, and telling the screens. */
+      const finish = async (kind: ContentKind, count: number, stats: WriteStats) => {
+        counts[kind] = count;
         await this.applyHiddenGroups(id, kind);
         this.searchCache.delete(id);
         if (kind === 'vod') this.versionIndexes.delete(id);
         done += W.save;
-        this.hooks.progress({ playlistId: id, done: Math.min(done, total), total, step: 'saved', kind, count: built.items.length, stats });
+        this.hooks.progress({ playlistId: id, done: Math.min(done, total), total, step: 'saved', kind, count, stats });
         this.hooks.changed(id, [kind]);
-        log.info('playlist', `${kind} saved`, { playlist: id, items: built.items.length, ...flatStats(stats) });
+        log.info('playlist', `${kind} saved`, { playlist: id, items: count, ...flatStats(stats) });
+      };
+      const write = async <K extends ContentKind>(kind: K, built: Built<K>) => {
+        // Samsung: the database is too small for a big catalogue, so it goes to files, one per category.
+        const files = catalogFiles();
+        const stats = files
+          ? await perf.timed(`refresh.files.${kind}`, () => writeKindToFiles(db, files, id, kind, built), { items: built.items.length })
+          : await perf.timed(`refresh.write.${kind}`, () => writeKind(db, id, kind, built), { items: built.items.length });
+        if (!files) await perf.timed(`refresh.snapshot.${kind}`, () => this.saveSnapshot(id, kind));
+        await finish(kind, built.items.length, stats);
       };
       const unchanged = (kind: ContentKind) => {
         void this.ensureSnapshot(id, kind);
@@ -701,7 +761,7 @@ export class PlaylistService {
         this.hooks.progress({ playlistId: id, done: Math.min(done, total), total, step: 'saved', kind, count: record.counts?.[kind] ?? 0 });
       };
       if (record.type === 'xtream') {
-        account = await this.refreshXtream(id, secret, record.userAgent, write, unchanged, partial, step);
+        account = await this.refreshXtream(id, secret, record.userAgent, write, finish, unchanged, partial, step);
       } else {
         await this.refreshM3u(id, secret, record.userAgent, write, step);
       }
@@ -732,6 +792,7 @@ export class PlaylistService {
     secret: PlaylistSecret,
     userAgent: string | undefined,
     write: <K extends ContentKind>(kind: K, built: Built<K>) => Promise<void>,
+    finish: (kind: ContentKind, count: number, stats: WriteStats) => Promise<void>,
     unchanged: (kind: ContentKind) => void,
     partial: ContentKind[],
     step: (weight: number) => void,
@@ -745,13 +806,35 @@ export class PlaylistService {
       p.catch(() => undefined);
       return p;
     };
+    // Catalogue in files (a TV with little memory): Live comes first and alone, and Movies and Series
+    // download while it is processed; they are then processed one at a time.
+    const inFiles = !!catalogFiles();
+    const after = (before: Promise<unknown>, weight: number, action: string) => {
+      const p = before.then(
+        () => fetched(weight, action),
+        () => fetched(weight, action),
+      );
+      p.catch(() => undefined);
+      return p;
+    };
     const login = limit(() => api.login()).then((v) => (step(W.small), v));
     const liveCats = fetched(W.small, 'get_live_categories');
-    const live = fetched(W.list, 'get_live_streams');
     const vodCats = fetched(W.small, 'get_vod_categories');
-    const vod = fetched(W.list, 'get_vod_streams');
     const seriesCats = fetched(W.small, 'get_series_categories');
-    const series = fetched(W.list, 'get_series');
+    // Each big list is handed over once and then forgotten here, so its text can be freed as
+    // soon as it's processed rather than when the whole refresh ends.
+    const lists: Partial<Record<ContentKind, Promise<string>>> = {};
+    lists.live = fetched(W.list, 'get_live_streams');
+    // With a second worker (TVs), Movies is downloaded and processed there, on another core.
+    const sections = inFiles ? sectionWorkers() : null;
+    if (!sections) lists.vod = inFiles ? after(lists.live, W.list, 'get_vod_streams') : fetched(W.list, 'get_vod_streams');
+    // Series starts with Movies: on its own it took longer to arrive than Movies takes to process.
+    lists.series = inFiles ? after(lists.live, W.list, 'get_series') : fetched(W.list, 'get_series');
+    const take = (kind: ContentKind): Promise<string> => {
+      const p = lists[kind] as Promise<string>;
+      delete lists[kind];
+      return p;
+    };
 
     /** A list identical to the last refresh skips parsing and saving, and keeps what's in memory. */
     const apply = async <K extends ContentKind>(
@@ -761,19 +844,32 @@ export class PlaylistService {
       build: (catsText: string, itemsText: string) => Built<K>,
     ) => {
       const [catsText, itemsText] = [await cats, await items];
-      const hash = perf.timedSync(`refresh.hash.${kind}`, () => `${LIST_HASH_VERSION}|${hash64(catsText)}|${hash64(itemsText)}`);
       const key = listHashKey(id, kind);
-      if ((await db.get('settings', key)) === hash) {
+      const previous = await db.get('settings', key);
+      const make = () => perf.timedSync(`refresh.build.${kind}`, () => (inFiles ? unsigned(() => build(catsText, itemsText)) : build(catsText, itemsText)));
+      // A first load into files has nothing to compare with: no seconds spent on the check.
+      if (inFiles && previous === undefined && !(await db.get('settings', fileIndexKey(id, kind)))) {
+        await write(kind, make());
+        return;
+      }
+      const hash = perf.timedSync(`refresh.hash.${kind}`, () => `${LIST_HASH_VERSION}|${hash64(catsText)}|${hash64(itemsText)}`);
+      if (previous === hash) {
         perf.count(`refresh.unchanged.${kind}`);
         unchanged(kind);
         return;
       }
-      await write(kind, perf.timedSync(`refresh.build.${kind}`, () => build(catsText, itemsText)));
+      await write(kind, make());
       await db.put('settings', hash, key);
     };
 
     const account = await login;
-    await apply('live', liveCats, live, (c, i) =>
+    // Started once Live's list has arrived (as the download would be here), with the category list
+    // already fetched: never more connections at once than without the second worker.
+    const remoteVod = sections
+      ? Promise.all([vodCats, lists.live.then(() => 0, () => 0)]).then(([catsText]) => this.remoteSection(id, 'vod', secret, userAgent, catsText, sections, finish, unchanged, step))
+      : null;
+    if (remoteVod) remoteVod.catch(() => undefined);
+    await apply('live', liveCats, take('live'), (c, i) =>
       buildXtreamLive(id, api.parseList('get_live_categories', c), api.parseList('get_live_streams', i)),
     );
     const rest = async (kind: ContentKind, run: () => Promise<void>) => {
@@ -784,19 +880,100 @@ export class PlaylistService {
         log.warn('playlist', `${kind} failed`, { playlist: id, error: toErrorInfo(e) });
       }
     };
-    await Promise.all([
+    const doVod = () =>
       rest('vod', () =>
-        apply('vod', vodCats, vod, (c, i) =>
-          buildXtreamVod(id, api.parseList('get_vod_categories', c), api.parseList('get_vod_streams', i)),
-        ),
-      ),
+        apply('vod', vodCats, take('vod'), (c, i) => buildXtreamVod(id, api.parseList('get_vod_categories', c), api.parseList('get_vod_streams', i))),
+      );
+    const doSeries = () =>
       rest('series', () =>
-        apply('series', seriesCats, series, (c, i) =>
-          buildXtreamSeries(id, api.parseList('get_series_categories', c), api.parseList('get_series', i)),
-        ),
-      ),
-    ]);
+        apply('series', seriesCats, take('series'), (c, i) => buildXtreamSeries(id, api.parseList('get_series_categories', c), api.parseList('get_series', i))),
+      );
+    if (remoteVod) {
+      // Movies in the section worker, Series here: two cores at once.
+      await Promise.all([rest('vod', () => remoteVod), doSeries()]);
+    } else if (inFiles) {
+      // One at a time: only one big list's rows in memory.
+      await doVod();
+      await doSeries();
+    } else {
+      await Promise.all([doVod(), doSeries()]);
+    }
     return account;
+  }
+
+  /** One section done by a section worker (see sectionJob.ts): it sends file text, this writes and commits it. */
+  private async remoteSection(
+    id: string,
+    kind: 'vod' | 'series',
+    secret: PlaylistSecret,
+    userAgent: string | undefined,
+    catsText: string,
+    start: () => SectionWorkerLike,
+    finish: (kind: ContentKind, count: number, stats: WriteStats) => Promise<void>,
+    unchanged: (kind: ContentKind) => void,
+    step: (weight: number) => void,
+  ): Promise<void> {
+    const db = await openUltraDb();
+    const files = catalogFiles();
+    if (!files) throw new AppError({ code: 'internal', message: 'No file storage' });
+    const key = listHashKey(id, kind);
+    const previousHash = (await db.get('settings', key)) as string | undefined;
+    const previous = await readFileIndex(db, id, kind);
+    const favorites = await db.getAllFromIndex('favorites', 'byPlaylistKind', [id, kind]);
+    const { gen, dir, data } = newSectionFolder(id, kind);
+    const writer = pipeWriter(files, data);
+    const span = perf.span(`refresh.files.${kind}`);
+    const worker = start();
+    try {
+      const result = await new Promise<{ encoded: EncodedSection; hash?: string; ms: Record<string, number> } | null>((resolve, reject) => {
+        worker.onmessage = (e) => {
+          const m = e.data as SectionMessage;
+          if (m.type === 'downloaded') step(W.list);
+          else if (m.type === 'estimate')
+            checkRoom(files, m.bytes).then(
+              () => worker.postMessage({ type: 'go' } as SectionReply),
+              (err: unknown) => worker.postMessage({ type: 'stop', error: toErrorInfo(err) } as SectionReply),
+            );
+          else if (m.type === 'batch') writer.send(m.text, m.start).then(() => worker.postMessage({ type: 'ack' } as SectionReply), reject);
+          else if (m.type === 'unchanged') resolve(null);
+          else if (m.type === 'done') resolve({ encoded: m.encoded, hash: m.hash, ms: m.ms });
+          else if (m.type === 'error') reject(new AppError(m.error));
+        };
+        worker.onerror = (ev) => reject(new AppError({ code: 'internal', message: `Section worker failed: ${ev.message || ''}` }));
+        const job: SectionJob = {
+          playlistId: id,
+          kind,
+          creds: { server: secret.server!, username: secret.username!, password: secret.password! },
+          headers: headersFor(userAgent),
+          catsText,
+          // The same rule as here: a first load into files has nothing to compare with.
+          previousHash: previousHash !== undefined || previous ? (previousHash ?? '') : undefined,
+          hashVersion: LIST_HASH_VERSION,
+          favorites,
+        };
+        worker.postMessage({ type: 'job', job } as SectionReply);
+      });
+      if (!result) {
+        perf.count(`refresh.unchanged.${kind}`);
+        unchanged(kind);
+        await files.removeDir(dir).catch(() => undefined);
+        return;
+      }
+      for (const name of Object.keys(result.ms)) perf.count(`section.${kind}.${name}Ms`, result.ms[name]);
+      await writer.done();
+      await perf.timed(`files.namesWrite.${kind}`, () => files.write(`${dir}/${NAMES_FILE}`, result.encoded.namesText));
+      const stats = await commitSection(db, files, id, kind, gen, result.encoded, previous);
+      if (result.hash) await db.put('settings', result.hash, key);
+      span.end({ items: result.encoded.items });
+      await finish(kind, result.encoded.items, stats);
+    } catch (e) {
+      span.end();
+      await writer.done().catch(() => undefined);
+      await files.removeDir(dir).catch(() => undefined);
+      throw e;
+    } finally {
+      worker.terminate();
+    }
   }
 
   private async refreshM3u(

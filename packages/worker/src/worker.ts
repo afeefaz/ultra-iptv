@@ -1,9 +1,9 @@
 /// <reference lib="webworker" />
 // Catalogue worker (spec §3): fetches and parses playlists, diffs and writes IndexedDB, searches.
 // Built as a classic (non-module) worker without polyfills: keep to Chrome 53 built-ins here.
-import { log, logging, perf, setFallbackFetch, toErrorInfo } from '@ultra/core';
+import { log, logging, perf, setCatalogFiles, setFallbackFetch, setSectionWorkers, toErrorInfo, type CatalogFileStore, type SectionWorkerLike } from '@ultra/core';
 import { PlaylistService } from '@ultra/core/service';
-import type { FromWorker, HttpReplyMessage, Method, ToWorker, WorkerApi } from './protocol';
+import type { FileOp, FileReplyMessage, FromWorker, HttpReplyMessage, Method, ToWorker, WorkerApi } from './protocol';
 
 declare const self: DedicatedWorkerGlobalScope;
 
@@ -38,11 +38,41 @@ function nativeFetch(url: string, init?: RequestInit): Promise<Response> {
   });
 }
 
+// The app's own files (Samsung): only the page has the TV's file API, so each call goes there.
+const fileWaiters = new Map<number, (r: FileReplyMessage) => void>();
+let nextFileId = 1;
+
+function fileCall(op: FileOp, path: string, text?: string, extra: { start?: boolean; offset?: number; count?: number } = {}): Promise<FileReplyMessage> {
+  return new Promise<FileReplyMessage>((resolve) => {
+    const reqId = nextFileId++;
+    fileWaiters.set(reqId, resolve);
+    post({ event: 'file', reqId, op, path, text, start: extra.start, offset: extra.offset, count: extra.count });
+  }).then((reply) => {
+    if (reply.error !== undefined) throw new Error(reply.error);
+    return reply;
+  });
+}
+
+const pageFiles: CatalogFileStore = {
+  write: (path, text) => fileCall('write', path, text).then(() => undefined),
+  read: (path) => fileCall('read', path).then((r) => (r.text === undefined ? null : r.text)),
+  append: (path, text, start) => fileCall('append', path, text, { start }).then(() => undefined),
+  readSlice: (path, offset, count) => fileCall('readSlice', path, undefined, { offset, count }).then((r) => (r.text === undefined ? null : r.text)),
+  removeDir: (path) => fileCall('removeDir', path).then(() => undefined),
+  freeBytes: () => fileCall('freeBytes', '').then((r) => r.bytes),
+};
+
 const api: WorkerApi = {
-  async init({ saltHex, keepHosts, logLevel, nativeHttp }) {
+  async init({ saltHex, keepHosts, logLevel, nativeHttp, catalogFiles, sectionWorkerUrl, sectionWorkerModule }) {
     logging.configureWorker(saltHex, keepHosts);
     log.setLevel(logLevel);
     if (nativeHttp) setFallbackFetch(nativeFetch);
+    setCatalogFiles(catalogFiles ? pageFiles : null);
+    // A second worker for the biggest section, on another core (TVs keep the catalogue in files).
+    // Older engines can't start a worker from a worker: then everything stays in this one.
+    // The page knows where the section worker's script is (the build names it); it says so in init.
+    const url = sectionWorkerUrl;
+    setSectionWorkers(catalogFiles && url && typeof Worker !== 'undefined' ? () => (sectionWorkerModule ? new Worker(url, { type: 'module' }) : new Worker(url)) as unknown as SectionWorkerLike : null);
     await service.init();
   },
   async setLogLevel(level) {
@@ -92,6 +122,13 @@ const api: WorkerApi = {
 };
 
 self.onmessage = (e: MessageEvent<ToWorker>) => {
+  if ('fileReply' in e.data) {
+    const reply = e.data;
+    const waiter = fileWaiters.get(reply.fileReply);
+    fileWaiters.delete(reply.fileReply);
+    if (waiter) waiter(reply);
+    return;
+  }
   if ('httpReply' in e.data) {
     const reply = e.data;
     const waiter = httpWaiters.get(reply.httpReply);

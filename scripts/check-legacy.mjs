@@ -77,7 +77,8 @@ const WORKER_BUILTINS = [
   [/\.replaceAll\(/, 'String#replaceAll (Chrome 85)'],
   [/\bstructuredClone\(/, 'structuredClone (Chrome 98)'],
 ];
-for (const f of js.filter((p) => /worker[^/]*\.js$/.test(p))) {
+// The catalogue worker and the section worker it starts: neither gets polyfills.
+for (const f of js.filter((p) => /(worker|section)[^/]*\.js$/.test(p))) {
   const code = readFileSync(f, 'utf8');
   for (const [re, what] of WORKER_BUILTINS) if (re.test(code)) problems.push(`${f}: worker uses ${what} (no polyfills in workers)`);
 }
