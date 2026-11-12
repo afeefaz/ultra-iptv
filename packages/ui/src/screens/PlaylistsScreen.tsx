@@ -8,7 +8,7 @@ import { catalog } from '../data/catalog';
 import { activePlaylist, playlists, refreshing, refreshPlaylist, reloadPlaylists, setActivePlaylist } from '../data/playlists';
 import { publishDeleted } from '../data/remoteAccess';
 import { FocusZone } from '../focus';
-import { countsText, errorText, statusText } from '../format';
+import { countsText, errorText, expiryText, statusText } from '../format';
 import { t } from '../i18n';
 import { navigate } from '../nav';
 
@@ -67,6 +67,13 @@ export function PlaylistsScreen(): JSX.Element {
                         {p.userHint ? ` · ${p.userHint}` : ''}
                       </div>
                       <div class="card-sub">{countsText(p)}</div>
+                      <Show when={expiryText(p)}>
+                        {(e) => (
+                          <div class="card-sub" classList={{ 'text-warn': e().level === 'soon', 'text-error': e().level === 'expired' }}>
+                            {e().text}
+                          </div>
+                        )}
+                      </Show>
                       <div class="card-sub" classList={{ 'text-error': !!p.lastError && !busy() }}>
                         {statusText(p, busy())}
                       </div>

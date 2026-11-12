@@ -10,6 +10,7 @@ let platform: Platform | null = null;
 /** Must run before the first `catalog()` call so the worker knows whether to use native HTTP. */
 export function setCatalogPlatform(p: Platform): void {
   platform = p;
+  rememberMode();
   // The page reads the catalogue's files itself (opening a category); the worker writes them.
   setCatalogFiles(filesWanted() ? (p.catalogFiles ?? null) : null);
 }
@@ -89,6 +90,41 @@ export async function changeStorageMode(mode: StorageMode): Promise<void> {
   }
   log.info('playlist', 'loading mode changed', { mode });
   location.reload();
+}
+
+/**
+ * A device that never chose takes this platform's default, and keeps it from then on, so a later
+ * change of default doesn't move it silently. A Mac on 0.9.0 ran Classic without choosing; Fast is
+ * its default now, so its playlists load again into files, as when Loading is changed by hand.
+ */
+function rememberMode(): void {
+  try {
+    if (localStorage.getItem(STORAGE_KEY) !== null) return;
+    const mode = storageMode();
+    localStorage.setItem(STORAGE_KEY, mode);
+    if (mode === 'fast' && platform?.catalogFilesByDefault === true) localStorage.setItem(DEFAULT_CHANGED_KEY, '1');
+  } catch {
+    // nothing to remember it in
+  }
+}
+
+const DEFAULT_CHANGED_KEY = 'ultraiptv.playlists.defaultFast';
+
+/**
+ * True once, on the first launch with Fast as the default: playlists saved in Classic before that
+ * are loaded again into files (an install that had none has nothing to do).
+ */
+export async function takeDefaultChange(): Promise<boolean> {
+  try {
+    if (localStorage.getItem(DEFAULT_CHANGED_KEY) !== '1') return false;
+    localStorage.removeItem(DEFAULT_CHANGED_KEY);
+  } catch {
+    return false;
+  }
+  if (!(await listPlaylists()).length) return false;
+  await forgetSavedLists();
+  log.info('playlist', 'loading mode is now the default', { mode: 'fast' });
+  return true;
 }
 
 /** True once after a mode change: every playlist should be loaded again. */

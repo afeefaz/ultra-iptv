@@ -11,7 +11,7 @@ import { recentVersion } from '../data/playback';
 import { activePlaylist, playlistsLoaded, refreshing, refreshPlaylist, versionOf } from '../data/playlists';
 import { guideOnEveryRow, homeShows } from '../data/settings';
 import { FocusZone } from '../focus';
-import { formatLeft, statusText } from '../format';
+import { expiryText, formatLeft, statusText } from '../format';
 import { formatNumber, t } from '../i18n';
 import { navigate, openRoot } from '../nav';
 
@@ -205,6 +205,14 @@ function WelcomeBackHero(): JSX.Element {
           <span>{t('home.libMoviesSub', { n: formatNumber(p()?.counts?.vod ?? 0) })}</span>
           <span>·</span>
           <span>{t('home.libSeriesSub', { n: formatNumber(p()?.counts?.series ?? 0) })}</span>
+          <Show when={p() && expiryText(p()!)}>
+            {(e) => (
+              <>
+                <span>·</span>
+                <span classList={{ 'text-warn': e().level === 'soon', 'text-error': e().level === 'expired' }}>{e().text}</span>
+              </>
+            )}
+          </Show>
         </div>
         <div class="button-row">
           <FocusButton id="home-live" class="btn-primary btn-lg" autofocus onSelect={() => openRoot({ name: 'live' })}>

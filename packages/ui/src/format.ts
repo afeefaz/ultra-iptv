@@ -72,6 +72,26 @@ export function countsText(p: PlaylistRecord): string {
   });
 }
 
+const DAY = 24 * 60 * 60 * 1000;
+/** From this close to the end, the date is shown as a warning. */
+const EXPIRY_WARN_DAYS = 14;
+
+/**
+ * When the provider subscription ends (Xtream accounts report it at login), for Home, Playlists
+ * and Settings. Null when it isn't known (M3U playlists, or not loaded yet).
+ */
+export function expiryText(p: PlaylistRecord, now = Date.now()): { text: string; level: 'ok' | 'soon' | 'expired' } | null {
+  const account = p.account;
+  if (!account) return null;
+  const end = account.expiresAt;
+  if (!end) return { text: t('expiry.none'), level: 'ok' };
+  const date = formatDate(end);
+  if (end <= now) return { text: t('expiry.expired', { date }), level: 'expired' };
+  const days = Math.ceil((end - now) / DAY);
+  if (days <= EXPIRY_WARN_DAYS) return { text: days === 1 ? t('expiry.tomorrow', { date }) : t('expiry.soon', { n: formatNumber(days), date }), level: 'soon' };
+  return { text: t('expiry.until', { date }), level: 'ok' };
+}
+
 export function statusText(p: PlaylistRecord, isRefreshing: boolean): string {
   if (isRefreshing) return t('status.refreshing');
   if (p.lastError) return t('status.failed', { message: errorText(p.lastError) });

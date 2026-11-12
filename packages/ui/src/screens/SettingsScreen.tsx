@@ -84,7 +84,7 @@ import {
   type SubtitleSize,
 } from '../data/settings';
 import { CONTENT_ZONE, focusManager, FocusZone } from '../focus';
-import { countsText } from '../format';
+import { countsText, expiryText } from '../format';
 import { formatNumber, locale, setLocale, t, type Locale, type MessageKey } from '../i18n';
 import { useKeys } from '../keys';
 import { navigate } from '../nav';
@@ -850,6 +850,13 @@ export function SettingsScreen(): JSX.Element {
                       <bdi>{activePlaylist()?.name ?? t('playlists.none')}</bdi>
                     </div>
                     <Show when={activePlaylist()}>{(p) => <div class="setting-desc">{countsText(p())}</div>}</Show>
+                    <Show when={activePlaylist() && expiryText(activePlaylist()!)}>
+                      {(e) => (
+                        <div class="setting-desc" classList={{ 'text-warn': e().level === 'soon', 'text-error': e().level === 'expired' }}>
+                          {e().text}
+                        </div>
+                      )}
+                    </Show>
                   </div>
                   <FocusButton id="settings-playlists" onSelect={() => navigate({ name: 'playlists' })}>
                     <Icon name="list" />

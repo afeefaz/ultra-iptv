@@ -1,19 +1,17 @@
 {
-  "versionCode": 9000,
-  "versionName": "0.9.0",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.0/UltraIPTV-mac.app.tar.gz",
-  "sha256": "08b12e2d9fcacaef6c160757c6b3dcdec09ad9404bb8f357a22684d2794ebad3",
-  "size": 16418989,
+  "versionCode": 9001,
+  "versionName": "0.9.1",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.1/UltraIPTV-mac.app.tar.gz",
+  "sha256": "3844ac045f903ee9a6a06c5c92e7e161d08eba9a621e133f6e1f5cdd6dbac5cb",
+  "size": 16419930,
   "notes": {
     "en": [
-      "The first Mac version of Ultra IPTV.",
-      "Plays MKV, HEVC and Dolby/DTS sound, with every audio and subtitle track.",
-      "Fast loading keeps very large playlists in files; choose it in Settings → Playlists & devices → Loading."
+      "See when your subscription ends: on Home, in Playlists, and in Settings → Playlists & devices.",
+      "Fast loading is now the default on the Mac: playlists load once more into files the first time after this update."
     ],
     "ar": [
-      "أول إصدار من Ultra IPTV للماك.",
-      "يشغّل MKV وHEVC وصوت Dolby وDTS، مع كل مسارات الصوت والترجمة.",
-      "التحميل السريع يحفظ القوائم الكبيرة جدًا في ملفات؛ اختره من الإعدادات ← القوائم والأجهزة ← التحميل."
+      "اعرف متى ينتهي اشتراكك: في الرئيسية وفي القوائم وفي الإعدادات ← القوائم والأجهزة.",
+      "التحميل السريع أصبح الافتراضي على الماك: تُحمَّل القوائم مرة أخرى في ملفات أول مرة بعد هذا التحديث."
     ]
   }
 }

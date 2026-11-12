@@ -1,6 +1,6 @@
 import { perf, listPlaylists, log, type ContentKind, type PlaylistRecord, type RefreshResult } from '@ultra/core';
 import { createSignal } from 'solid-js';
-import { catalog, onCatalogEvent, takeReloadAll } from './catalog';
+import { catalog, onCatalogEvent, takeDefaultChange, takeReloadAll } from './catalog';
 
 const ACTIVE_KEY = 'ultraiptv.activePlaylist';
 const REFRESH_AFTER_LAUNCH_MS = 15_000;
@@ -104,7 +104,7 @@ export function startPlaylists(): void {
   void reloadPlaylists().then(async () => {
     const active = activePlaylist();
     // Just switched between Classic and Fast: every playlist loads again, the one on screen first.
-    if (takeReloadAll()) {
+    if (takeReloadAll() || (await takeDefaultChange())) {
       const all = playlists();
       const order = active ? [active].concat(all.filter((p) => p.id !== active.id)) : all;
       for (const p of order) await refreshPlaylist(p.id);

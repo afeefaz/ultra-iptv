@@ -80,8 +80,8 @@ export async function createDesktopPlatform(): Promise<Platform> {
         }
       },
     },
-    // The database has plenty of room on a Mac: Classic until Fast is chosen in Settings.
-    catalogFilesByDefault: false,
+    // Fast from the start: faster loading and less memory for big playlists (Settings can change it).
+    catalogFilesByDefault: true,
     systemUsage: () => native.systemUsage(),
     async download(url, { seconds, onProgress, isCancelled }) {
       const result = await native.measureDownload(url, seconds, (p) => {

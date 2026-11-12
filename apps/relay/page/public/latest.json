@@ -1,19 +1,15 @@
 {
-  "versionCode": 15,
-  "versionName": "0.9.0",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.0/UltraIPTV.apk",
-  "sha256": "722492b4046a6182887001ed88a6b6994046c32e21b72d39ce0598f1dd19fc49",
-  "size": 12502620,
+  "versionCode": 16,
+  "versionName": "0.9.1",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.1/UltraIPTV.apk",
+  "sha256": "2b212af163536967572ddd4818215d6789144369a1719acf94b671b5801893d8",
+  "size": 12503324,
   "notes": {
     "en": [
-      "A Mac version (Apple Silicon): download UltraIPTV-mac.dmg from the release page. It plays everything the Android app does, including MKV and Dolby/DTS sound.",
-      "Clearer messages when a video can’t connect, or its format can’t be played.",
-      "Fast loading: Movies now load on very large providers when the provider can only be reached by the app itself."
+      "See when your subscription ends: on Home, in Playlists, and in Settings → Playlists & devices. It turns amber in the last two weeks and red once it has ended."
     ],
     "ar": [
-      "إصدار للماك (Apple Silicon): نزّل UltraIPTV-mac.dmg من صفحة الإصدار. يشغّل كل ما يشغّله تطبيق أندرويد، بما فيه MKV وصوت Dolby وDTS.",
-      "رسائل أوضح عندما يتعذّر الاتصال بالفيديو أو تشغيل صيغته.",
-      "التحميل السريع: تُحمَّل الأفلام الآن لدى المزوّدين الكبار جدًا عندما لا يمكن الوصول إلى المزوّد إلا من التطبيق نفسه."
+      "اعرف متى ينتهي اشتراكك: في الرئيسية وفي القوائم وفي الإعدادات ← القوائم والأجهزة. يصبح كهرمانيًا في آخر أسبوعين وأحمر بعد انتهائه."
     ]
   }
 }

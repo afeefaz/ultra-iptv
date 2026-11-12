@@ -264,6 +264,9 @@ h3 {
   margin: 0.25rem 0 1rem;
 }
 
+.text-warn {
+  color: var(--warn);
+}
 .text-error {
   color: var(--error);
 }

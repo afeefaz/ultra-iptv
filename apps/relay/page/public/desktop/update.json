@@ -1,11 +1,11 @@
 {
-  "version": "0.9.0",
-  "notes": "The first Mac version of Ultra IPTV.\nPlays MKV, HEVC and Dolby/DTS sound, with every audio and subtitle track.\nFast loading keeps very large playlists in files; choose it in Settings → Playlists & devices → Loading.",
-  "pub_date": "2026-11-12T15:18:15.724Z",
+  "version": "0.9.1",
+  "notes": "See when your subscription ends: on Home, in Playlists, and in Settings → Playlists & devices.\nFast loading is now the default on the Mac: playlists load once more into files the first time after this update.",
+  "pub_date": "2026-11-12T15:40:07.057Z",
   "platforms": {
     "darwin-aarch64": {
-      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.0/UltraIPTV-mac.app.tar.gz",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzRFRnAzdG9RVzRiUVpKUzlsMkEzQlhtZWFwY2s4ZEZVL2FaSkxzS0hXRXI4WHRGWmZKMnhWUGJuVDJLVDNhdTBQREEyZVA1d2w2aGZxMjJkeG1yV0FVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NDk2NjgyCWZpbGU6VWx0cmEgSVBUVi5hcHAudGFyLmd6CXZlcnNpb246MC45LjAKZGtQcE5hWGpRTHE4VXB4OWJaclpQeE9odXR2MU9XdzE4STVGL1VpOEJpekpDS05PNGxNZUdaUVNnSlRpQ0Jka2tXSTFYbEF4VmN4dDM1NE5laVM1QlE9PQo="
+      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.1/UltraIPTV-mac.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzF1WCtuLzZxazU3cGlvVmJUTEp5QlA3eEN6SUEwYUZGK0FFbDdGV29oeVdLMDR3dlhWMElKRHYxd2YzZTg4d05GMHU1NWdOOWlCdjd2S0VOT1hXMGdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NDk3OTk1CWZpbGU6VWx0cmEgSVBUVi5hcHAudGFyLmd6CXZlcnNpb246MC45LjEKcFFYYkRXS1FXRmI4U2YvcXlBem1Wck5QVkZhTVpEN040UllESlQwRHBwdFRlWnBtVHJMZU1RaEYyS1kxSzMxZDZ0Z1JYVTlycEdYUm5hTGRBbytHQmc9PQo="
     }
   }
 }
