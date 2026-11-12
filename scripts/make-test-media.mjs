@@ -1,5 +1,5 @@
 // Generates local test video for the dev mock provider (apps/web/dev/fixtures.ts). Needs ffmpeg.
-// Output: apps/web/dev/media/ (gitignored), about 40 MB. Run: node scripts/make-test-media.mjs [--force]
+// Output: apps/web/dev/media/ (gitignored), about 40 MB. Run: node scripts/make-test-media.mjs [--force] [--mkv]
 // Looks that are already complete are skipped unless --force is given.
 //
 //   <look>/video/seg000.ts …      HLS video rendition (640x360, 2 s segments, 5 min loop)
@@ -7,6 +7,8 @@
 //   <look>/muxed.ts               one MPEG-TS file (video + English audio) for the mpegts.js path
 //   <look>/movie.mp4              the same as a fast-start MP4, for movies/episodes (seekable)
 //   subs/eng|ara/seg000.vtt …     WebVTT subtitle segments aligned to the video timeline
+//   desktop/movie.mkv             with --mkv: 1080p HEVC 10-bit, AC-3 5.1 + E-AC-3 + DTS, SRT + ASS (30 s),
+//                                 served for .mkv movies; for players that can (the Mac app's mpv, Android)
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -36,6 +38,29 @@ const videoCodec = [
 const audioCodec = ['-c:a', 'aac', '-b:a', '64k', '-ac', '2'];
 
 const force = process.argv.includes('--force');
+
+// What browsers can't play and mpv / ExoPlayer can: one file with every awkward format.
+if (process.argv.includes('--mkv') && (force || !existsSync(join(OUT, 'desktop', 'movie.mkv')))) {
+  const dir = join(OUT, 'desktop');
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'en.srt'), '1\n00:00:01,000 --> 00:00:25,000\nEnglish SRT subtitle\n');
+  writeFileSync(
+    join(dir, 'ar.ass'),
+    '[Script Info]\nScriptType: v4.00+\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, Alignment\nStyle: Default,Arial,48,&H0000FFFF,2\n[Events]\nFormat: Layer, Start, End, Style, Text\nDialogue: 0,0:00:01.00,0:00:25.00,Default,ASS subtitle (yellow)\n',
+  );
+  console.log('desktop/movie.mkv');
+  ffmpeg([
+    '-f', 'lavfi', '-i', 'testsrc2=size=1920x1080:rate=25:duration=30',
+    '-f', 'lavfi', '-i', 'sine=frequency=440:duration=30', '-f', 'lavfi', '-i', 'sine=frequency=660:duration=30', '-f', 'lavfi', '-i', 'sine=frequency=880:duration=30',
+    '-i', join(dir, 'en.srt'), '-i', join(dir, 'ar.ass'),
+    '-map', '0:v', '-map', '1:a', '-map', '2:a', '-map', '3:a', '-map', '4', '-map', '5',
+    '-c:v', 'libx265', '-pix_fmt', 'yuv420p10le', '-preset', 'ultrafast', '-x265-params', 'log-level=error',
+    '-c:a:0', 'ac3', '-ac:a:0', '6', '-c:a:1', 'eac3', '-c:a:2', 'dca', '-strict', '-2', '-c:s:0', 'srt', '-c:s:1', 'ass',
+    '-metadata:s:a:0', 'language=eng', '-metadata:s:a:0', 'title=AC-3 5.1', '-metadata:s:a:1', 'language=ara', '-metadata:s:a:1', 'title=E-AC-3',
+    '-metadata:s:a:2', 'language=fra', '-metadata:s:a:2', 'title=DTS', '-metadata:s:s:0', 'language=eng', '-metadata:s:s:1', 'language=ara',
+    join(dir, 'movie.mkv'),
+  ]);
+}
 for (const [look, source] of Object.entries(LOOKS)) {
   const dir = join(OUT, look);
   if (!force && existsSync(join(dir, 'muxed.ts')) && existsSync(join(dir, 'video', 'index.m3u8'))) {

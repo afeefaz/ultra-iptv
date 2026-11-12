@@ -853,6 +853,27 @@ function PausedPill(): JSX.Element {
 
 /** "Open in another player": only where the platform supports it (Android). */
 function externalControl(platform: Platform): PlayerControl[] {
-  if (!platform.openExternal) return [];
-  return [{ label: () => t('player.external'), icon: () => 'forward', text: true, run: () => void openInExternalPlayer() }];
+  const own: PlayerControl[] = [];
+  if (platform.openExternal) own.push({ label: () => t('player.external'), icon: () => 'forward', text: true, run: () => void openInExternalPlayer() });
+  return own.concat(fullscreenControl(platform));
+}
+
+const [windowFull, setWindowFull] = createSignal(false);
+
+/** The app window filling the screen, where it's a window (the Mac). F11 does the same. */
+function fullscreenControl(platform: Platform): PlayerControl[] {
+  const win = platform.windowFullscreen;
+  if (!win) return [];
+  void win.get().then(setWindowFull, () => undefined);
+  return [
+    {
+      label: () => (windowFull() ? t('player.exitFullscreen') : t('player.fullscreen')),
+      icon: () => (windowFull() ? 'fullscreenExit' : 'fullscreen'),
+      run: () => {
+        const next = !windowFull();
+        setWindowFull(next);
+        void win.set(next);
+      },
+    },
+  ];
 }

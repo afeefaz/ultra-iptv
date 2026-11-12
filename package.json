@@ -1,6 +1,6 @@
 {
   "name": "ultra-iptv",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -23,6 +23,8 @@
     "relay:dev": "corepack pnpm --filter @ultra/relay dev",
     "relay:build": "vite build --config apps/relay/vite.config.ts",
     "relay:deploy": "vite build --config apps/relay/vite.config.ts && corepack pnpm --filter @ultra/relay run deploy",
+    "desktop": "node scripts/desktop.mjs",
+    "desktop:check": "cd apps/desktop/src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test",
     "perf": "node scripts/perf/run.mjs",
     "perf:report": "node scripts/perf/report.mjs"
   },

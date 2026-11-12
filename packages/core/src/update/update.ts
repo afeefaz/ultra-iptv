@@ -2,6 +2,8 @@ import { RELAY_URL } from '../pair/pair';
 
 /** A static file on our website, so checking costs nothing on the relay's free plan. */
 export const LATEST_URL = `${RELAY_URL}/latest.json`;
+/** The Mac app's: the same format, for its own downloads (the app replaces itself through Tauri's updater). */
+export const DESKTOP_LATEST_URL = `${RELAY_URL}/desktop/latest.json`;
 
 /** What scripts/release-manifest.mjs publishes with each release. */
 export interface LatestRelease {

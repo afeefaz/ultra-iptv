@@ -17,6 +17,8 @@ import i_dns from '@material-symbols/svg-400/outlined/dns.svg?raw';
 import i_down from '@material-symbols/svg-400/outlined/keyboard_arrow_down.svg?raw';
 import i_eyeOff from '@material-symbols/svg-400/outlined/visibility_off.svg?raw';
 import i_edit from '@material-symbols/svg-400/outlined/edit.svg?raw';
+import i_fullscreen from '@material-symbols/svg-400/outlined/fullscreen.svg?raw';
+import i_fullscreenExit from '@material-symbols/svg-400/outlined/fullscreen_exit.svg?raw';
 import i_forward from '@material-symbols/svg-400/outlined/arrow_forward.svg?raw';
 import i_grid from '@material-symbols/svg-400/outlined/grid_view.svg?raw';
 import i_history from '@material-symbols/svg-400/outlined/history.svg?raw';
@@ -76,6 +78,8 @@ const ICONS = {
   edit: i_edit,
   eyeOff: i_eyeOff,
   forward: i_forward,
+  fullscreen: i_fullscreen,
+  fullscreenExit: i_fullscreenExit,
   grid: i_grid,
   history: i_history,
   info: i_info,

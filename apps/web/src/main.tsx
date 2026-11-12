@@ -5,13 +5,18 @@ import { App, startLogging } from '@ultra/ui';
 import '@ultra/ui/styles.css';
 import { render } from 'solid-js/web';
 
+// The Mac app (Tauri) defines its bridge before any page script runs.
+const isDesktopApp = '__TAURI_INTERNALS__' in window;
+
 // Capacitor injects its bridge before the page loads, so this is known at start-up.
 const isAndroidApp = !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
 
 // The TV's web runtime defines `tizen` before any page script runs.
 const isTizenApp = 'tizen' in window;
 
-const platformReady: Promise<Platform> = isAndroidApp
+const platformReady: Promise<Platform> = isDesktopApp
+  ? import('@ultra/platform/desktop').then((m) => m.createDesktopPlatform())
+  : isAndroidApp
   ? import('@ultra/platform/android').then((m) => m.androidPlatform)
   : isTizenApp
     ? import('@ultra/platform/tizen').then((m) => m.tizenPlatform)

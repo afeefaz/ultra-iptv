@@ -33,3 +33,8 @@ research/
 .vscode/
 .DS_Store
 *.log
+
+# Desktop (Tauri) build output
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/
+apps/desktop/src-tauri/vendor/

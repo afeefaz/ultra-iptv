@@ -2,7 +2,7 @@ import { log, logging } from '../log';
 import { createLimiter } from '../net/limit';
 import { perf } from '../perf/perf';
 import type { SpeedTargets } from '../net/speed';
-import { AppError, getTextStream, toErrorInfo } from '../net/http';
+import { AppError, getTextStream, toErrorInfo, usesNativeHttp } from '../net/http';
 import { checkPin, hashPin, isValidPin, type PinHash } from '../secure/pin';
 import { SecretBox } from '../secure/secret-box';
 import { M3uParser, type M3uEntry } from '../sources/m3u';
@@ -923,6 +923,10 @@ export class PlaylistService {
     const { gen, dir, data } = newSectionFolder(id, kind);
     const writer = pipeWriter(files, data);
     const span = perf.span(`refresh.files.${kind}`);
+    // Only native HTTP reaches this provider (the Mac app): download here, process there.
+    const api = this.xtream(secret, userAgent);
+    const listAction = kind === 'vod' ? 'get_vod_streams' : 'get_series';
+    const itemsText = usesNativeHttp(api.url()) ? await api.rawList(listAction) : undefined;
     const worker = start();
     try {
       const result = await new Promise<{ encoded: EncodedSection; hash?: string; ms: Record<string, number> } | null>((resolve, reject) => {
@@ -941,6 +945,7 @@ export class PlaylistService {
         };
         worker.onerror = (ev) => reject(new AppError({ code: 'internal', message: `Section worker failed: ${ev.message || ''}` }));
         const job: SectionJob = {
+          itemsText,
           playlistId: id,
           kind,
           creds: { server: secret.server!, username: secret.username!, password: secret.password! },

@@ -1,6 +1,6 @@
 # Sideloading Ultra IPTV
 
-Distribution starts with sideloading; app stores come later. This page covers putting a build on a Samsung TV, an LG TV, and Android phones, TVs and Fire TV.
+Distribution starts with sideloading; app stores come later. This page covers putting a build on a Samsung TV, an LG TV, Android phones, TVs and Fire TV, and a Mac.
 
 > Status: the Android steps below were verified in phase 4 (Android TV and phone emulators). Samsung and LG steps are still the **planned** ones; steps marked **(verify)** get checked on real hardware in phases 5–6. App IDs come from `docs/spec.md` §12 (Android/webOS `com.ultraiptv.player`, Tizen `ULTRAIPTV1.UltraIPTV`); `<TV_IP>` is the TV's IP address.
 
@@ -152,3 +152,60 @@ runs apps signed with a certificate made for that TV, and that takes a Samsung a
    the package. It creates the certificate (sign in when asked), signs the package and installs it.
 
 Apps2Samsung keeps the TV's developer connection while it runs. Quit it before using `sdb`.
+
+## Mac (Apple Silicon, macOS 13+)
+
+The Mac app is the same app in a [Tauri](https://tauri.app) window (`apps/desktop`), with mpv for
+video (MKV, AC-3/E-AC-3/DTS, HEVC, every audio track) and native networking, so there are no
+browser limits. Intel Macs aren't supported.
+
+### Installing
+
+1. Open `UltraIPTV-mac.dmg` from the release and drag **Ultra IPTV** into **Applications**. Updates
+   from inside the app only work from there.
+2. The app isn't signed by Apple, so the first launch is blocked. On macOS 15 and newer: open it
+   once, then **System Settings → Privacy & Security → Open Anyway**. On macOS 13–14: Control-click
+   the app, choose **Open**, then **Open**. Or, in Terminal:
+   ```sh
+   xattr -dr com.apple.quarantine "/Applications/Ultra IPTV.app"
+   ```
+   Updates installed from inside the app don't ask again.
+
+### Building
+
+Needs Rust (`curl https://sh.rustup.rs | sh`) and Xcode's command line tools. The build downloads
+the bundled libmpv once (`scripts/desktop-libmpv.mjs`, a pinned LGPL build: see THIRD_PARTY_NOTICES.md).
+
+```sh
+pnpm desktop                 # apps/desktop/src-tauri/target/release/bundle/macos/Ultra IPTV.app
+pnpm desktop -- --debug      # with Safari's Web Inspector and the test hook (docs/debugging.md)
+pnpm desktop:check           # cargo fmt, clippy and tests for the Rust side
+```
+
+During development, run the dev server on port 5181 and `node scripts/desktop.mjs --dev`. The mock
+provider's `.mkv` movies play a real HEVC/AC-3/E-AC-3/DTS file after
+`node scripts/make-test-media.mjs --mkv`.
+
+### Releasing the Mac app
+
+Updates are signed with the updater key in `~/.ultra-iptv/desktop-updater.key` (its password is in
+`desktop-updater.password` next to it; the public half is in `tauri.conf.json`). Neither goes in
+git. **Back them up:** the app only installs updates signed with this key, so losing it means every
+Mac has to install the next version by hand.
+
+The version comes from the root `package.json` (all of them move together). Then:
+
+```sh
+pnpm desktop -- --release   # .app, .dmg, and the signed update (Ultra IPTV.app.tar.gz + .sig)
+node scripts/release-manifest.mjs --desktop notes.json
+cp "apps/desktop/src-tauri/target/release/bundle/dmg/Ultra IPTV_<version>_aarch64.dmg" UltraIPTV-mac.dmg
+cp "apps/desktop/src-tauri/target/release/bundle/macos/Ultra IPTV.app.tar.gz" UltraIPTV-mac.app.tar.gz
+gh release upload v<version> UltraIPTV-mac.dmg UltraIPTV-mac.app.tar.gz --repo afeefaz/ultra-iptv
+pnpm relay:deploy           # only now does the app offer it
+```
+
+The manifest step writes `apps/relay/page/public/desktop/latest.json` (our format: the app checks
+it when Check for updates is pressed) and `desktop/update.json` (Tauri's: the install reads it).
+Commit both. Pressing Update downloads the archive from our GitHub release (nothing else is
+accepted), checks its signature, replaces the app and restarts it. An app run from the disk image
+or Downloads says to move it to Applications first.

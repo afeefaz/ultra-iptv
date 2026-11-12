@@ -3,7 +3,7 @@ import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
-  { ignores: ['**/node_modules/**', '**/dist/**', '**/dist-legacy/**', '**/dist-tizen/**', '**/.wrangler/**', 'apps/*/dev/media/**', 'apps/android/android/**'] },
+  { ignores: ['**/node_modules/**', '**/dist/**', '**/dist-legacy/**', '**/dist-tizen/**', '**/.wrangler/**', 'apps/*/dev/media/**', 'apps/android/android/**', 'apps/desktop/src-tauri/target/**', 'apps/desktop/src-tauri/gen/**'] },
   js.configs.recommended,
   tseslint.configs.recommended,
   {

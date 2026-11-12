@@ -1,0 +1,80 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Ultra IPTV",
+  "version": "../package.json",
+  "identifier": "com.ultraiptv.desktop",
+  "build": {
+    "frontendDist": "../../web/dist",
+    "devUrl": "http://localhost:5181"
+  },
+  "app": {
+    "macOSPrivateApi": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Ultra IPTV",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1024,
+        "minHeight": 600,
+        "transparent": true,
+        "zoomHotkeysEnabled": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "app",
+      "dmg"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.png"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "13.0",
+      "signingIdentity": "-",
+      "hardenedRuntime": false,
+      "frameworks": [
+        "vendor/libmpv/lib/libass.dylib",
+        "vendor/libmpv/lib/libavcodec.dylib",
+        "vendor/libmpv/lib/libavfilter.dylib",
+        "vendor/libmpv/lib/libavformat.dylib",
+        "vendor/libmpv/lib/libavutil.dylib",
+        "vendor/libmpv/lib/libdav1d.dylib",
+        "vendor/libmpv/lib/libfreetype.dylib",
+        "vendor/libmpv/lib/libfribidi.dylib",
+        "vendor/libmpv/lib/libharfbuzz.dylib",
+        "vendor/libmpv/lib/libmbedcrypto.dylib",
+        "vendor/libmpv/lib/libmbedtls.dylib",
+        "vendor/libmpv/lib/libmbedx509.dylib",
+        "vendor/libmpv/lib/libmpv.dylib",
+        "vendor/libmpv/lib/libpng16.dylib",
+        "vendor/libmpv/lib/libswresample.dylib",
+        "vendor/libmpv/lib/libswscale.dylib",
+        "vendor/libmpv/lib/libuchardet.dylib",
+        "vendor/libmpv/lib/libxml2.dylib"
+      ]
+    },
+    "createUpdaterArtifacts": true,
+    "resources": {
+      "../licenses/": "licenses/"
+    },
+    "copyright": "MIT License. Includes LGPL libraries: see Contents/Resources/licenses."
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVCRUEyMzBGRTZFOTA1QjYKUldTMkJlbm1EeVBxVzZjZCtpZlg0cXE4QlhRMU03bU82SU1QRXZ1YjJwZUVvVTlyZm4zaUlSaUoK",
+      "endpoints": [
+        "https://ultra-iptv-relay.afeef-az11.workers.dev/desktop/update.json"
+      ]
+    }
+  }
+}

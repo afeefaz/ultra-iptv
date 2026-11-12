@@ -42,7 +42,7 @@ export interface FileExportAdapter {
   exportText(filename: string, mimeType: string, text: string): Promise<void>;
 }
 
-export type PlatformId = 'web' | 'tizen' | 'webos' | 'android';
+export type PlatformId = 'web' | 'tizen' | 'webos' | 'android' | 'macos';
 
 export interface DeviceInfo {
   platform: PlatformId;
@@ -110,6 +110,14 @@ export interface Platform {
   openExternal?: (url: string, title: string) => Promise<void>;
   /** Installs a new version from inside the app. Missing where a platform can't (Samsung, web). */
   updater?: AppUpdater;
+  /** The app window filling the whole screen (desktop). Missing where the app is always full screen. */
+  windowFullscreen?: { get(): Promise<boolean>; set(on: boolean): Promise<void> };
+  /**
+   * The bytes of the key that encrypts saved logins, where the platform keeps it itself (the Mac
+   * app: a private file, because WebKit would put a stored CryptoKey's key in the login keychain
+   * and ask for its password after every update). Missing: the key lives in IndexedDB.
+   */
+  secretKey?: () => Promise<Uint8Array>;
   /** Called at exit from the root screen (Back on Home); platforms without an exit ignore it. */
   exit?: () => void;
 }
@@ -117,11 +125,16 @@ export interface Platform {
 export type UpdateProblem = 'network' | 'corrupt' | 'storage' | 'refused' | 'install';
 
 export interface AppUpdater {
-  info(): Promise<{ versionCode: number; canInstall: boolean }>;
+  /** Our website's release file for this platform; Android's when missing. */
+  latestUrl?: string;
+  /** The app replaces itself and restarts (the Mac); Android closes and is opened again. */
+  relaunches?: boolean;
+  /** `blocker` says why it can't: `location` when it runs from somewhere it can't replace itself. */
+  info(): Promise<{ versionCode: number; canInstall: boolean; blocker?: 'location' }>;
   /** False if this device has no screen for it. */
   openInstallPermission(): Promise<boolean>;
   install(
-    update: { url: string; sha256: string },
+    update: { url: string; sha256: string; versionName: string },
     events: {
       onProgress: (percent: number) => void;
       /** The system has it. The app closes when it's done, or the system asks to confirm first. */

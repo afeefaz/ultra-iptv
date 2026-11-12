@@ -12,6 +12,20 @@ this repository, and the decoder's version is set in `apps/android/android/varia
 
 The Samsung and web versions don't include this library.
 
+## Mac app: LGPL libraries
+
+The Mac app plays video with **libmpv 0.36.0** (LGPL-2.1-or-later) and **FFmpeg 6.0**
+(LGPL-3.0-or-later), from media-kit's prebuilt
+[libmpv-darwin-build v0.7.3](https://github.com/media-kit/libmpv-darwin-build) ("full" decoders, no
+GPL parts). They ship as separate, dynamically linked libraries in `Contents/Frameworks`, so the
+app stays MIT and the libraries can be replaced. The app carries their licence texts and a list of
+every bundled library and its licence in `Contents/Resources/licenses`
+(`apps/desktop/licenses/NOTICE.txt`). The build pins the archive's SHA-256 in
+`scripts/desktop-libmpv.mjs`.
+
+The window is [Tauri](https://tauri.app) (MIT or Apache-2.0), with Rust crates under MIT or
+Apache-2.0.
+
 ## Other libraries
 
 | License | Libraries |

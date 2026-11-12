@@ -1,0 +1,19 @@
+{
+  "versionCode": 9000,
+  "versionName": "0.9.0",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.0/UltraIPTV-mac.app.tar.gz",
+  "sha256": "08b12e2d9fcacaef6c160757c6b3dcdec09ad9404bb8f357a22684d2794ebad3",
+  "size": 16418989,
+  "notes": {
+    "en": [
+      "The first Mac version of Ultra IPTV.",
+      "Plays MKV, HEVC and Dolby/DTS sound, with every audio and subtitle track.",
+      "Fast loading keeps very large playlists in files; choose it in Settings → Playlists & devices → Loading."
+    ],
+    "ar": [
+      "أول إصدار من Ultra IPTV للماك.",
+      "يشغّل MKV وHEVC وصوت Dolby وDTS، مع كل مسارات الصوت والترجمة.",
+      "التحميل السريع يحفظ القوائم الكبيرة جدًا في ملفات؛ اختره من الإعدادات ← القوائم والأجهزة ← التحميل."
+    ]
+  }
+}

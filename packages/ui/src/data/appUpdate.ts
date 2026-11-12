@@ -11,7 +11,9 @@ export async function checkForUpdate(platform: Platform): Promise<CheckResult> {
   const { updater, http } = platform;
   try {
     return await perf.timed('update.check', async () => {
-      const [info, response] = await Promise.all([updater.info(), http({ url: LATEST_URL, headers: {}, timeoutMs: 15_000 })]);
+      const [info, response] = await Promise.all([updater.info(), http({ url: updater.latestUrl ?? LATEST_URL, headers: {}, timeoutMs: 15_000 })]);
+      // No release file for this platform yet (the Mac before its first release): nothing newer.
+      if (response.status === 404) return { kind: 'current' as const };
       const latest = response.status === 200 ? parseLatest(response.body) : null;
       if (!latest) return { kind: 'offline' as const };
       return latest.versionCode > info.versionCode ? { kind: 'available' as const, latest } : { kind: 'current' as const };

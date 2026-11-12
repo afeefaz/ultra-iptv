@@ -15,6 +15,11 @@ export interface SectionJob {
   headers?: Record<string, string>;
   /** The category list, already downloaded by the catalogue worker: one connection less. */
   catsText: string;
+  /**
+   * The big list itself, when only native HTTP reaches the provider (the Mac): a section worker
+   * has no way to it, so the catalogue worker downloads it and this worker only processes it.
+   */
+  itemsText?: string;
   /** The last refresh's list hash, when there is one to compare with; none on a first load. */
   previousHash?: string;
   hashVersion: number;
@@ -55,7 +60,7 @@ export async function runSectionJob(job: SectionJob, send: (m: SectionMessage) =
     const t0 = Date.now();
     // Only the big list: providers limit how many connections an account may have open at once.
     const catsText = job.catsText;
-    const itemsText = await api.rawList(listAction);
+    const itemsText = job.itemsText !== undefined ? job.itemsText : await api.rawList(listAction);
     ms.download = Date.now() - t0;
     send({ type: 'downloaded' });
     let hash: string | undefined;

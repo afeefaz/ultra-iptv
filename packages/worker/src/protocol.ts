@@ -37,7 +37,9 @@ import type {
 export interface WorkerApi {
   /** `nativeHttp`: send network requests to the main thread (platform native HTTP) instead of `fetch`. */
   /** `catalogFiles`: the page can keep the catalogue in files (Samsung), outside the small web database. */
-  init(args: { saltHex: string; keepHosts: string[]; logLevel: LogLevel; nativeHttp?: boolean; catalogFiles?: boolean; sectionWorkerUrl?: string; sectionWorkerModule?: boolean }): Promise<void>;
+  init(args: { saltHex: string; keepHosts: string[]; logLevel: LogLevel; nativeHttp?: boolean; catalogFiles?: boolean; sectionWorkerUrl?: string; sectionWorkerModule?: boolean;
+    /** The encryption key's bytes, where the platform keeps it itself (the Mac app); else IndexedDB's. */
+    secretKey?: number[] }): Promise<void>;
   setLogLevel(level: LogLevel): Promise<void>;
   testPlaylist(input: PlaylistInput): Promise<TestResult>;
   savePlaylist(input: PlaylistInput): Promise<PlaylistRecord>;

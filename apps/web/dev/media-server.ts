@@ -199,7 +199,10 @@ export function handleMedia(rawPath: string, query: URLSearchParams, req: Incomi
   const vod = /^\/(movie|series)\/([^/]+)\/([^/]+)\/(\d+)\.(mp4|mkv)$/.exec(path);
   if (vod) {
     if (!authorised(vod[2], vod[3])) return send(res, 403, 'text/plain', 'forbidden'), true;
-    serveFile(req, res, `${MEDIA}${LOOKS[Number(vod[4]) % LOOKS.length]}/movie.mp4`, 'video/mp4');
+    // A real MKV (HEVC, AC-3/E-AC-3/DTS, SRT/ASS) when made (make-test-media.mjs --mkv), for players that can.
+    const mkv = `${MEDIA}desktop/movie.mkv`;
+    if (vod[5] === 'mkv' && existsSync(mkv)) serveFile(req, res, mkv, 'video/x-matroska');
+    else serveFile(req, res, `${MEDIA}${LOOKS[Number(vod[4]) % LOOKS.length]}/movie.mp4`, 'video/mp4');
     return true;
   }
 

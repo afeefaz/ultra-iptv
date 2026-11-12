@@ -35,6 +35,11 @@ export function setFallbackFetch(fn: FetchFn | null): void {
   fallbackOrigins.clear();
 }
 
+/** Whether requests to this server already go through native HTTP (the page's `fetch` can't reach it). */
+export function usesNativeHttp(url: string): boolean {
+  return !!fallbackImpl && fallbackOrigins.has(originOf(url));
+}
+
 function originOf(url: string): string {
   const m = /^[a-z]+:\/\/[^/]+/i.exec(url);
   return m ? m[0].toLowerCase() : '';

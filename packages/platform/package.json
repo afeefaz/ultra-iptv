@@ -1,18 +1,20 @@
 {
   "name": "@ultra/platform",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
     "./web": "./src/web/index.ts",
     "./android": "./src/android/index.ts",
-    "./tizen": "./src/tizen/index.ts"
+    "./tizen": "./src/tizen/index.ts",
+    "./desktop": "./src/desktop/index.ts"
   },
   "dependencies": {
     "@ultra/core": "workspace:*",
     "@capacitor/app": "8.1.2",
     "@capacitor/core": "8.5.3",
+    "@tauri-apps/api": "2.12.4",
     "hls.js": "1.7.3",
     "mpegts.js": "1.8.2"
   }

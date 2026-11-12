@@ -41,7 +41,7 @@ Status: **all decisions recorded (§12), waiting for approval before any app cod
 
 ```
 ┌──────────────────────── apps/ (one per target) ─────────────────────────┐
-│ tizen (.wgt)   webos (.ipk)   android (Capacitor, phone+TV+Fire TV)  web │
+│ tizen (.wgt)  webos (.ipk)  android (Capacitor)  desktop (Tauri)  web   │
 │ build config + manifest + platform adapter registration only            │
 └──────────────────────────────┬───────────────────────────────────────────┘
 ┌─────────────── packages/ui (SolidJS) ────────────────────────────────────┐
@@ -54,7 +54,7 @@ Status: **all decisions recorded (§12), waiting for approval before any app cod
 └──────────────────────────────┬───────────────────────────────────────────┘
 ┌─────────────── packages/platform (interfaces + adapters) ────────────────┐
 │ Keys · Pointer · Player · Storage · SecureKey · Device · Lifecycle ·     │
-│ Network · FileExport — adapters: tizen | webos | android | web           │
+│ Network · FileExport — adapters: tizen | webos | android | desktop | web │
 └──────────────────────────────────────────────────────────────────────────┘
 packages/worker  – classic Web Worker: fetch + stream-parse M3U/Xtream JSON, diff, IndexedDB writes, search index
 ```
@@ -68,6 +68,7 @@ packages/worker  – classic Web Worker: fetch + stream-parse M3U/Xtream JSON, d
 | LG webOS 4.x | Chromium 53 | **legacy** |
 | Samsung Tizen 4.0 | Chromium 56 | **legacy** |
 | Android (incl. Fire TV) | System WebView (can be old on Fire TV / older Android TV) | **legacy** |
+| Mac (Tauri, Apple Silicon, macOS 13+) | WKWebView (Safari 16+) | modern |
 | Web (development on the Mac) | current Chrome / Safari / Firefox | modern |
 
 **The legacy bundle targets Chrome 53:**
@@ -93,6 +94,7 @@ Normalised key events: `up/down/left/right/ok/back/menu/info/playPause/play/paus
 | Tizen | `tizen.tvinputdevice.registerKey` for media, colour, channel and number keys; Back = 10009; exit with `tizen.application.getCurrentApplication().exit()` |
 | webOS | keyCode map (Back 461, colour 403–406, CH 33/34, media keys). **Magic Remote:** the pointer moves focus on hover and clicks with OK; the app listens for webOS's `cursorStateChange` to switch between pointer and D-pad modes. Back is handled by the app (`disableBackHistoryAPI` in `appinfo.json`) |
 | Android | Capacitor host forwards D-pad, media and colour `KeyEvent`s into the WebView. Touch on phones. Fire TV remote key codes (Menu, Rewind/FF, Play/Pause) included. Manifest: `LEANBACK_LAUNCHER` + banner, `touchscreen` and `leanback` features `required="false"` so one APK installs on phone, Android TV and Fire TV |
+| Mac | As the web, plus F11 / Ctrl+Cmd+F for window full screen; Back on Home doesn't quit |
 | Web | Keyboard (arrows, Enter, Esc/Backspace, digits, `F1`–`F4` as colour keys), mouse, touch |
 
 ### 4.2 Player
@@ -113,6 +115,7 @@ interface PlayerAdapter {
 | Tizen | **AVPlay** (`webapis.avplay`) | HLS and MPEG-TS natively; `setDisplayRect` for the preview pane; `setStreamingProperty` for buffering and user agent; tracks via `getTotalTrackInfo` / `setSelectTrack` |
 | webOS | **`<video>`**, plus **hls.js where needed** | Native pipeline for HLS/TS first; hls.js for HLS streams the native player mishandles (decided per stream after a failed native attempt, then remembered per host) |
 | Android | **Media3 ExoPlayer** in a small Capacitor plugin | `SurfaceView` behind a transparent WebView, rect synced from JS; FFmpeg audio extension (AC-3/E-AC-3/DTS); HW→SW decoder fallback |
+| Mac | **libmpv** (LGPL build) drawn by a native view under the transparent page | Plays everything ExoPlayer does (MKV, AC-3/E-AC-3/DTS, HEVC with VideoToolbox, every audio track, SRT/ASS subtitles); same `video-behind`/`video-hole` model as Android; logins never leave the native side, mpv's log lines included |
 | Web | **hls.js** for HLS, **mpegts.js** for raw `.ts` live | **Only streams the browser can reach directly** (CORS-enabled; `https` when the page is `https`). Unreachable streams show a clear message instead of failing silently |
 
 **Shared player behaviour** (in `core`, not per adapter):
@@ -133,7 +136,7 @@ interface PlayerAdapter {
 | Target | Key storage |
 |---|---|
 | Android | AES key generated in and wrapped by the **Android Keystore** (small Capacitor plugin) |
-| Tizen, webOS, web | **non-extractable WebCrypto `CryptoKey`** stored in IndexedDB |
+| Tizen, webOS, web, Mac | **non-extractable WebCrypto `CryptoKey`** stored in IndexedDB |
 
 - **Limits:** this protects against reading the database from an export, backup or casual inspection. It doesn't protect against someone with full control of the device (stated plainly in the debug docs).
 - **Fallback:** if `crypto.subtle` is unavailable on a target (to be checked on real Tizen 4 / webOS 4), a pure-JS AES-GCM (`@noble/ciphers`) is used with the key kept in IndexedDB.
@@ -147,6 +150,7 @@ interface PlayerAdapter {
 |---|---|
 | Android | Capacitor native HTTP (no CORS restrictions) |
 | Tizen | `<access origin="*" subdomains="true"/>` in `config.xml` |
+| Mac | the page's `fetch` first, then native HTTP in Rust (reqwest) for providers it can't reach; Fast mode's files in the app's data folder |
 | webOS | packaged-app origin |
 | Web | plain `fetch`; only providers that allow cross-origin requests work. **No proxy of any kind, including in development.** A blocked request shows "This provider can't be reached from a browser" and logs the reason (CORS / mixed content / network) |
 
@@ -157,6 +161,7 @@ interface PlayerAdapter {
 |---|---|
 | Web | file download |
 | Android | write to app storage + Android share sheet |
+| Mac | written to Downloads and shown in Finder |
 | Tizen | write to the `downloads` virtual root (`filesystem.write` privilege), then `sdb pull` |
 | webOS | no user file system for web apps: export prints the log in numbered chunks to the console, captured with `ares-inspect` / `ares-log` (see `docs/debugging.md`) |
 

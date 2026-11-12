@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 // Catalogue worker (spec §3): fetches and parses playlists, diffs and writes IndexedDB, searches.
 // Built as a classic (non-module) worker without polyfills: keep to Chrome 53 built-ins here.
-import { log, logging, perf, setCatalogFiles, setFallbackFetch, setSectionWorkers, toErrorInfo, type CatalogFileStore, type SectionWorkerLike } from '@ultra/core';
+import { log, logging, perf, setCatalogFiles, setSecretKeySource, setFallbackFetch, setSectionWorkers, toErrorInfo, type CatalogFileStore, type SectionWorkerLike } from '@ultra/core';
 import { PlaylistService } from '@ultra/core/service';
 import type { FileOp, FileReplyMessage, FromWorker, HttpReplyMessage, Method, ToWorker, WorkerApi } from './protocol';
 
@@ -62,8 +62,13 @@ const pageFiles: CatalogFileStore = {
   freeBytes: () => fileCall('freeBytes', '').then((r) => r.bytes),
 };
 
+// Nothing is decrypted before init says where the key comes from (the Mac app keeps it in a file).
+let giveSecretKey: (key: Uint8Array | null) => void = () => undefined;
+setSecretKeySource(new Promise<Uint8Array | null>((resolve) => (giveSecretKey = resolve)));
+
 const api: WorkerApi = {
-  async init({ saltHex, keepHosts, logLevel, nativeHttp, catalogFiles, sectionWorkerUrl, sectionWorkerModule }) {
+  async init({ saltHex, keepHosts, logLevel, nativeHttp, catalogFiles, sectionWorkerUrl, sectionWorkerModule, secretKey }) {
+    giveSecretKey(secretKey && secretKey.length === 32 ? new Uint8Array(secretKey) : null);
     logging.configureWorker(saltHex, keepHosts);
     log.setLevel(logLevel);
     if (nativeHttp) setFallbackFetch(nativeFetch);

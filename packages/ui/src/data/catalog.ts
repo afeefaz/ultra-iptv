@@ -24,11 +24,18 @@ export function catalog(): WorkerClient {
     if (files) client.setFiles(files);
     const keepHosts = ['localhost', '127.0.0.1'];
     if (location.hostname) keepHosts.push(location.hostname);
-    client.call('init', { saltHex: logging.saltHex, keepHosts, logLevel: log.level, nativeHttp: !!http, catalogFiles: !!files, sectionWorkerUrl: files ? new URL(sectionWorkerPath, location.href).href : undefined,
-      // The dev server serves workers as modules; builds make classic scripts.
-      sectionWorkerModule: import.meta.env.DEV }).then(() => perf.mark('startup.workerReady'), (e) => {
-      log.error('worker', 'init failed', { error: e });
-    });
+    const keyReady: Promise<Uint8Array | null> = platform?.secretKey ? platform.secretKey().catch(() => null) : Promise.resolve(null);
+    const worker = client;
+    void keyReady
+      .then((key) =>
+        worker.call('init', { saltHex: logging.saltHex, keepHosts, logLevel: log.level, nativeHttp: !!http, catalogFiles: !!files, sectionWorkerUrl: files ? new URL(sectionWorkerPath, location.href).href : undefined,
+          // The dev server serves workers as modules; builds make classic scripts.
+          sectionWorkerModule: import.meta.env.DEV,
+          secretKey: key ? Array.prototype.slice.call(key) : undefined }),
+      )
+      .then(() => perf.mark('startup.workerReady'), (e) => {
+        log.error('worker', 'init failed', { error: e });
+      });
   }
   return client;
 }

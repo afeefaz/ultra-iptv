@@ -18,7 +18,7 @@ export function VideoLayer(): JSX.Element {
     const s = playbackStatus();
     if (s?.kind === 'reconnecting') return t('player.reconnecting', { n: formatNumber(s.attempt) });
     if (s?.kind === 'offline') return t('player.offline');
-    if (s?.kind === 'failed') return (playingMedia() ? t('player.mediaFailed') : t('player.failed')) + failureReason(s.message);
+    if (s?.kind === 'failed') return (playingMedia() ? t('player.mediaFailed') : t('player.failed')) + failureReason(s.message, platform.id !== 'web');
     if (s?.kind === 'ended') return t('player.ended');
     if (s?.kind === 'needs-gesture') return t('player.pressOk');
     const st = playerState();
@@ -50,12 +50,13 @@ export function VideoLayer(): JSX.Element {
 }
 
 /** Why it failed, in words a viewer can act on (spec §4.5). */
-function failureReason(message: string): string {
+function failureReason(message: string, inApp: boolean): string {
   if (message === 'blocked') return '\n' + t('player.reasonBlocked');
-  if (message === 'connect') return '\n' + t('player.reasonConnect');
+  // In a browser the cause is usually the browser itself; the apps have no such limit.
+  if (message === 'connect') return '\n' + t(inApp ? 'player.reasonConnectApp' : 'player.reasonConnect');
   const status = /HTTP (\d{3})/.exec(message);
   if (status && (status[1] === '401' || status[1] === '403')) return '\n' + t('player.reasonDenied');
   if (status && status[1] === '404') return '\n' + t('player.reasonMissing');
-  if (/unsupported|not supported|SRC_NOT_SUPPORTED|DEMUXER/i.test(message)) return '\n' + t('player.reasonFormat');
+  if (/unsupported|not supported|SRC_NOT_SUPPORTED|DEMUXER/i.test(message)) return '\n' + t(inApp ? 'player.reasonFormatApp' : 'player.reasonFormat');
   return message && message !== 'reconnect' ? `\n(${message})` : '';
 }

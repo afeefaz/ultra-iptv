@@ -179,6 +179,14 @@ If `ares-log` isn't supported on your TV's webOS version, use the inspector cons
 - **What Export does on webOS:** prints the ring buffer to the console as numbered chunks (`[UltraIPTV] export 1/12 …`), framed by `export-begin` / `export-end` lines.
 - **How to capture it:** with `ares-inspect` open, right-click in the Console → **Save as…**.
 
+## Mac app
+
+- **Web Inspector:** debug builds only (`pnpm desktop -- --debug`, or `node scripts/desktop.mjs --dev`). Right-click → Inspect Element, or Safari → Develop → the app's name. Release builds have no inspector.
+- **Logs:** the same in-app log as everywhere (debug screen, Export). Exports go to Downloads and open in Finder.
+- **Where things are:** the app's database in `~/Library/WebKit/com.ultraiptv.desktop/`, Fast mode's catalogue files in `~/Library/Application Support/com.ultraiptv.desktop/catalog/`.
+- **mpv:** its own log lines carry stream addresses with logins, so they are never forwarded or printed: the native side only reads them to tell an HTTP error from a failed connection. Don't add code that logs them.
+- **Test hook (debug builds):** `ULTRA_TEST_SCRIPT=path.js` runs a script in the page after start-up; it can print with `invoke('test_report', {line})` and screenshot the window with `invoke('test_shot', {path})`.
+
 ---
 
 ## Common checks

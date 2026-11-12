@@ -11,6 +11,8 @@ LG webOS is planned. The design is in `docs/spec.md`.
 This link always gets the newest version. On Android TV or Fire TV, enter it in the Downloader app.
 Android asks you to allow installs from the app you download with, and Play Protect may warn about an unknown app.
 
+**Mac (Apple Silicon, macOS 13+):** [download the latest Mac version](https://github.com/afeefaz/ultra-iptv/releases/latest/download/UltraIPTV-mac.dmg), open it and drag Ultra IPTV into Applications. It isn't signed by Apple yet, so the first time, open it and allow it in System Settings → Privacy & Security (Open Anyway).
+
 For Samsung TVs, see [docs/sideloading.md](docs/sideloading.md).
 
 ## Setup
@@ -33,6 +35,7 @@ pnpm install
 | `pnpm build` | Modern web build → `apps/web/dist` |
 | `pnpm build:legacy` | TV/Android bundle for Chrome 53+ → `apps/web/dist-legacy`, then checks it can run there |
 | `pnpm android` / `pnpm android:install` | Android APK (phone, Android TV, Fire TV) and optional `adb install`; see `docs/sideloading.md` |
+| `pnpm desktop` / `pnpm desktop:check` | Mac app (`Ultra IPTV.app`, needs Rust) and its Rust checks; see `docs/sideloading.md` |
 | `pnpm preview:legacy` | Serve the legacy bundle locally |
 | `pnpm check` | All of the above, in order |
 
@@ -114,11 +117,12 @@ may not offer audio/subtitle track switching.
 ```
 apps/web            Vite entry for the browser and for Android (picks the platform at start-up)
 apps/android        Capacitor project; native ExoPlayer plugin in android/app/src/main/java/com/ultraiptv/player
+apps/desktop        Mac app: Tauri shell (src-tauri, Rust) with the mpv player view (native/mpv_view.m)
   build/            legacy worker transpiling;  dev/  fake provider for `pnpm dev`
 packages/core       framework-free logic: logger + redaction, Xtream/M3U sources, catalogue
                     (IndexedDB, diff writes, favourites, search), encrypted credentials
 packages/worker     the catalogue worker (all fetching, parsing and writes) + its client
-packages/platform   platform interfaces + adapters (web now; tizen/webos/android later)
+packages/platform   platform interfaces + adapters (web, tizen, android, desktop)
 packages/ui         SolidJS screens, focus/spatial navigation, virtual lists, on-screen keyboard,
                     i18n (English, Arabic RTL)
 scripts/            build checks

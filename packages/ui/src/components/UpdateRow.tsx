@@ -41,6 +41,8 @@ export function UpdateRow(props: { updater: AppUpdater }): JSX.Element {
 
   const update = async (latest: LatestRelease) => {
     const info = await props.updater.info();
+    // The Mac app can't replace itself while it runs from the disk image or Downloads.
+    if (!info.canInstall && info.blocker === 'location') return setState({ kind: 'error', message: 'update.moveToApplications', latest });
     if (!info.canInstall) return setState({ kind: 'permission', latest });
     track('update.install');
     setState({ kind: 'downloading', latest, percent: 0 });
@@ -108,11 +110,11 @@ export function UpdateRow(props: { updater: AppUpdater }): JSX.Element {
       case 'downloading':
         return t('update.downloading', { percent: s.percent });
       case 'installing':
-        return t('update.installing');
+        return t(props.updater.relaunches ? 'update.installingRelaunch' : 'update.installing');
       case 'error':
         return t(s.message);
       default:
-        return t('update.desc');
+        return t(props.updater.relaunches ? 'update.descDesktop' : 'update.desc');
     }
   };
 

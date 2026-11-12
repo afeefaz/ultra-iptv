@@ -6,7 +6,7 @@ How this codebase is built, and what every change has to respect. `docs/spec.md`
 
 These don't bend for a feature. If a feature seems to need one broken, raise it first.
 
-1. **No third-party services, and no backend that can read your data.** The app talks to the user's IPTV provider, plus our relay (`apps/relay`), which holds encrypted data it has no key for. The app contacts it only when the user presses Refresh, Push, Pull or Link, or changes a playlist after having pressed Refresh once, and never on a timer. A device that has never pressed any of them sends nothing. The one other contact is Check for updates on Android, also only when pressed: it reads our website and downloads from our GitHub releases. No telemetry, crash reporting, CDNs or outside speed-test servers.
+1. **No third-party services, and no backend that can read your data.** The app talks to the user's IPTV provider, plus our relay (`apps/relay`), which holds encrypted data it has no key for. The app contacts it only when the user presses Refresh, Push, Pull or Link, or changes a playlist after having pressed Refresh once, and never on a timer. A device that has never pressed any of them sends nothing. The one other contact is Check for updates on Android and the Mac, also only when pressed: it reads our website and downloads from our GitHub releases. No telemetry, crash reporting, CDNs or outside speed-test servers.
 2. **Nothing readable leaves the device.** Logs, performance data and usage counts stay local until the user exports them.
 3. **No content.** The app ships no channels, streams or provider details.
 4. **One codebase.** Samsung, Android (phone, TV, Fire TV) and web share the UI. Differences live behind `Platform`, never in `if (samsung)` branches in screens.
@@ -17,6 +17,7 @@ These don't bend for a feature. If a feature seems to need one broken, raise it 
 ```
 apps/web        Entry point; picks the platform at runtime
 apps/android    Capacitor shell and the native player plugin (Java)
+apps/desktop    Mac app: Tauri shell, mpv player and native helpers (Rust, Obj-C)
 apps/tizen      Samsung config.xml and icon
 apps/relay      Cloudflare Worker: encrypted mailbox and the playlist website
 packages/ui     Screens, components, focus, keys, translations, styles
@@ -114,7 +115,7 @@ Budgets and how to run the tests are in `docs/performance.md`.
 
 ## Testing
 
-- `pnpm check` must pass before every commit: characters, types, lint, unit tests, both builds, legacy limits.
+- `pnpm check` must pass before every commit: characters, types, lint, unit tests, both builds, legacy limits. Changes to `apps/desktop/src-tauri` also need `pnpm desktop:check` (cargo fmt, clippy, tests).
 - **Unit tests** sit next to the code (`x.test.ts`) for logic: parsing, caching, player state, formatting. Anything that has broken once gets a test.
 - **Real devices** for anything touching video, keys, layout or speed. Emulators and Chrome miss real problems.
 
@@ -125,6 +126,7 @@ Budgets and how to run the tests are in `docs/performance.md`.
 | Keys or focus | Samsung TV remote, phone touch |
 | Player | Samsung TV (AVPlay) and phone (ExoPlayer), live and movie |
 | Android native code | Phone and Android TV emulator |
+| Mac app (`apps/desktop`) | A release build (`pnpm desktop`), not only `--dev`: the packaged app's origin (`tauri://`) behaves differently from the dev server |
 | Speed-sensitive code | `pnpm perf` before and after |
 
 **The real account.** Performance tests run on the account already signed in on the devices. Tools must never type, read or print the login, must test one device at a time because of connection limits, and must keep channel names, hosts and logins out of the repo. Everyday development uses the mock provider (`pnpm dev`, see the README).
@@ -149,4 +151,5 @@ Budgets and how to run the tests are in `docs/performance.md`.
 - **Never commit:** signing keys, `.env` files, `perf-results/`, or anything with a real provider's details. The repo is public, and history stays public.
 - **Commits use the GitHub no-reply email,** set in this repo's git config.
 - **Android releases:** raise `versionCode` and `versionName`, then follow `docs/sideloading.md`. Sign only with the release key in `~/.ultra-iptv/`; a different key forces everyone to reinstall.
-- **Licensing:** the code is MIT. Check a new dependency's license and update `THIRD_PARTY_NOTICES.md`. GPL libraries affect how the APK can be shared.
+- **Mac releases:** `pnpm desktop -- --release` and the steps in `docs/sideloading.md` (Releasing the Mac app). Updates are signed with `~/.ultra-iptv/desktop-updater.key`; without it, Macs can only update by hand.
+- **Licensing:** the code is MIT. Check a new dependency's license and update `THIRD_PARTY_NOTICES.md`. GPL libraries affect how the APK can be shared. The Mac app's mpv and FFmpeg must stay LGPL builds, dynamically linked (`scripts/desktop-libmpv.mjs`).

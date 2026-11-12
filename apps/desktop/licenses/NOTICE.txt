@@ -1,0 +1,32 @@
+Ultra IPTV for Mac: third-party components
+===========================================
+
+The app's own code is under the MIT License (https://github.com/afeefaz/ultra-iptv).
+
+Video playback uses libmpv and FFmpeg, built for macOS by the media-kit project
+(release v0.7.3, "macos-arm64-video-full", https://github.com/media-kit/libmpv-darwin-build).
+They are separate libraries in Contents/Frameworks, linked dynamically, and can be replaced
+with other builds of the same versions (re-sign the app ad hoc afterwards:
+codesign --force --deep -s - "Ultra IPTV.app").
+
+  mpv 0.36.0 (libmpv)        LGPL-2.1-or-later (built without GPL parts)   LGPL-2.1.txt
+                             https://github.com/mpv-player/mpv/tree/v0.36.0
+  FFmpeg 6.0 (libavcodec, libavformat, libavfilter, libavutil, libswresample, libswscale)
+                             LGPL-3.0-or-later                              LGPL-3.0.txt, GPL-3.0.txt
+                             https://ffmpeg.org/releases/ffmpeg-6.0.tar.xz
+  libass                     ISC
+  FreeType                   FreeType License (FTL)
+  HarfBuzz                   MIT ("Old MIT")
+  FriBidi                    LGPL-2.1-or-later                              LGPL-2.1.txt
+  dav1d                      BSD-2-Clause
+  Mbed TLS                   Apache-2.0
+  libxml2                    MIT
+  libpng                     libpng License
+  uchardet                   MPL-1.1 / GPL-2.0-or-later / LGPL-2.1-or-later (chosen: LGPL-2.1)
+
+The exact source versions and build recipe of these libraries are in the media-kit repository
+at tag v0.7.3 (nix/ and Makefile).
+
+The app window uses Tauri (MIT or Apache-2.0) and Rust crates under MIT or Apache-2.0 licences;
+the interface uses SolidJS (MIT), Material Symbols (Apache-2.0) and the Cairo, Outfit and Space
+Grotesk fonts (SIL OFL 1.1).
