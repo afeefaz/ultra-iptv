@@ -13,7 +13,7 @@ Android asks you to allow installs from the app you download with, and Play Prot
 
 **Mac (Apple Silicon, macOS 13+):** [download the latest Mac version](https://github.com/afeefaz/ultra-iptv/releases/latest/download/UltraIPTV-mac.dmg), open it and drag Ultra IPTV into Applications. It isn't signed by Apple yet, so the first time, open it and allow it in System Settings → Privacy & Security (Open Anyway).
 
-**Windows (x64, Windows 10 and 11):** coming soon; see [docs/sideloading.md](docs/sideloading.md).
+**Windows (x64, Windows 10 and 11):** [download the latest Windows version](https://github.com/afeefaz/ultra-iptv/releases/latest/download/UltraIPTV-windows-setup.exe) and run it. It isn't signed yet, so SmartScreen may warn the first time: choose More info → Run anyway. See [docs/sideloading.md](docs/sideloading.md).
 
 For Samsung TVs, see [docs/sideloading.md](docs/sideloading.md).
 
@@ -119,7 +119,7 @@ may not offer audio/subtitle track switching.
 ```
 apps/web            Vite entry for the browser and for Android (picks the platform at start-up)
 apps/android        Capacitor project; native ExoPlayer plugin in android/app/src/main/java/com/ultraiptv/player
-apps/desktop        Mac app: Tauri shell (src-tauri, Rust) with the mpv player view (native/mpv_view.m)
+apps/desktop        Mac and Windows app: Tauri shell (src-tauri, Rust) with the mpv player view (native/mpv_view.m)
   build/            legacy worker transpiling;  dev/  fake provider for `pnpm dev`
 packages/core       framework-free logic: logger + redaction, Xtream/M3U sources, catalogue
                     (IndexedDB, diff writes, favourites, search), encrypted credentials

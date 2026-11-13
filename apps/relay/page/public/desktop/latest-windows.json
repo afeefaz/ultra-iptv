@@ -1,0 +1,17 @@
+{
+  "versionCode": 9002,
+  "versionName": "0.9.2",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.2/UltraIPTV-windows-setup.exe",
+  "sha256": "91aebbb913e48841bfc8e7175098f30dc9549987af547a6f2480a576f6e0263b",
+  "size": 35772537,
+  "notes": {
+    "en": [
+      "The first Windows version of Ultra IPTV, alongside the Mac.",
+      "The programme guide no longer floods a provider that is struggling."
+    ],
+    "ar": [
+      "أول إصدار من Ultra IPTV لويندوز، إلى جانب الماك.",
+      "لم يعد دليل البرامج يُغرق المزوّد عندما يتعثّر."
+    ]
+  }
+}

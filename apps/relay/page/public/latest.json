@@ -1,15 +1,17 @@
 {
-  "versionCode": 16,
-  "versionName": "0.9.1",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.1/UltraIPTV.apk",
-  "sha256": "2b212af163536967572ddd4818215d6789144369a1719acf94b671b5801893d8",
-  "size": 12503324,
+  "versionCode": 17,
+  "versionName": "0.9.2",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.2/UltraIPTV.apk",
+  "sha256": "d282fcfda69bc629c645d8bd89fae55df6111882e0b85c00d1b88d2e83257124",
+  "size": 12503756,
   "notes": {
     "en": [
-      "See when your subscription ends: on Home, in Playlists, and in Settings → Playlists & devices. It turns amber in the last two weeks and red once it has ended."
+      "A Windows version: download UltraIPTV-windows-setup.exe from the release page.",
+      "The programme guide no longer floods a provider that is struggling: a channel whose guide failed waits before asking again."
     ],
     "ar": [
-      "اعرف متى ينتهي اشتراكك: في الرئيسية وفي القوائم وفي الإعدادات ← القوائم والأجهزة. يصبح كهرمانيًا في آخر أسبوعين وأحمر بعد انتهائه."
+      "إصدار لويندوز: نزّل UltraIPTV-windows-setup.exe من صفحة الإصدار.",
+      "لم يعد دليل البرامج يُغرق المزوّد عندما يتعثّر: القناة التي فشل دليلها تنتظر قبل أن تطلبه مجددًا."
     ]
   }
 }

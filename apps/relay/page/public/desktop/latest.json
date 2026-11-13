@@ -1,17 +1,17 @@
 {
-  "versionCode": 9001,
-  "versionName": "0.9.1",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.1/UltraIPTV-mac.app.tar.gz",
-  "sha256": "3844ac045f903ee9a6a06c5c92e7e161d08eba9a621e133f6e1f5cdd6dbac5cb",
-  "size": 16419930,
+  "versionCode": 9002,
+  "versionName": "0.9.2",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.2/UltraIPTV-mac.app.tar.gz",
+  "sha256": "7c5239781a9bc888fa18701febd66c66cac4b277a243411cd119ae80b58fb399",
+  "size": 16423299,
   "notes": {
     "en": [
-      "See when your subscription ends: on Home, in Playlists, and in Settings → Playlists & devices.",
-      "Fast loading is now the default on the Mac: playlists load once more into files the first time after this update."
+      "The first Windows version of Ultra IPTV, alongside the Mac.",
+      "The programme guide no longer floods a provider that is struggling."
     ],
     "ar": [
-      "اعرف متى ينتهي اشتراكك: في الرئيسية وفي القوائم وفي الإعدادات ← القوائم والأجهزة.",
-      "التحميل السريع أصبح الافتراضي على الماك: تُحمَّل القوائم مرة أخرى في ملفات أول مرة بعد هذا التحديث."
+      "أول إصدار من Ultra IPTV لويندوز، إلى جانب الماك.",
+      "لم يعد دليل البرامج يُغرق المزوّد عندما يتعثّر."
     ]
   }
 }

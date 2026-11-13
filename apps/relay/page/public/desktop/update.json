@@ -1,11 +1,15 @@
 {
-  "version": "0.9.1",
-  "notes": "See when your subscription ends: on Home, in Playlists, and in Settings → Playlists & devices.\nFast loading is now the default on the Mac: playlists load once more into files the first time after this update.",
-  "pub_date": "2026-11-12T15:40:07.057Z",
+  "version": "0.9.2",
+  "notes": "The first Windows version of Ultra IPTV, alongside the Mac.\nThe programme guide no longer floods a provider that is struggling.",
+  "pub_date": "2026-11-13T15:21:11.476Z",
   "platforms": {
     "darwin-aarch64": {
-      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.1/UltraIPTV-mac.app.tar.gz",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzF1WCtuLzZxazU3cGlvVmJUTEp5QlA3eEN6SUEwYUZGK0FFbDdGV29oeVdLMDR3dlhWMElKRHYxd2YzZTg4d05GMHU1NWdOOWlCdjd2S0VOT1hXMGdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NDk3OTk1CWZpbGU6VWx0cmEgSVBUVi5hcHAudGFyLmd6CXZlcnNpb246MC45LjEKcFFYYkRXS1FXRmI4U2YvcXlBem1Wck5QVkZhTVpEN040UllESlQwRHBwdFRlWnBtVHJMZU1RaEYyS1kxSzMxZDZ0Z1JYVTlycEdYUm5hTGRBbytHQmc9PQo="
+      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.2/UltraIPTV-mac.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzhFSzdwRHZKNFY1TC9BYy9CK3NVS2RmTnIyZzN6c1RTUElaTDNTRURnZXgwaUpHdlJyZ1ZySWVJQm9EWTM3Q3ZaVTdhWURENDRLamo5YW80KzJmemdBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTgyODY5CWZpbGU6VWx0cmEgSVBUVi5hcHAudGFyLmd6CXZlcnNpb246MC45LjIKL3o0OXljcTFjNHQxTXNIN2NCRWtCMXM3bVZjRmlkK085TWZ4eXFuOVpzL21vNi9sUzh0V1NFekh0MVN4Y3RMRDBxTVZPMnB3Q01GRVc1aGpNTUEwRGc9PQo="
+    },
+    "windows-x86_64": {
+      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.2/UltraIPTV-windows-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzM4am5EdmZwYktDOEtZa3J4dTNaUlgvRysyYjJ2ZEU4QzhQYVJsK3F3KzV0Sk5qS0FOU0Uya2FqVDFIUG9UVy9KN2RNc3AvdWtua0JUTUF0czBXendvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTgzMTgwCWZpbGU6VWx0cmEgSVBUVl8wLjkuMl94NjQtc2V0dXAuZXhlCXZlcnNpb246MC45LjIKQi9lTC9xa0l4aTI1emwwTnBCZkx5WlNXZTJzVjBYWnJhY2ZMY2F5aUZrQUF2bE52U3BsWGVBdzB2SzhCSDR3Um50K3dwN1FYKzU5WkF6TEZZZWN3REE9PQo="
     }
   }
 }
