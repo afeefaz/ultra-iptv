@@ -75,6 +75,9 @@ impl Mpv {
                 ("vo", "gpu-next".into()),
                 ("gpu-api", "d3d11".into()),
                 ("hwdec", "d3d11va".into()),
+                // Its surface stays up (black) when nothing plays: the window is transparent, so
+                // without it the Live preview would show the desktop behind the app.
+                ("force-window", "yes".into()),
                 ("wid", wid.map(|w| w.to_string()).unwrap_or_default()),
             ];
             #[cfg(not(any(target_os = "macos", windows)))]
