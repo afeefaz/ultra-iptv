@@ -1,15 +1,15 @@
 {
-  "version": "0.9.3",
-  "notes": "A live channel that keeps pausing to buffer now reconnects by itself instead of stuttering.\nWhen a stream keeps dropping, the app tries the other stream format and then tells you, instead of retrying forever.\nSeries open again with providers that refused them (error 469 on Windows).",
-  "pub_date": "2026-11-13T16:19:25.821Z",
+  "version": "0.9.4",
+  "notes": "Jumping in a movie or episode with Left/Right (or REW/FF) no longer opens the controls: a small badge shows how far it jumped.\nOn the computer, Space plays and pauses.",
+  "pub_date": "2026-11-13T20:21:07.339Z",
   "platforms": {
     "darwin-aarch64": {
-      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.3/UltraIPTV-mac.app.tar.gz",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxV3pNZVRQeW9rK1lkYS9mRGRXNWZ2bVJxam1zRXcwZzRuKy9aZlArRUFVaG9iaUh5ZGVyVFZCRlRnaDNJdDJiMHdtbTRkSlNOSkZ4cDU1SFNwOHhOM3djPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTg2MzgxCWZpbGU6VWx0cmEgSVBUVi5hcHAudGFyLmd6CXZlcnNpb246MC45LjMKRXdrYlNwdk44RDFkNlBjcjVXbjVJaFRhZ2g4ZkNuQ0VnUzJOSXAyd01mUndKcko1dTF3S2pON1ZjbUNJTmQraFJ5YmhscGk1TXowclNaY3JwS0krRHc9PQo="
+      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.4/UltraIPTV-mac.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzg3azBscTUvMlZJMEMyQWdOUWoySmJsTjVNVUxnK0NzdC9UV0R5d1JZeE9HT0tCSWJvRHQ3Y3ZJamRrY01lOU1MR01aWUswYjYyVlo2QW5GZTE0RVFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NjAwNzIxCWZpbGU6VWx0cmEgSVBUVi5hcHAudGFyLmd6CXZlcnNpb246MC45LjQKbGlkaVlkejB4b2Z3d05reFpvRmFYc1BmQnB2TmJLUzBUb0xxQy9aOGRWTmx5NHdOMDlEQWFsMUF1YmxWRHUyQjlvbWV3NlpkMlR0WC9POGNCZXlPQnc9PQo="
     },
     "windows-x86_64": {
-      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.3/UltraIPTV-windows-setup.exe",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVytVc1hpbWFqbDlndlg2MmhvWVAvZFJmYXVRK0loT2VQSTJoUC8zcnpwMUhDK1kvbjhSZkk2M2s1RkxNQWxHc0dWeFdqQVhOVDB0Y2lvT1ZRRTdka3dnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTg2Njg3CWZpbGU6VWx0cmEgSVBUVl8wLjkuM194NjQtc2V0dXAuZXhlCXZlcnNpb246MC45LjMKY1RXTzBvSXlVb2k3K29aZ0dwTlMvVkN6dklmRkQyV2xxTWQ1U3JpK2J5VnBvNDFkSFlZMlZIMTVCV3k3U21rczhEUkNLQVJ1b0VIMVN3c2xibFpWQ3c9PQo="
+      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.4/UltraIPTV-windows-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzZUdjA5M2xCeGtYb1RUaE5WSlNIbngrLzBIdDl6TDBjUEFtOGtBeFB6MFJUSXV0V0s4b09xVElycE1QbDZ0NTVzbEMxT0EySXNPbnpjWmhwTlljN2c0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NjAxMTk3CWZpbGU6VWx0cmEgSVBUVl8wLjkuNF94NjQtc2V0dXAuZXhlCXZlcnNpb246MC45LjQKVnpsbDNEWDJwTjRUUU1pVU1EOGFDUFpLaWw2MkVHZkxmRnhWOExQbE82Mm01ckJuTHRkamlDVTNxMjNqbStEb3FkdmhJU095cTRhQXdsR093T2lrQmc9PQo="
     }
   }
 }

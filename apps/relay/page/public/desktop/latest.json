@@ -1,19 +1,17 @@
 {
-  "versionCode": 9003,
-  "versionName": "0.9.3",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.3/UltraIPTV-mac.app.tar.gz",
-  "sha256": "4aef36392d11564fc131ee0a470ec2ba71119883f7cceecc083e3393381bbdd4",
-  "size": 16423251,
+  "versionCode": 9004,
+  "versionName": "0.9.4",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.4/UltraIPTV-mac.app.tar.gz",
+  "sha256": "32ec7d461f674db711f6e82fdd24c69546f5e514a45e48c26dae575e66fae9f7",
+  "size": 16422890,
   "notes": {
     "en": [
-      "A live channel that keeps pausing to buffer now reconnects by itself instead of stuttering.",
-      "When a stream keeps dropping, the app tries the other stream format and then tells you, instead of retrying forever.",
-      "Series open again with providers that refused them (error 469 on Windows)."
+      "Jumping in a movie or episode with Left/Right (or REW/FF) no longer opens the controls: a small badge shows how far it jumped.",
+      "On the computer, Space plays and pauses."
     ],
     "ar": [
-      "القناة المباشرة التي تتوقف مرارًا للتحميل تعيد الاتصال وحدها بدل أن تتقطّع.",
-      "عندما ينقطع البث مرارًا، يجرّب التطبيق صيغة البث الأخرى ثم يخبرك، بدل أن يعيد المحاولة بلا نهاية.",
-      "تفتح المسلسلات مجددًا مع المزوّدين الذين كانوا يرفضونها (الخطأ 469 على ويندوز)."
+      "التقديم أو الرجوع في فيلم أو حلقة بالسهمين (أو REW/FF) لم يعد يفتح أزرار التحكم: تظهر شارة صغيرة توضّح مقدار القفزة.",
+      "على الكمبيوتر، زر المسافة يشغّل ويوقف مؤقتًا."
     ]
   }
 }
