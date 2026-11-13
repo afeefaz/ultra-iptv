@@ -27,9 +27,10 @@ export function catalog(): WorkerClient {
     if (location.hostname) keepHosts.push(location.hostname);
     const keyReady: Promise<Uint8Array | null> = platform?.secretKey ? platform.secretKey().catch(() => null) : Promise.resolve(null);
     const worker = client;
-    void keyReady
-      .then((key) =>
-        worker.call('init', { saltHex: logging.saltHex, keepHosts, logLevel: log.level, nativeHttp: !!http, catalogFiles: !!files, sectionWorkerUrl: files ? new URL(sectionWorkerPath, location.href).href : undefined,
+    const sectionUrl = files ? sectionWorkerUrl() : Promise.resolve(undefined);
+    void Promise.all([keyReady, sectionUrl])
+      .then(([key, sectionWorker]) =>
+        worker.call('init', { saltHex: logging.saltHex, keepHosts, logLevel: log.level, nativeHttp: !!http, catalogFiles: !!files, sectionWorkerUrl: sectionWorker,
           // The dev server serves workers as modules; builds make classic scripts.
           sectionWorkerModule: import.meta.env.DEV,
           secretKey: key ? Array.prototype.slice.call(key) : undefined }),
@@ -39,6 +40,23 @@ export function catalog(): WorkerClient {
       });
   }
   return client;
+}
+
+/**
+ * Where the catalogue worker starts its second worker from. On Windows, WebView2 doesn't serve the
+ * app's files to a worker started inside a worker (it failed to load: "Section worker failed"), so
+ * the page reads the script and hands over an in-memory copy, which any worker can start.
+ */
+async function sectionWorkerUrl(): Promise<string | undefined> {
+  const url = new URL(sectionWorkerPath, location.href).href;
+  if (platform?.id !== 'windows') return url;
+  try {
+    const script = await (await fetch(url)).blob();
+    return URL.createObjectURL(new Blob([script], { type: 'text/javascript' }));
+  } catch (e) {
+    log.warn('worker', 'could not load the section worker script', { error: e });
+    return url;
+  }
 }
 
 const STORAGE_KEY = 'ultraiptv.playlists.storage';

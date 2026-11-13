@@ -131,7 +131,7 @@ impl Mpv {
         }
     }
 
-    fn set(&self, name: &str, value: &str) -> Result<(), String> {
+    pub(crate) fn set(&self, name: &str, value: &str) -> Result<(), String> {
         let r =
             unsafe { mpv_set_property_string(self.handle, c(name).as_ptr(), c(value).as_ptr()) };
         if r < 0 {

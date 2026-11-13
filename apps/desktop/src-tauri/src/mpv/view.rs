@@ -1,7 +1,7 @@
 //! Where the picture is drawn, under the window's transparent page:
 //! - macOS: a layer-backed view drawn by libmpv's render API (native/mpv_view.m), added after mpv starts.
-//! - Windows: a child window mpv draws into itself (its `wid` option, Direct3D 11), made before mpv
-//!   starts and kept at the bottom of the window's children, under WebView2.
+//! - Windows: mpv draws into the app's window itself (its `wid` option, Direct3D 11), under
+//!   WebView2, and the picture is placed with its video margins.
 //!
 //! Rects come in CSS pixels from the page's top left; `fill` follows the window's size.
 use tauri::{AppHandle, WebviewWindow};
@@ -74,73 +74,18 @@ mod imp {
 #[cfg(windows)]
 mod imp {
     use super::*;
-    use crate::mpv::ffi;
-    use std::sync::Mutex;
-    use windows_sys::Win32::Foundation::{HWND, RECT};
-    use windows_sys::Win32::Graphics::Gdi::{GetStockObject, BLACK_BRUSH, HBRUSH};
-    use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
-    use windows_sys::Win32::UI::WindowsAndMessaging::{
-        CreateWindowExW, DefWindowProcW, GetClientRect, RegisterClassW, SetWindowPos, ShowWindow,
-        HWND_BOTTOM, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SW_HIDE, SW_SHOWNOACTIVATE, WNDCLASSW,
-        WS_CHILD, WS_CLIPSIBLINGS, WS_DISABLED,
-    };
+    use crate::mpv::{ffi, Mpv};
+    use tauri::Manager;
 
-    /** Whether the picture fills the window, so a resize keeps it filling it. */
-    static FILLING: Mutex<bool> = Mutex::new(false);
-
-    fn wide(s: &str) -> Vec<u16> {
-        s.encode_utf16().chain(std::iter::once(0)).collect()
-    }
-
+    /**
+     * mpv draws into the app's own window: it makes its surface there, under WebView2 (a child
+     * window of ours was never drawn, the transparent window has no surface for it). The picture
+     * is placed with mpv's video margins, as fractions of the window.
+     */
     pub fn prepare(window: &WebviewWindow) -> Result<Prepared, String> {
-        let parent = window.hwnd().map_err(|e| e.to_string())?.0 as HWND;
-        let class = wide("UltraIptvVideo");
-        unsafe {
-            let instance = GetModuleHandleW(std::ptr::null());
-            let wc = WNDCLASSW {
-                style: 0,
-                lpfnWndProc: Some(DefWindowProcW),
-                cbClsExtra: 0,
-                cbWndExtra: 0,
-                hInstance: instance,
-                hIcon: std::ptr::null_mut(),
-                hCursor: std::ptr::null_mut(),
-                hbrBackground: GetStockObject(BLACK_BRUSH) as HBRUSH,
-                lpszMenuName: std::ptr::null(),
-                lpszClassName: class.as_ptr(),
-            };
-            RegisterClassW(&wc);
-            // Disabled: clicks and keys go to the page above it, never to the video.
-            let hwnd = CreateWindowExW(
-                0,
-                class.as_ptr(),
-                std::ptr::null(),
-                WS_CHILD | WS_CLIPSIBLINGS | WS_DISABLED,
-                0,
-                0,
-                16,
-                16,
-                parent,
-                std::ptr::null_mut(),
-                instance,
-                std::ptr::null(),
-            );
-            if hwnd.is_null() {
-                return Err("the video window could not be made".into());
-            }
-            SetWindowPos(
-                hwnd,
-                HWND_BOTTOM,
-                0,
-                0,
-                0,
-                0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
-            );
-            Ok(Prepared {
-                hwnd: hwnd as isize,
-            })
-        }
+        Ok(Prepared {
+            hwnd: window.hwnd().map_err(|e| e.to_string())?.0 as isize,
+        })
     }
 
     pub fn attach(
@@ -151,69 +96,49 @@ mod imp {
         Ok(View(prepared.hwnd as usize))
     }
 
-    fn place(parent: HWND, hwnd: HWND, rect: (i32, i32, i32, i32)) {
-        let _ = parent;
-        unsafe {
-            SetWindowPos(
-                hwnd,
-                HWND_BOTTOM,
-                rect.0,
-                rect.1,
-                rect.2.max(1),
-                rect.3.max(1),
-                SWP_NOACTIVATE,
-            );
-        }
-    }
-
-    fn client(parent: HWND) -> (i32, i32, i32, i32) {
-        let mut r = RECT {
-            left: 0,
-            top: 0,
-            right: 0,
-            bottom: 0,
-        };
-        unsafe { GetClientRect(parent, &mut r) };
-        (0, 0, r.right - r.left, r.bottom - r.top)
-    }
-
     pub fn set_frame(
         app: &AppHandle,
-        view: View,
+        _view: View,
         rect: (f64, f64, f64, f64),
         fill: bool,
         hidden: bool,
     ) -> Result<(), String> {
-        use tauri::Manager;
         let window = app.get_webview_window("main").ok_or("no main window")?;
-        let parent = window.hwnd().map_err(|e| e.to_string())?.0 as isize;
-        // CSS pixels to the window's physical pixels.
+        let player = app.state::<Mpv>();
+        // The page's size in CSS pixels: the rect comes in the same units.
         let scale = window.scale_factor().unwrap_or(1.0);
-        let px = |v: f64| (v * scale).round() as i32;
-        let physical = (px(rect.0), px(rect.1), px(rect.2), px(rect.3));
-        *FILLING.lock().unwrap() = fill && !hidden;
-        app.run_on_main_thread(move || unsafe {
-            let (parent, hwnd) = (parent as HWND, view.0 as HWND);
-            if hidden {
-                ShowWindow(hwnd, SW_HIDE);
-                return;
-            }
-            place(parent, hwnd, if fill { client(parent) } else { physical });
-            ShowWindow(hwnd, SW_SHOWNOACTIVATE);
-        })
-        .map_err(|e| e.to_string())
+        let size = window.inner_size().map_err(|e| e.to_string())?;
+        let (w, h) = (
+            (size.width as f64 / scale).max(1.0),
+            (size.height as f64 / scale).max(1.0),
+        );
+        let (left, top, right, bottom) = if hidden {
+            // Nothing visible: all the picture squeezed out.
+            (0.5, 0.5, 0.5, 0.5)
+        } else if fill {
+            (0.0, 0.0, 0.0, 0.0)
+        } else {
+            let clamp = |v: f64| v.clamp(0.0, 1.0);
+            (
+                clamp(rect.0 / w),
+                clamp(rect.1 / h),
+                clamp((w - rect.0 - rect.2) / w),
+                clamp((h - rect.1 - rect.3) / h),
+            )
+        };
+        for (name, value) in [
+            ("video-margin-ratio-left", left),
+            ("video-margin-ratio-top", top),
+            ("video-margin-ratio-right", right),
+            ("video-margin-ratio-bottom", bottom),
+        ] {
+            player.set(name, &format!("{value:.5}"))?;
+        }
+        Ok(())
     }
 
-    /** Full-screen video follows the window when it is resized. */
-    pub fn window_resized(window: &WebviewWindow, view: View) {
-        if !*FILLING.lock().unwrap() {
-            return;
-        }
-        if let Ok(parent) = window.hwnd() {
-            let parent = parent.0 as HWND;
-            place(parent, view.0 as HWND, client(parent));
-        }
-    }
+    /** Margins are fractions of the window, and the page sends a new rect when it resizes. */
+    pub fn window_resized(_window: &WebviewWindow, _view: View) {}
 }
 
 pub use imp::{attach, prepare, set_frame, window_resized};
