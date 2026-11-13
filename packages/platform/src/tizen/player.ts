@@ -126,10 +126,11 @@ export class AvPlayPlayer implements PlayerAdapter {
         },
         oncurrentplaytime: (ms) => {
           if (mine !== this.seq) return;
-          if (ms !== this.lastPlayMs) {
-            this.lastPlayMs = ms;
-            this.progressAt = Date.now();
-          }
+          // AVPlay keeps calling with the same time while the picture is frozen: only a moving
+          // clock means it plays.
+          if (ms === this.lastPlayMs) return;
+          this.lastPlayMs = ms;
+          this.progressAt = Date.now();
           this.pos = { current: ms / 1000, duration: this.pos.duration };
           if (this.playing) this.markPlaying();
         },

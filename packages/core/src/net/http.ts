@@ -49,8 +49,9 @@ function originOf(url: string): string {
 async function send(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
   const origin = originOf(url);
   if (fallbackImpl && fallbackOrigins.has(origin)) return sendFallback(url, init);
+  let res: Response;
   try {
-    return await fetchImpl(url, init);
+    res = await fetchImpl(url, init);
   } catch (e) {
     if (!fallbackImpl || (init.signal && init.signal.aborted)) throw e;
     log.info('net', 'using native HTTP for this server', { url: origin, timeoutMs });
@@ -58,6 +59,21 @@ async function send(url: string, init: RequestInit, timeoutMs: number): Promise<
     perf.count('net.fallbackUsed');
     return sendFallback(url, init);
   }
+  if (!fallbackImpl || !refusesBrowsers(res.status) || (init.signal && init.signal.aborted)) return res;
+  // Some providers refuse requests that come from a web page (its Origin and browser headers) with
+  // an odd 4xx, e.g. 469: the same request from native HTTP may be answered.
+  const native = await sendFallback(url, init);
+  if (native.ok) {
+    log.info('net', 'using native HTTP for this server', { url: origin, refused: res.status });
+    fallbackOrigins.add(origin);
+    perf.count('net.fallbackUsed');
+  }
+  return native;
+}
+
+/** A refusal that may be about the page's request, not the address: not a login error, a missing item or a rate limit. */
+function refusesBrowsers(status: number): boolean {
+  return status >= 400 && status < 500 && status !== 401 && status !== 403 && status !== 404 && status !== 408 && status !== 429;
 }
 
 /** Native HTTP can hit a stale pooled connection ("unexpected end of stream"): retry once. */

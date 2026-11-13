@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FROZEN_AFTER_MS, isFrozen } from './stallWatch';
+import { FROZEN_AFTER_MS, isFrozen, isStuttering, STEADY_AFTER_MS, steadyAgain, STUTTER_PAUSES, STUTTER_WINDOW_MS } from './stallWatch';
 
 const NOW = 1_000_000;
 
@@ -20,5 +20,36 @@ describe('isFrozen', () => {
 
   it('never judges an engine that does not report its clock', () => {
     expect(isFrozen(NOW, undefined, true, false)).toBe(false);
+  });
+});
+
+describe('steadyAgain', () => {
+  it('is false when the stream never came back', () => {
+    expect(steadyAgain(0, NOW)).toBe(false);
+  });
+
+  it('keeps counting when the stream came back only briefly', () => {
+    expect(steadyAgain(NOW - 1000, NOW)).toBe(false);
+    expect(steadyAgain(NOW - STEADY_AFTER_MS + 1, NOW)).toBe(false);
+  });
+
+  it('starts afresh once the stream played long enough', () => {
+    expect(steadyAgain(NOW - STEADY_AFTER_MS, NOW)).toBe(true);
+  });
+});
+
+describe('isStuttering', () => {
+  const every = (ms: number, n: number) => Array.from({ length: n }, (_, i) => NOW - ms * (n - i));
+
+  it('ignores the odd pause', () => {
+    expect(isStuttering(every(10_000, STUTTER_PAUSES - 1), NOW)).toBe(false);
+  });
+
+  it('notices pauses close together', () => {
+    expect(isStuttering(every(10_000, STUTTER_PAUSES), NOW)).toBe(true);
+  });
+
+  it('forgets pauses older than the window', () => {
+    expect(isStuttering(every(STUTTER_WINDOW_MS / 2, STUTTER_PAUSES), NOW)).toBe(false);
   });
 });

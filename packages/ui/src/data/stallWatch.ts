@@ -14,3 +14,29 @@ export function isFrozen(now: number, lastProgressAt: number | undefined, playin
   if (!playing || reconnecting || !lastProgressAt) return false;
   return now - lastProgressAt >= FROZEN_AFTER_MS;
 }
+
+/** How long a reconnected stream must keep playing before its next drop starts the retries afresh. */
+export const STEADY_AFTER_MS = 60_000;
+
+/**
+ * Whether a stream that came back during reconnecting (at `recoveredAt`, 0 if it hasn't) has played
+ * long enough for the next drop to count as a new outage. One that plays for a second and stops
+ * again is the same outage: the retries keep counting, so they reach the other container and in
+ * the end say so, instead of starting over at attempt 1 forever.
+ */
+export function steadyAgain(recoveredAt: number, now: number): boolean {
+  return recoveredAt > 0 && now - recoveredAt >= STEADY_AFTER_MS;
+}
+
+/** Pauses to buffer that, this close together, mean a live stream is starving. */
+export const STUTTER_PAUSES = 4;
+export const STUTTER_WINDOW_MS = 60_000;
+
+/**
+ * Whether a live stream keeps pausing to buffer: each pause is too short to count as stalled, but a
+ * connection that delivers slower than the picture plays never recovers by itself, and a fresh
+ * one often does. `pauses` are when each pause started, oldest first.
+ */
+export function isStuttering(pauses: number[], now: number): boolean {
+  return pauses.filter((at) => now - at < STUTTER_WINDOW_MS).length >= STUTTER_PAUSES;
+}

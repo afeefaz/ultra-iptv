@@ -3,7 +3,7 @@ import { CANNOT_CONNECT, type Platform, type PlayerAdapter, type PlayerError, ty
 import { createSignal } from 'solid-js';
 import { resolutionLabel } from '../format';
 import { catalog } from './catalog';
-import { HEARTBEAT_EVERY_MS, isFrozen, WATCH_EVERY_MS } from './stallWatch';
+import { HEARTBEAT_EVERY_MS, isFrozen, isStuttering, steadyAgain, WATCH_EVERY_MS } from './stallWatch';
 import { track } from './usage';
 import { ensureUnlocked, isChannelLocked } from './parental';
 import { autoPlayNext, bufferProfile, preferredAudio, preferredText, setPreferredAudio, setPreferredText, streamFormat } from './settings';
@@ -103,6 +103,13 @@ let platform: Platform | null = null;
 let resolved: ResolvedStream | null = null;
 let usingFallback = false;
 let attempt = 0;
+/** When the stream came back during the current reconnect attempts (0 if it hasn't). */
+let recoveredAt = 0;
+/** A reconnect is waiting to start: until it does, the old stream's events say nothing. */
+let retryPending = false;
+/** When the live stream last paused to buffer (newest last), to notice one that keeps stuttering. */
+let pauses: number[] = [];
+let pausedAt = 0;
 let retryTimer: ReturnType<typeof setTimeout> | undefined;
 let stallTimer: ReturnType<typeof setTimeout> | undefined;
 let tickTimer: ReturnType<typeof setInterval> | undefined;
@@ -191,7 +198,7 @@ export function initPlayback(p: Platform, layer: HTMLElement): void {
   window.addEventListener('online', () => {
     log.info('player', 'network online');
     if (isActive()) {
-      attempt = 0;
+      resetAttempts();
       void loadCurrent();
     }
   });
@@ -238,7 +245,7 @@ export async function playChannel(row: ChannelRow, list: ChannelRow[], playlistI
   const index = Math.max(0, list.findIndex((c) => c.key === row.key));
   setSession({ playlistId, list, index });
   setCurrent(row);
-  attempt = 0;
+  resetAttempts();
   usingFallback = false;
   zapStart = now();
   setStatus(null);
@@ -261,7 +268,7 @@ export async function playMedia(item: MediaItem): Promise<void> {
   setMedia(item);
   setNeighbours({ prev: item.prev, next: item.next });
   setPosition({ current: item.startAt ?? 0, duration: 0 });
-  attempt = 0;
+  resetAttempts();
   usingFallback = false;
   resumeAt = item.startAt ?? 0;
   lastSavedAt = Date.now();
@@ -332,6 +339,7 @@ export async function zapTo(index: number): Promise<void> {
 export function stopPlayback(): void {
   clearTimeout(retryTimer);
   clearTimeout(stallTimer);
+  retryPending = false;
   finishMedia();
   if (current()) log.info('player', 'stopped');
   setCurrent(null);
@@ -400,7 +408,7 @@ export function seekTo(seconds: number): void {
 /** Retries after an autoplay block or a final failure (user pressed OK). */
 export function retryNow(): void {
   if (!isActive()) return;
-  attempt = 0;
+  resetAttempts();
   setStatus(null);
   zapStart = now();
   void loadCurrent();
@@ -508,18 +516,37 @@ function onState(s: PlayerState): void {
   if (s === 'buffering' && state() !== 'buffering') {
     bufferingSpan = perf.span('player.buffering');
     perf.count('player.bufferingEvents');
+    pausedAt = Date.now();
   } else if (s !== 'buffering' && bufferingSpan) {
     bufferingSpan.end();
     bufferingSpan = null;
+    if (pausedAt && s === 'playing') log.info('player', 'buffered', { ms: Date.now() - pausedAt });
+    pausedAt = 0;
   }
+  if (s === 'loading') pauses = [];
   setState(s);
   if (s === 'loading') setVideoSize(null);
   clearTimeout(stallTimer);
   if (s === 'playing') {
-    if (attempt > 0) log.info('player', 'reconnected', { attempts: attempt });
-    attempt = 0;
+    if (retryPending) return;
+    // The attempts only start afresh once it has kept playing for a while (settleAttempts).
+    if (attempt > 0 && !recoveredAt) {
+      recoveredAt = Date.now();
+      log.info('player', 'reconnected', { attempts: attempt });
+    }
     setStatus(null);
   } else if (s === 'buffering' && isActive()) {
+    if (current() && !retryPending) {
+      const at = Date.now();
+      pauses = pauses.concat(at).slice(-8);
+      if (isStuttering(pauses, at)) {
+        log.warn('player', 'stuttering', { pauses: pauses.length });
+        perf.count('player.stuttering');
+        pauses = [];
+        scheduleReconnect();
+        return;
+      }
+    }
     // A stream stuck buffering is treated like a dropped connection.
     stallTimer = setTimeout(() => {
       if (state() === 'buffering' && isActive()) {
@@ -546,6 +573,7 @@ function onError(e: PlayerError): void {
   }
   log.warn('player', 'error', { kind: e.kind, fatal: e.fatal, message: e.message, status: e.httpStatus });
   if (!e.fatal) return;
+  settleAttempts();
   const cannotConnect = e.message === CANNOT_CONNECT;
   lastError = e.httpStatus ? `HTTP ${e.httpStatus}` : cannotConnect ? 'connect' : e.blocked ? 'blocked' : e.message;
   // Unreachable twice in a row: say so now instead of retrying for half a minute.
@@ -573,9 +601,25 @@ function onError(e: PlayerError): void {
   scheduleReconnect();
 }
 
+function resetAttempts(): void {
+  attempt = 0;
+  recoveredAt = 0;
+  retryPending = false;
+  pauses = [];
+}
+
+/** A drop after the stream had come back: a new outage if it played steadily since, else the same one. */
+function settleAttempts(): void {
+  if (!recoveredAt) return;
+  if (steadyAgain(recoveredAt, Date.now())) attempt = 0;
+  else log.warn('player', 'dropped again soon after reconnecting', { attempts: attempt, playedSeconds: Math.round((Date.now() - recoveredAt) / 1000) });
+  recoveredAt = 0;
+}
+
 function scheduleReconnect(): void {
   perf.count('player.reconnects');
   clearTimeout(retryTimer);
+  settleAttempts();
   attempt++;
   if (attempt > MAX_ATTEMPTS) {
     log.error('player', 'gave up reconnecting', { attempts: MAX_ATTEMPTS, lastError });
@@ -589,7 +633,11 @@ function scheduleReconnect(): void {
   const delayMs = Math.min(8000, 500 * Math.pow(2, attempt - 1));
   setStatus({ kind: 'reconnecting', attempt });
   log.warn('player', 'reconnect', { attempt, delayMs });
-  retryTimer = setTimeout(() => void loadCurrent(), delayMs);
+  retryPending = true;
+  retryTimer = setTimeout(() => {
+    retryPending = false;
+    void loadCurrent();
+  }, delayMs);
 }
 
 function onTracks(t: PlayerTracks): void {

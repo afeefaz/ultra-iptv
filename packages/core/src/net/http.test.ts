@@ -35,6 +35,32 @@ describe('fetch with a native fallback', () => {
     await expect(getJson('http://a.test/x')).rejects.toMatchObject({ info: { code: 'auth', status: 403 } });
   });
 
+  it('asks natively when the server refuses the page with an odd 4xx, then stays native for it', async () => {
+    let fetches = 0;
+    setFetch(async () => (fetches++, new Response('no', { status: 469 })));
+    setFallbackFetch(async () => ok({ via: 'native' }));
+    expect(await getJson('http://a.test/x')).toEqual({ via: 'native' });
+    expect(await getJson('http://a.test/y')).toEqual({ via: 'native' });
+    expect(fetches).toBe(1);
+  });
+
+  it('keeps the refusal when native HTTP is refused too, and tries the page again next time', async () => {
+    let fetches = 0;
+    setFetch(async () => (fetches++, new Response('no', { status: 469 })));
+    setFallbackFetch(async () => new Response('no', { status: 469 }));
+    await expect(getJson('http://a.test/x')).rejects.toMatchObject({ info: { code: 'http', status: 469 } });
+    await expect(getJson('http://a.test/x')).rejects.toMatchObject({ info: { status: 469 } });
+    expect(fetches).toBe(2);
+  });
+
+  it('does not ask natively about a missing item', async () => {
+    let native = 0;
+    setFetch(async () => new Response('no', { status: 404 }));
+    setFallbackFetch(async () => (native++, ok({ via: 'native' })));
+    await expect(getJson('http://a.test/x')).rejects.toMatchObject({ info: { status: 404 } });
+    expect(native).toBe(0);
+  });
+
   it('retries native HTTP once after a dropped connection', async () => {
     let calls = 0;
     setFetch(async () => {
