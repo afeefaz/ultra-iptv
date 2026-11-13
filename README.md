@@ -13,6 +13,8 @@ Android asks you to allow installs from the app you download with, and Play Prot
 
 **Mac (Apple Silicon, macOS 13+):** [download the latest Mac version](https://github.com/afeefaz/ultra-iptv/releases/latest/download/UltraIPTV-mac.dmg), open it and drag Ultra IPTV into Applications. It isn't signed by Apple yet, so the first time, open it and allow it in System Settings → Privacy & Security (Open Anyway).
 
+**Windows (x64, Windows 10 and 11):** coming soon; see [docs/sideloading.md](docs/sideloading.md).
+
 For Samsung TVs, see [docs/sideloading.md](docs/sideloading.md).
 
 ## Setup

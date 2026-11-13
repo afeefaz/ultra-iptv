@@ -6,6 +6,50 @@ use std::time::Instant;
 use tauri::ipc::Channel;
 use tauri::{AppHandle, Manager, WebviewWindow};
 
+#[cfg(target_os = "macos")]
+fn os_version() -> Option<String> {
+    sysctl("kern.osproductversion").map(|v| format!("macOS {v}"))
+}
+
+#[cfg(target_os = "macos")]
+fn model() -> Option<String> {
+    sysctl("hw.model")
+}
+
+/** "Microsoft Windows [Version 10.0.26100.1234]" → "Windows 10.0.26100.1234" (build 22000 and up is Windows 11). */
+#[cfg(windows)]
+fn os_version() -> Option<String> {
+    use std::os::windows::process::CommandExt;
+    const NO_WINDOW: u32 = 0x0800_0000;
+    let out = std::process::Command::new("cmd")
+        .args(["/C", "ver"])
+        .creation_flags(NO_WINDOW)
+        .output()
+        .ok()?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    let version = text
+        .split("Version ")
+        .nth(1)?
+        .trim()
+        .trim_end_matches(']')
+        .to_string();
+    let build: u32 = version
+        .split('.')
+        .nth(2)
+        .and_then(|b| b.parse().ok())
+        .unwrap_or(0);
+    Some(format!(
+        "Windows {} ({version})",
+        if build >= 22000 { "11" } else { "10" }
+    ))
+}
+
+#[cfg(windows)]
+fn model() -> Option<String> {
+    None
+}
+
+#[cfg(target_os = "macos")]
 fn sysctl(name: &str) -> Option<String> {
     let out = std::process::Command::new("/usr/sbin/sysctl")
         .args(["-n", name])
@@ -26,15 +70,18 @@ pub struct AppInfo {
     os_version: Option<String>,
     model: Option<String>,
     arch: &'static str,
+    /** "macos" or "windows": the platform the page reports itself as. */
+    os: &'static str,
 }
 
 #[tauri::command]
 pub fn app_info(app: AppHandle) -> AppInfo {
     AppInfo {
         version: app.package_info().version.to_string(),
-        os_version: sysctl("kern.osproductversion").map(|v| format!("macOS {v}")),
-        model: sysctl("hw.model"),
+        os_version: os_version(),
+        model: model(),
         arch: std::env::consts::ARCH,
+        os: std::env::consts::OS,
     }
 }
 
@@ -148,9 +195,15 @@ pub fn export_text(app: AppHandle, filename: String, text: String) -> Result<(),
         name
     });
     std::fs::write(&file, text).map_err(|e| e.to_string())?;
+    // Shown in Finder or Explorer, selected.
+    #[cfg(target_os = "macos")]
     let _ = std::process::Command::new("/usr/bin/open")
         .arg("-R")
         .arg(&file)
+        .spawn();
+    #[cfg(windows)]
+    let _ = std::process::Command::new("explorer")
+        .arg(format!("/select,{}", file.display()))
         .spawn();
     Ok(())
 }
@@ -172,8 +225,6 @@ pub fn is_fullscreen(window: WebviewWindow) -> bool {
  */
 #[tauri::command]
 pub fn secret_key(app: AppHandle) -> Result<Vec<u8>, String> {
-    use std::io::Read;
-    use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
     let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let file = dir.join("secret.key");
@@ -183,17 +234,22 @@ pub fn secret_key(app: AppHandle) -> Result<Vec<u8>, String> {
         }
     }
     let mut key = vec![0u8; 32];
-    std::fs::File::open("/dev/urandom")
-        .and_then(|mut f| f.read_exact(&mut key))
-        .map_err(|e| e.to_string())?;
-    let mut out = std::fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .mode(0o600)
-        .open(&file)
-        .map_err(|e| e.to_string())?;
-    std::io::Write::write_all(&mut out, &key).map_err(|e| e.to_string())?;
-    let _ = std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o600));
+    getrandom::fill(&mut key).map_err(|e| e.to_string())?;
+    // The data folder is the user's own on Windows; on the Mac the file is made readable by them alone.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+        let mut out = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .mode(0o600)
+            .open(&file)
+            .map_err(|e| e.to_string())?;
+        std::io::Write::write_all(&mut out, &key).map_err(|e| e.to_string())?;
+        let _ = std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o600));
+    }
+    #[cfg(not(unix))]
+    std::fs::write(&file, &key).map_err(|e| e.to_string())?;
     Ok(key)
 }

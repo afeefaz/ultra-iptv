@@ -23,8 +23,16 @@ every bundled library and its licence in `Contents/Resources/licenses`
 (`apps/desktop/licenses/NOTICE.txt`). The build pins the archive's SHA-256 in
 `scripts/desktop-libmpv.mjs`.
 
+## Windows app: LGPL libraries
+
+The Windows app plays video with **libmpv 0.42** and FFmpeg, from zhongfly's LGPL build
+([mpv-winbuild](https://github.com/zhongfly/mpv-winbuild), `mpv-dev-lgpl-x86_64`, built with
+`-Dgpl=false`). It ships as one dynamically linked `libmpv-2.dll` next to the program, so the app
+stays MIT and the library can be replaced. The archive's SHA-256 is pinned in
+`scripts/desktop-libmpv.mjs`, and the licence texts travel in the installed app's `licenses` folder.
+
 The window is [Tauri](https://tauri.app) (MIT or Apache-2.0), with Rust crates under MIT or
-Apache-2.0.
+Apache-2.0, on both the Mac and Windows.
 
 ## Other libraries
 

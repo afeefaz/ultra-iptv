@@ -4,6 +4,8 @@ import { RELAY_URL } from '../pair/pair';
 export const LATEST_URL = `${RELAY_URL}/latest.json`;
 /** The Mac app's: the same format, for its own downloads (the app replaces itself through Tauri's updater). */
 export const DESKTOP_LATEST_URL = `${RELAY_URL}/desktop/latest.json`;
+/** The Windows app's. */
+export const WINDOWS_LATEST_URL = `${RELAY_URL}/desktop/latest-windows.json`;
 
 /** What scripts/release-manifest.mjs publishes with each release. */
 export interface LatestRelease {

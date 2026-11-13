@@ -1,19 +1,30 @@
 fn main() {
-    // libmpv: the bundled LGPL build (scripts/desktop-libmpv.mjs), copied into the app's Frameworks
-    // folder by the bundler. ULTRA_LIBMPV_PREFIX points elsewhere (e.g. Homebrew's) for experiments.
-    let vendored = format!(
-        "{}/vendor/libmpv",
-        std::env::var("CARGO_MANIFEST_DIR").unwrap()
-    );
+    let manifest = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+    let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    println!("cargo:rerun-if-env-changed=ULTRA_LIBMPV_PREFIX");
+    println!("cargo:rerun-if-changed=build.rs");
+    if target_os == "macos" {
+        macos(&manifest);
+    } else if target_os == "windows" {
+        windows(&manifest);
+    }
+    tauri_build::build()
+}
+
+/**
+ * libmpv on the Mac: the bundled LGPL build (scripts/desktop-libmpv.mjs), linked here and copied
+ * into the app's Frameworks folder by the bundler; and the native video view. ULTRA_LIBMPV_PREFIX
+ * points elsewhere (e.g. Homebrew's) for experiments.
+ */
+fn macos(manifest: &str) {
+    let vendored = format!("{manifest}/vendor/libmpv");
     let mpv_prefix = std::env::var("ULTRA_LIBMPV_PREFIX").unwrap_or_else(|_| {
         if !std::path::Path::new(&format!("{vendored}/lib/libmpv.dylib")).exists() {
             panic!("libmpv is missing: run `node scripts/desktop-libmpv.mjs` first");
         }
         vendored.clone()
     });
-    println!("cargo:rerun-if-env-changed=ULTRA_LIBMPV_PREFIX");
     println!("cargo:rerun-if-changed=native/mpv_view.m");
-    println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=vendor/libmpv/VERSION");
     println!("cargo:rustc-link-search=native={mpv_prefix}/lib");
     println!("cargo:rustc-link-lib=dylib=mpv");
@@ -31,5 +42,24 @@ fn main() {
     for framework in ["Cocoa", "QuartzCore", "OpenGL"] {
         println!("cargo:rustc-link-lib=framework={framework}");
     }
-    tauri_build::build()
+}
+
+/**
+ * libmpv on Windows: one DLL (scripts/desktop-libmpv.mjs --windows), loaded when the app starts.
+ * The installer puts it next to the program (tauri.windows.conf.json); for runs straight from
+ * target/ it is copied there too.
+ */
+fn windows(manifest: &str) {
+    let dll = std::path::Path::new(manifest).join("vendor/libmpv-win/libmpv-2.dll");
+    println!("cargo:rerun-if-changed=vendor/libmpv-win/VERSION");
+    if !dll.exists() {
+        println!("cargo:warning=libmpv-2.dll is missing: run `node scripts/desktop-libmpv.mjs --windows` first");
+        return;
+    }
+    // OUT_DIR is target/<triple?>/<profile>/build/<crate>/out: the program sits three levels up.
+    if let Ok(out) = std::env::var("OUT_DIR") {
+        if let Some(profile_dir) = std::path::Path::new(&out).ancestors().nth(3) {
+            let _ = std::fs::copy(&dll, profile_dir.join("libmpv-2.dll"));
+        }
+    }
 }

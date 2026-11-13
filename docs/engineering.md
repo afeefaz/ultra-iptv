@@ -17,7 +17,7 @@ These don't bend for a feature. If a feature seems to need one broken, raise it 
 ```
 apps/web        Entry point; picks the platform at runtime
 apps/android    Capacitor shell and the native player plugin (Java)
-apps/desktop    Mac app: Tauri shell, mpv player and native helpers (Rust, Obj-C)
+apps/desktop    Mac and Windows app: Tauri shell, mpv player and native helpers (Rust, Obj-C on the Mac)
 apps/tizen      Samsung config.xml and icon
 apps/relay      Cloudflare Worker: encrypted mailbox and the playlist website
 packages/ui     Screens, components, focus, keys, translations, styles

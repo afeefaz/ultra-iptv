@@ -1,4 +1,4 @@
-//! Ultra IPTV for macOS: the shared web app in a Tauri window, with native networking, files and
+//! Ultra IPTV for macOS and Windows: the shared web app in a Tauri window, with native networking, files and
 //! an mpv video player underneath the page (docs/spec.md §3).
 mod files;
 mod http;
@@ -15,13 +15,21 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
-            let player = mpv::Mpv::new()?;
             let window = app.get_webview_window("main").ok_or("no main window")?;
-            let ns_window = window.ns_window()? as usize;
+            let prepared = mpv::view::prepare(&window)?;
+            let player = mpv::Mpv::new(prepared.wid())?;
             let handle = player_handle(&player);
-            let view = unsafe { mpv::ffi::ump_view_create(ns_window as *mut _, handle as *mut _) };
-            player.attach_view(view as usize);
+            let view = mpv::view::attach(&window, prepared, handle as *mut _)?;
+            player.attach_view(view);
             app.manage(player);
+            let resized = window.clone();
+            window.on_window_event(move |event| {
+                if let tauri::WindowEvent::Resized(_) = event {
+                    if let Some(player) = resized.try_state::<mpv::Mpv>() {
+                        mpv::view::window_resized(&resized, player.view());
+                    }
+                }
+            });
             mpv::spawn_events(app.handle().clone(), handle);
             #[cfg(debug_assertions)]
             testing::start(window.clone());

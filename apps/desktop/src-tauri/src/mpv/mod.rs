@@ -1,10 +1,10 @@
-//! The video player: one libmpv instance for the window, drawn by the native view under the page
-//! (native/mpv_view.m). The page's adapter (packages/platform/src/desktop/player.ts) turns these
+//! The video player: one libmpv instance for the window, drawn under the page (see view.rs). The page's adapter (packages/platform/src/desktop/player.ts) turns these
 //! events into the app's player states, as it does for ExoPlayer on Android.
 //!
 //! Stream addresses contain logins, so neither URLs nor mpv's own log lines ever leave this module:
 //! log lines are only read here to tell an HTTP error or a failed connection apart.
 pub mod ffi;
+pub mod view;
 
 use ffi::*;
 use regex::Regex;
@@ -17,7 +17,7 @@ use tauri::{AppHandle, State};
 
 pub struct Mpv {
     handle: *mut mpv_handle,
-    view: Mutex<usize>,
+    view: Mutex<view::View>,
     sink: Mutex<Option<Channel<Value>>>,
     /** What mpv logged about the file being opened, for the next error. */
     problem: Mutex<(Option<u16>, bool)>,
@@ -57,15 +57,33 @@ const OBSERVED: &[(&str, i32)] = &[
 ];
 
 impl Mpv {
-    pub fn new() -> Result<Mpv, String> {
+    /** `wid`: the window mpv draws into itself (Windows); none when the app draws it (macOS). */
+    pub fn new(wid: Option<i64>) -> Result<Mpv, String> {
+        load()?;
         unsafe {
             let handle = mpv_create();
             if handle.is_null() {
                 return Err("mpv could not start".into());
             }
+            // How the picture is drawn: by our view through the render API (macOS), or by mpv
+            // itself into our child window with Direct3D 11 (Windows).
+            #[cfg(target_os = "macos")]
+            let video: Vec<(&str, String)> =
+                vec![("vo", "libmpv".into()), ("hwdec", "videotoolbox".into())];
+            #[cfg(windows)]
+            let video: Vec<(&str, String)> = vec![
+                ("vo", "gpu-next".into()),
+                ("gpu-api", "d3d11".into()),
+                ("hwdec", "d3d11va".into()),
+                ("wid", wid.map(|w| w.to_string()).unwrap_or_default()),
+            ];
+            #[cfg(not(any(target_os = "macos", windows)))]
+            let video: Vec<(&str, String)> = vec![("vo", "libmpv".into())];
+            let _ = wid;
+            for (k, v) in video {
+                mpv_set_option_string(handle, c(k).as_ptr(), c(&v).as_ptr());
+            }
             for (k, v) in [
-                ("vo", "libmpv"),
-                ("hwdec", "videotoolbox"),
                 ("config", "no"),
                 ("terminal", "no"),
                 ("load-scripts", "no"),
@@ -94,7 +112,7 @@ impl Mpv {
             mpv_request_log_messages(handle, c("warn").as_ptr());
             Ok(Mpv {
                 handle,
-                view: Mutex::new(0),
+                view: Mutex::new(view::View::default()),
                 sink: Mutex::new(None),
                 problem: Mutex::new((None, false)),
             })
@@ -127,8 +145,12 @@ impl Mpv {
         self.handle
     }
 
-    pub fn attach_view(&self, view: usize) {
+    pub fn attach_view(&self, view: view::View) {
         *self.view.lock().unwrap() = view;
+    }
+
+    pub fn view(&self) -> view::View {
+        *self.view.lock().unwrap()
     }
 
     fn send(&self, payload: Value) {
@@ -334,22 +356,13 @@ pub fn mpv_set_rect(
     w: f64,
     h: f64,
 ) -> Result<(), String> {
-    let view = *player.view.lock().unwrap();
-    if view == 0 {
-        return Ok(());
-    }
-    app.run_on_main_thread(move || unsafe {
-        ump_view_set_frame(
-            view as *mut _,
-            x,
-            y,
-            w,
-            h,
-            (mode == "behind") as i32,
-            (mode == "hidden") as i32,
-        );
-    })
-    .map_err(|e| e.to_string())
+    view::set_frame(
+        &app,
+        player.view(),
+        (x, y, w, h),
+        mode == "behind",
+        mode == "hidden",
+    )
 }
 
 #[cfg(test)]

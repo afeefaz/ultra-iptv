@@ -23,7 +23,7 @@ export type MpvEvent =
   | { t: 'end'; reason: number; error: string; httpStatus: number | null; cannotConnect: boolean };
 
 export const native = {
-  appInfo: () => invoke<{ version: string; osVersion?: string; model?: string; arch: string }>('app_info'),
+  appInfo: () => invoke<{ version: string; osVersion?: string; model?: string; arch: string; os: string }>('app_info'),
   /** The answer comes back as raw "<status>\n<body>" text, not JSON. */
   async httpGet(url: string, headers: Record<string, string> | undefined, timeoutMs: number): Promise<{ status: number; body: string }> {
     const raw = await invoke<ArrayBuffer | string>('http_get', { url, headers: headers ?? null, timeoutMs });

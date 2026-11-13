@@ -1,6 +1,7 @@
 //! Check for updates on the Mac (Settings → System), only when pressed: Tauri's updater downloads
 //! the new app from our GitHub releases, checks its signature (our updater key), and replaces this
-//! one; then the app restarts into it.
+//! one; then the app restarts into it. On Windows the update is the installer itself: the plugin
+//! runs it (quietly) and it starts the new version.
 use serde::Serialize;
 use tauri::ipc::Channel;
 use tauri::AppHandle;
@@ -48,10 +49,20 @@ pub struct Info {
 #[tauri::command]
 pub fn update_info(app: AppHandle) -> Info {
     let version = app.package_info().version.to_string();
+    // Windows: the update is our installer, which replaces the app wherever it is.
+    #[cfg(windows)]
+    return Info {
+        version_code: version_code(&version),
+        can_install: true,
+        blocker: None,
+    };
+    #[cfg(not(windows))]
     let exe = std::env::current_exe().ok();
+    #[cfg(not(windows))]
     let bundle = exe
         .as_ref()
         .and_then(|e| e.ancestors().nth(3).map(|p| p.to_path_buf()));
+    #[cfg(not(windows))]
     let movable = bundle.as_ref().is_some_and(|b| {
         let path = b.to_string_lossy();
         let writable = b
@@ -59,6 +70,7 @@ pub fn update_info(app: AppHandle) -> Info {
             .is_some_and(|dir| std::fs::metadata(dir).is_ok_and(|m| !m.permissions().readonly()));
         !path.contains("/AppTranslocation/") && !path.starts_with("/Volumes/") && writable
     });
+    #[cfg(not(windows))]
     Info {
         version_code: version_code(&version),
         can_install: movable,

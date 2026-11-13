@@ -1,6 +1,6 @@
 # Sideloading Ultra IPTV
 
-Distribution starts with sideloading; app stores come later. This page covers putting a build on a Samsung TV, an LG TV, Android phones, TVs and Fire TV, and a Mac.
+Distribution starts with sideloading; app stores come later. This page covers putting a build on a Samsung TV, an LG TV, Android phones, TVs and Fire TV, a Mac, and a Windows PC.
 
 > Status: the Android steps below were verified in phase 4 (Android TV and phone emulators). Samsung and LG steps are still the **planned** ones; steps marked **(verify)** get checked on real hardware in phases 5–6. App IDs come from `docs/spec.md` §12 (Android/webOS `com.ultraiptv.player`, Tizen `ULTRAIPTV1.UltraIPTV`); `<TV_IP>` is the TV's IP address.
 
@@ -209,3 +209,45 @@ it when Check for updates is pressed) and `desktop/update.json` (Tauri's: the in
 Commit both. Pressing Update downloads the archive from our GitHub release (nothing else is
 accepted), checks its signature, replaces the app and restarts it. An app run from the disk image
 or Downloads says to move it to Applications first.
+
+## Windows (x64, Windows 10 and 11)
+
+The same app as the Mac's (`apps/desktop`), with mpv drawing into a child window under WebView2.
+It needs the WebView2 runtime, which Windows 11 and an up-to-date Windows 10 already have; the
+installer doesn't download it (nothing is fetched from anywhere but our releases).
+
+### Installing
+
+Run `UltraIPTV-windows-setup.exe`. It installs for the current user, so no administrator is
+needed. The installer isn't signed yet, so SmartScreen may say *Windows protected your PC*: choose
+**More info → Run anyway**. Updates from inside the app run the new installer quietly and start
+the new version.
+
+### Building
+
+Windows builds run on GitHub's Windows machines: **Actions → Windows app → Run workflow**
+(`.github/workflows/desktop-windows.yml`). The installer is attached to the run. Tick *Sign for
+in-app updates* for a release: that needs the repository secrets `TAURI_SIGNING_PRIVATE_KEY` (the
+contents of `~/.ultra-iptv/desktop-updater.key`) and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+
+On a Windows machine with Node 22, Rust and Visual Studio's C++ build tools:
+
+```sh
+node scripts/desktop-libmpv.mjs --windows
+pnpm exec vite build --config apps/web/vite.config.ts
+cd apps/desktop && pnpm exec tauri build --bundles nsis --config "{\"bundle\":{\"createUpdaterArtifacts\":false}}"
+```
+
+### Releasing the Windows app
+
+From a signed run, download the installer and its `.sig`, then:
+
+```sh
+node scripts/release-manifest.mjs --windows notes.json "Ultra IPTV_<version>_x64-setup.exe"
+cp "Ultra IPTV_<version>_x64-setup.exe" UltraIPTV-windows-setup.exe
+gh release upload v<version> UltraIPTV-windows-setup.exe --repo afeefaz/ultra-iptv
+pnpm relay:deploy
+```
+
+This writes `desktop/latest-windows.json` and adds the `windows-x86_64` entry to `desktop/update.json`
+next to the Mac's (run the Mac step first for the same version). Commit both.

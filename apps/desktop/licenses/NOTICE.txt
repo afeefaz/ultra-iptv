@@ -1,5 +1,5 @@
-Ultra IPTV for Mac: third-party components
-===========================================
+Ultra IPTV for Mac and Windows: third-party components
+======================================================
 
 The app's own code is under the MIT License (https://github.com/afeefaz/ultra-iptv).
 
@@ -26,6 +26,12 @@ codesign --force --deep -s - "Ultra IPTV.app").
 
 The exact source versions and build recipe of these libraries are in the media-kit repository
 at tag v0.7.3 (nix/ and Makefile).
+
+On Windows, video playback uses one library, libmpv-2.dll next to the program: zhongfly's LGPL
+build (https://github.com/zhongfly/mpv-winbuild, release 2026-11-13-fe753a7824, file
+mpv-dev-lgpl-x86_64), mpv 0.42 built with -Dgpl=false and FFmpeg (LGPL), with its other libraries
+built in (the build's own list of components and their sources is in that repository). It is
+linked dynamically and can be replaced with another build of the same version.
 
 The app window uses Tauri (MIT or Apache-2.0) and Rust crates under MIT or Apache-2.0 licences;
 the interface uses SolidJS (MIT), Material Symbols (Apache-2.0) and the Cairo, Outfit and Space

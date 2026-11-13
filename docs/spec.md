@@ -69,6 +69,7 @@ packages/worker  – classic Web Worker: fetch + stream-parse M3U/Xtream JSON, d
 | Samsung Tizen 4.0 | Chromium 56 | **legacy** |
 | Android (incl. Fire TV) | System WebView (can be old on Fire TV / older Android TV) | **legacy** |
 | Mac (Tauri, Apple Silicon, macOS 13+) | WKWebView (Safari 16+) | modern |
+| Windows (Tauri, x64, Windows 10/11) | WebView2 (Chromium) | modern |
 | Web (development on the Mac) | current Chrome / Safari / Firefox | modern |
 
 **The legacy bundle targets Chrome 53:**
@@ -94,7 +95,7 @@ Normalised key events: `up/down/left/right/ok/back/menu/info/playPause/play/paus
 | Tizen | `tizen.tvinputdevice.registerKey` for media, colour, channel and number keys; Back = 10009; exit with `tizen.application.getCurrentApplication().exit()` |
 | webOS | keyCode map (Back 461, colour 403–406, CH 33/34, media keys). **Magic Remote:** the pointer moves focus on hover and clicks with OK; the app listens for webOS's `cursorStateChange` to switch between pointer and D-pad modes. Back is handled by the app (`disableBackHistoryAPI` in `appinfo.json`) |
 | Android | Capacitor host forwards D-pad, media and colour `KeyEvent`s into the WebView. Touch on phones. Fire TV remote key codes (Menu, Rewind/FF, Play/Pause) included. Manifest: `LEANBACK_LAUNCHER` + banner, `touchscreen` and `leanback` features `required="false"` so one APK installs on phone, Android TV and Fire TV |
-| Mac | As the web, plus F11 / Ctrl+Cmd+F for window full screen; Back on Home doesn't quit |
+| Mac, Windows | As the web, plus F11 (and Ctrl+Cmd+F on the Mac) for window full screen; Back on Home doesn't quit |
 | Web | Keyboard (arrows, Enter, Esc/Backspace, digits, `F1`–`F4` as colour keys), mouse, touch |
 
 ### 4.2 Player
@@ -115,7 +116,7 @@ interface PlayerAdapter {
 | Tizen | **AVPlay** (`webapis.avplay`) | HLS and MPEG-TS natively; `setDisplayRect` for the preview pane; `setStreamingProperty` for buffering and user agent; tracks via `getTotalTrackInfo` / `setSelectTrack` |
 | webOS | **`<video>`**, plus **hls.js where needed** | Native pipeline for HLS/TS first; hls.js for HLS streams the native player mishandles (decided per stream after a failed native attempt, then remembered per host) |
 | Android | **Media3 ExoPlayer** in a small Capacitor plugin | `SurfaceView` behind a transparent WebView, rect synced from JS; FFmpeg audio extension (AC-3/E-AC-3/DTS); HW→SW decoder fallback |
-| Mac | **libmpv** (LGPL build) drawn by a native view under the transparent page | Plays everything ExoPlayer does (MKV, AC-3/E-AC-3/DTS, HEVC with VideoToolbox, every audio track, SRT/ASS subtitles); same `video-behind`/`video-hole` model as Android; logins never leave the native side, mpv's log lines included |
+| Mac, Windows | **libmpv** (LGPL builds): on the Mac a native view under the transparent page, on Windows a child window mpv draws into (Direct3D 11) under WebView2 | Plays everything ExoPlayer does (MKV, AC-3/E-AC-3/DTS, HEVC with VideoToolbox, every audio track, SRT/ASS subtitles); same `video-behind`/`video-hole` model as Android; logins never leave the native side, mpv's log lines included |
 | Web | **hls.js** for HLS, **mpegts.js** for raw `.ts` live | **Only streams the browser can reach directly** (CORS-enabled; `https` when the page is `https`). Unreachable streams show a clear message instead of failing silently |
 
 **Shared player behaviour** (in `core`, not per adapter):
@@ -161,7 +162,7 @@ interface PlayerAdapter {
 |---|---|
 | Web | file download |
 | Android | write to app storage + Android share sheet |
-| Mac | written to Downloads and shown in Finder |
+| Mac, Windows | written to Downloads and shown in Finder or Explorer |
 | Tizen | write to the `downloads` virtual root (`filesystem.write` privilege), then `sdb pull` |
 | webOS | no user file system for web apps: export prints the log in numbered chunks to the console, captured with `ares-inspect` / `ares-log` (see `docs/debugging.md`) |
 

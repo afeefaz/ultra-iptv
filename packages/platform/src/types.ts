@@ -42,7 +42,7 @@ export interface FileExportAdapter {
   exportText(filename: string, mimeType: string, text: string): Promise<void>;
 }
 
-export type PlatformId = 'web' | 'tizen' | 'webos' | 'android' | 'macos';
+export type PlatformId = 'web' | 'tizen' | 'webos' | 'android' | 'macos' | 'windows';
 
 export interface DeviceInfo {
   platform: PlatformId;

@@ -151,6 +151,22 @@ describe('PlaylistService (playback support)', () => {
     expect(await service.shortEpg(rec.id, '1003')).toEqual([]); // every 7th mock channel has no guide
   });
 
+  it('does not ask again for a guide that just failed, and pauses a provider that keeps failing', async () => {
+    const rec = await service.save(XTREAM);
+    failAction = 'get_short_epg';
+    await expect(service.shortEpg(rec.id, '1001')).rejects.toBeTruthy();
+    const afterFirst = requested.length;
+    // Shown again: no second request for the same channel.
+    expect(await service.shortEpg(rec.id, '1001')).toEqual([]);
+    expect(requested.length).toBe(afterFirst);
+    // Five more channels fail (six in a row): then nothing more is asked for a while.
+    for (const id of ['1002', '1004', '1005', '1006', '1008']) await service.shortEpg(rec.id, id).catch(() => undefined);
+    const paused = requested.length;
+    failAction = null;
+    expect(await service.shortEpg(rec.id, '1009')).toEqual([]);
+    expect(requested.length).toBe(paused);
+  });
+
   it('builds stream URLs with the account’s credentials', async () => {
     const rec = await service.save(XTREAM);
     const r = await service.streamUrl(rec.id, { t: 'x', id: '1005' }, 'auto', true);

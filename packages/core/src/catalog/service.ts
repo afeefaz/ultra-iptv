@@ -93,6 +93,12 @@ const SPEED_MOVIES = 3;
 const LIST_HASH_VERSION = 1;
 const MAX_VERSIONS = 12;
 const MAX_MORE = 16;
+/** A channel whose guide failed isn't asked again for this long. */
+const EPG_RETRY_AFTER_MS = 10 * 60_000;
+/** This many failures in a row from one playlist pause its guide requests… */
+const EPG_PAUSE_AFTER_FAILURES = 6;
+/** …for this long. */
+const EPG_PAUSE_MS = 2 * 60_000;
 const W = { small: 1, list: 4, save: 3 };
 const XTREAM_TOTAL = W.small * 4 + W.list * 3 + W.save * 3;
 const M3U_TOTAL = W.list * 3 + W.save * 3;
@@ -140,6 +146,10 @@ export class PlaylistService {
   private readonly versionIndexes = new Map<string, Promise<Map<string, string[]>>>();
   private readonly epgInflight = new Map<string, Promise<EpgEntry[]>>();
   private readonly epgLimit = createLimiter(3);
+  /** When each channel's guide last failed, and failures in a row per playlist (see shortEpg). */
+  private readonly epgFailed = new Map<string, number>();
+  private readonly epgFailures = new Map<string, number>();
+  private readonly epgPausedUntil = new Map<string, number>();
   private lastRecentAt = 0;
 
   /** Managing this device from another one; silent until the user pairs. */
@@ -399,8 +409,16 @@ export class PlaylistService {
       perf.count('cache.epg.hit');
       return cached.items;
     }
-    perf.count('cache.epg.miss');
     const key = playlistId + '|' + streamId;
+    // A provider that failed is left alone for a while: every row shown or focused again would
+    // otherwise ask again, and a struggling server (502s) gets a storm of requests.
+    const failedAt = this.epgFailed.get(key);
+    const paused = this.epgPausedUntil.get(playlistId) ?? 0;
+    if ((failedAt !== undefined && now - failedAt < EPG_RETRY_AFTER_MS) || now < paused) {
+      perf.count('cache.epg.skipped');
+      return cached ? cached.items : [];
+    }
+    perf.count('cache.epg.miss');
     let pending = this.epgInflight.get(key);
     if (!pending) {
       const done = () => this.epgInflight.delete(key);
@@ -413,10 +431,20 @@ export class PlaylistService {
       }).then(
         (items) => {
           done();
+          this.epgFailed.delete(key);
+          this.epgFailures.set(playlistId, 0);
           return items;
         },
         (e) => {
           done();
+          this.epgFailed.set(key, Date.now());
+          const failures = (this.epgFailures.get(playlistId) ?? 0) + 1;
+          this.epgFailures.set(playlistId, failures);
+          if (failures === EPG_PAUSE_AFTER_FAILURES) {
+            this.epgPausedUntil.set(playlistId, Date.now() + EPG_PAUSE_MS);
+            this.epgFailures.set(playlistId, 0);
+            log.warn('epg', 'guide paused: the provider keeps failing', { playlist: playlistId, seconds: EPG_PAUSE_MS / 1000, error: toErrorInfo(e) });
+          }
           // Keep showing stale data rather than nothing.
           if (cached) return cached.items;
           throw e;

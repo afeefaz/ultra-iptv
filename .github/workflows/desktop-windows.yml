@@ -1,0 +1,78 @@
+# Builds the Windows app (x64 installer) on GitHub's Windows machines. Started by hand from the
+# Actions tab; the installer is attached to the run as an artifact (docs/sideloading.md, Windows).
+#
+# With the repository secrets TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+# (the updater key from ~/.ultra-iptv), the run also signs the installer for in-app updates.
+name: Windows app
+
+on:
+  # Every push to the Windows branch builds (unsigned) while it's being made.
+  push:
+    branches: [desktop-windows]
+  workflow_dispatch:
+    inputs:
+      signed:
+        description: Sign for in-app updates (needs the updater key secrets)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: pnpm
+        run: |
+          corepack enable
+          corepack pnpm --version
+
+      - name: Rust
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            apps/desktop/src-tauri/target
+          key: windows-cargo-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock') }}
+
+      - name: Install
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: libmpv
+        run: node scripts/desktop-libmpv.mjs --windows
+
+      - name: Web build
+        run: corepack pnpm exec vite build --config apps/web/vite.config.ts --sourcemap false
+
+      - name: Installer
+        working-directory: apps/desktop
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ inputs.signed && secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ inputs.signed && secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
+        run: |
+          if ("${{ inputs.signed }}" -eq "true") {
+            corepack pnpm exec tauri build --bundles nsis
+          } else {
+            corepack pnpm exec tauri build --bundles nsis --config '{\"bundle\":{\"createUpdaterArtifacts\":false}}'
+          }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: UltraIPTV-windows
+          path: |
+            apps/desktop/src-tauri/target/release/bundle/nsis/*.exe
+            apps/desktop/src-tauri/target/release/bundle/nsis/*.exe.sig
+          if-no-files-found: error

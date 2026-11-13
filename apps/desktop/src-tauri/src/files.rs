@@ -128,12 +128,42 @@ pub fn files_remove_dir(app: AppHandle, path: String) -> Result<(), String> {
 pub fn files_free_bytes(app: AppHandle) -> Option<u64> {
     let dir = app.path().app_data_dir().ok()?;
     fs::create_dir_all(&dir).ok()?;
+    free_space(&dir)
+}
+
+#[cfg(unix)]
+fn free_space(dir: &Path) -> Option<u64> {
     let c = std::ffi::CString::new(dir.to_string_lossy().as_bytes()).ok()?;
     let mut st: libc::statvfs = unsafe { std::mem::zeroed() };
     if unsafe { libc::statvfs(c.as_ptr(), &mut st) } != 0 {
         return None;
     }
     Some(st.f_bavail as u64 * st.f_frsize as u64)
+}
+
+#[cfg(windows)]
+fn free_space(dir: &Path) -> Option<u64> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
+    let wide: Vec<u16> = dir
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let mut free = 0u64;
+    let ok = unsafe {
+        GetDiskFreeSpaceExW(
+            wide.as_ptr(),
+            &mut free,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+        )
+    };
+    if ok == 0 {
+        None
+    } else {
+        Some(free)
+    }
 }
 
 #[cfg(test)]

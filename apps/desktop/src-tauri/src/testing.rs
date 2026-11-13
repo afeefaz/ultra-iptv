@@ -7,6 +7,7 @@ pub fn test_report(line: String) {
     println!("TEST {line}");
 }
 
+#[cfg(target_os = "macos")]
 #[tauri::command]
 pub fn test_shot(window: WebviewWindow, path: String) -> Result<(), String> {
     let id = unsafe {
@@ -40,4 +41,11 @@ pub fn start(window: WebviewWindow) {
             let _ = window.eval(&guarded);
         }
     });
+}
+
+/** Screenshots are macOS-only for now. */
+#[cfg(not(target_os = "macos"))]
+#[tauri::command]
+pub fn test_shot(_window: WebviewWindow, _path: String) -> Result<(), String> {
+    Err("screenshots: macOS only".into())
 }

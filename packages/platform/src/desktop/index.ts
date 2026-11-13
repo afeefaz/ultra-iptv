@@ -1,22 +1,24 @@
-import { DESKTOP_LATEST_URL } from '@ultra/core';
+import { DESKTOP_LATEST_URL, WINDOWS_LATEST_URL } from '@ultra/core';
 import type { DeviceInfo, Platform, UpdateProblem } from '../types';
 import { webPlatform } from '../web';
 import { MpvPlayer } from './player';
 import { native } from './plugin';
 
 /**
- * The Mac app (Tauri, apps/desktop): the same app in a native window, with mpv for video and
- * provider requests, files and the speed test done natively, so no browser limits apply.
+ * The desktop app (Tauri, apps/desktop) on the Mac and Windows: the same app in a native window,
+ * with mpv for video and provider requests, files and the speed test done natively, so no browser
+ * limits apply.
  */
 export async function createDesktopPlatform(): Promise<Platform> {
-  // The page can't see the macOS version or the Mac's model; ask once at start-up.
+  // The page can't see the OS version or the model; ask once at start-up.
   const info = await native.appInfo().catch(() => null);
+  const windows = info?.os === 'windows';
   let player: MpvPlayer | null = null;
 
   const toggleFullscreen = async () => native.setFullscreen(!(await native.isFullscreen()));
 
   return {
-    id: 'macos',
+    id: windows ? 'windows' : 'macos',
     textInput: 'native',
     isTv: () => false,
     // mpv plays raw MPEG-TS natively, like the TVs and Android do.
@@ -27,7 +29,7 @@ export async function createDesktopPlatform(): Promise<Platform> {
         const stopKeys = webPlatform.keys.start(handler);
         // F11, or the Mac's own Ctrl+Cmd+F, makes the window full screen.
         const onKeyDown = (ev: KeyboardEvent) => {
-          const isFull = ev.key === 'F11' || (ev.metaKey && ev.ctrlKey && (ev.key === 'f' || ev.key === 'F'));
+          const isFull = ev.key === 'F11' || (!windows && ev.metaKey && ev.ctrlKey && (ev.key === 'f' || ev.key === 'F'));
           if (!isFull) return;
           ev.preventDefault();
           void toggleFullscreen();
@@ -59,7 +61,7 @@ export async function createDesktopPlatform(): Promise<Platform> {
       freeBytes: () => native.files.freeBytes().then((n) => (n === null ? undefined : n), () => undefined),
     },
     updater: {
-      latestUrl: DESKTOP_LATEST_URL,
+      latestUrl: windows ? WINDOWS_LATEST_URL : DESKTOP_LATEST_URL,
       relaunches: true,
       async info() {
         const i = await native.updateInfo();
@@ -93,9 +95,10 @@ export async function createDesktopPlatform(): Promise<Platform> {
     device(): DeviceInfo {
       const ua = navigator.userAgent;
       const webkit = /AppleWebKit\/([\d.]+)/.exec(ua);
+      const edge = /Edg\/([\d.]+)/.exec(ua);
       return {
-        platform: 'macos',
-        engine: webkit ? `WebKit ${webkit[1]}` : 'WebKit',
+        platform: windows ? 'windows' : 'macos',
+        engine: windows ? `WebView2 ${edge ? edge[1] : ''}`.trim() : webkit ? `WebKit ${webkit[1]}` : 'WebKit',
         userAgent: ua,
         screen: { width: window.innerWidth, height: window.innerHeight, pixelRatio: window.devicePixelRatio || 1 },
         language: navigator.language,
