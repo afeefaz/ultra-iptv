@@ -226,9 +226,9 @@ the new version.
 ### Building
 
 Windows builds run on GitHub's Windows machines: **Actions → Windows app → Run workflow**
-(`.github/workflows/desktop-windows.yml`). The installer is attached to the run. Tick *Sign for
-in-app updates* for a release: that needs the repository secrets `TAURI_SIGNING_PRIVATE_KEY` (the
-contents of `~/.ultra-iptv/desktop-updater.key`) and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+(`.github/workflows/desktop-windows.yml`). The installer is attached to the run, signed for in-app
+updates with the repository secrets `TAURI_SIGNING_PRIVATE_KEY` (the contents of
+`~/.ultra-iptv/desktop-updater.key`) and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
 
 On a Windows machine with Node 22, Rust and Visual Studio's C++ build tools:
 
@@ -240,7 +240,7 @@ cd apps/desktop && pnpm exec tauri build --bundles nsis --config "{\"bundle\":{\
 
 ### Releasing the Windows app
 
-From a signed run, download the installer and its `.sig`, then:
+Download the run's installer and its `.sig` (`gh run download <run> --name UltraIPTV-windows`), then:
 
 ```sh
 node scripts/release-manifest.mjs --windows notes.json "Ultra IPTV_<version>_x64-setup.exe"

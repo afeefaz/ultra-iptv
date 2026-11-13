@@ -2,19 +2,14 @@
 # Actions tab; the installer is attached to the run as an artifact (docs/sideloading.md, Windows).
 #
 # With the repository secrets TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD
-# (the updater key from ~/.ultra-iptv), the run also signs the installer for in-app updates.
+# (the updater key from ~/.ultra-iptv), every run also signs the installer for in-app updates.
 name: Windows app
 
 on:
-  # Every push to the Windows branch builds (unsigned) while it's being made.
+  # Every push to the Windows branch builds while it is being made.
   push:
     branches: [desktop-windows]
   workflow_dispatch:
-    inputs:
-      signed:
-        description: Sign for in-app updates (needs the updater key secrets)
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -59,11 +54,12 @@ jobs:
       - name: Installer
         working-directory: apps/desktop
         shell: pwsh
+        # Signed for in-app updates whenever the updater key secrets are there (docs/sideloading.md).
         env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ inputs.signed && secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ inputs.signed && secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
-          if ("${{ inputs.signed }}" -eq "true") {
+          if ($env:TAURI_SIGNING_PRIVATE_KEY) {
             corepack pnpm exec tauri build --bundles nsis
           } else {
             corepack pnpm exec tauri build --bundles nsis --config '{\"bundle\":{\"createUpdaterArtifacts\":false}}'
