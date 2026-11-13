@@ -244,6 +244,8 @@ export const ar: Record<MessageKey, string> = {
   'player.channelList': 'قائمة القنوات',
   'player.audioSubs': 'الصوت والترجمة',
   'player.backBy': 'رجوع {n} ثانية',
+  'player.seekedBack': '−{n} ث',
+  'player.seekedForward': '+{n} ث',
   'player.forwardBy': 'تقديم {n} ثانية',
   'player.play': 'تشغيل',
   'player.pause': 'إيقاف مؤقت',

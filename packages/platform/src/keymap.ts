@@ -11,6 +11,9 @@ const BY_NAME: Record<string, Key> = {
   ArrowRight: 'right',
   Right: 'right',
   Enter: 'ok',
+  // Space plays and pauses, as in every desktop player (text fields keep it: web/index.ts).
+  ' ': 'playPause',
+  Spacebar: 'playPause',
   Accept: 'ok',
   Escape: 'back',
   Esc: 'back',
@@ -47,6 +50,7 @@ const BY_CODE: Record<number, Key> = {
   37: 'left',
   39: 'right',
   13: 'ok',
+  32: 'playPause',
   27: 'back',
   8: 'back',
   10009: 'back', // Tizen Return

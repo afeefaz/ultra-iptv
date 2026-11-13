@@ -41,6 +41,8 @@ import { usePlatform } from '../platform-context';
 import { goBack } from '../nav';
 
 const OVERLAY_MS = 5000;
+/** How long the badge after a Left/Right/REW/FF jump stays; presses within it add up. */
+const SEEK_FLASH_MS = 1200;
 const ZAP_DELAY_MS = 1500;
 
 const SKIP_SECONDS = 30;
@@ -403,6 +405,21 @@ function MediaPlayer(): JSX.Element {
   const [dragAt, setDragAt] = createSignal<number | null>(null);
   let lastScrubAt = 0;
   let scrubRun = 0;
+  /** The badge after a jump from the keys: which way, how far in all, and where to. */
+  const [seekFlash, setSeekFlash] = createSignal<{ direction: -1 | 1; seconds: number; at: number } | null>(null);
+  let seekFlashTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Left/Right/REW/FF without the controls: the jump is shown on its own, and quick presses add up. */
+  const jump = (seconds: number) => {
+    const moved = Math.round(Math.abs(seekBy(seconds)));
+    const at = playbackPosition().current;
+    const direction: -1 | 1 = seconds < 0 ? -1 : 1;
+    const previous = seekFlash();
+    setSeekFlash({ direction, seconds: (previous && previous.direction === direction ? previous.seconds : 0) + moved, at });
+    clearTimeout(seekFlashTimer);
+    seekFlashTimer = setTimeout(() => setSeekFlash(null), SEEK_FLASH_MS);
+  };
+  /** Keys that only jump: they leave the controls hidden. */
+  const jumpKey = (key: Key) => control() === null && !onTimeline() && !sheet() && !counting() && (key === 'left' || key === 'right' || key === 'rew' || key === 'ff');
 
   /** Single presses move 10 s for precision; holding the key speeds up to minutes at a time. */
   const scrub = (direction: number) => {
@@ -435,11 +452,12 @@ function MediaPlayer(): JSX.Element {
   });
   onCleanup(() => {
     clearTimeout(hideTimer);
+    clearTimeout(seekFlashTimer);
     releaseSurface('fullscreen');
   });
 
   useKeys((press) => {
-    showOverlay();
+    if (!jumpKey(press.key)) showOverlay();
     if (sheet()) {
       if (press.key !== 'back') return false;
       setSheet(false);
@@ -503,16 +521,16 @@ function MediaPlayer(): JSX.Element {
     const status = playbackStatus()?.kind;
     switch (press.key) {
       case 'left':
-        seekBy(-seekSeconds());
+        jump(-seekSeconds());
         return true;
       case 'right':
-        seekBy(seekSeconds());
+        jump(seekSeconds());
         return true;
       case 'rew':
-        seekBy(-SKIP_SECONDS);
+        jump(-SKIP_SECONDS);
         return true;
       case 'ff':
-        seekBy(SKIP_SECONDS);
+        jump(SKIP_SECONDS);
         return true;
       case 'ok':
       case 'playPause':
@@ -682,6 +700,22 @@ function MediaPlayer(): JSX.Element {
       </Show>
       <Show when={playerState() === 'paused'}>
         <PausedPill />
+      </Show>
+      <Show when={seekFlash()}>
+        {(f) => (
+          <div class="seek-flash" classList={{ forward: f().direction > 0 }} role="status" dir="ltr">
+            <span class="seek-icon" classList={{ forward: f().direction > 0 }}>
+              <Icon name="replay" />
+            </span>
+            <span class="seek-flash-text">
+              <span class="seek-flash-amount">{t(f().direction > 0 ? 'player.seekedForward' : 'player.seekedBack', { n: formatNumber(f().seconds) })}</span>
+              <span class="seek-flash-time">
+                {formatDuration(f().at)}
+                <Show when={playbackPosition().duration}> / {formatDuration(playbackPosition().duration)}</Show>
+              </span>
+            </span>
+          </div>
+        )}
       </Show>
       <Show when={counting()}>
         <div class="next-card" role="status">

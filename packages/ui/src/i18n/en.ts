@@ -242,6 +242,8 @@ export const en = {
   'player.channelList': 'Channel list',
   'player.audioSubs': 'Audio & subtitles',
   'player.backBy': 'Back {n} seconds',
+  'player.seekedBack': '−{n} s',
+  'player.seekedForward': '+{n} s',
   'player.forwardBy': 'Forward {n} seconds',
   'player.play': 'Play',
   'player.pause': 'Pause',

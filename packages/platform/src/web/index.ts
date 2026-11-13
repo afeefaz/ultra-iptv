@@ -6,6 +6,11 @@ import { WebPlayer } from './player';
 // Keys that keep their normal meaning while typing in a text field.
 const TEXT_EDITING_KEYS: Key[] = ['left', 'right', 'back', 'digit0', 'digit1', 'digit2', 'digit3', 'digit4', 'digit5', 'digit6', 'digit7', 'digit8', 'digit9'];
 
+/** Space is play/pause, except while typing. */
+function isSpace(ev: KeyboardEvent): boolean {
+  return ev.key === ' ' || ev.key === 'Spacebar' || ev.keyCode === 32;
+}
+
 function isEditable(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   return target.isContentEditable || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
@@ -56,7 +61,7 @@ export const webPlatform: Platform = {
         const key = toKey(ev);
         if (!key) return;
         // Backspace deletes text; Escape still leaves the field (handled as `back`).
-        if (isEditable(ev.target) && TEXT_EDITING_KEYS.indexOf(key) >= 0 && ev.key !== 'Escape') return;
+        if (isEditable(ev.target) && (TEXT_EDITING_KEYS.indexOf(key) >= 0 || isSpace(ev)) && ev.key !== 'Escape') return;
         if (handler({ key, raw: ev.key || ev.keyCode, repeat: ev.repeat })) ev.preventDefault();
       };
       window.addEventListener('keydown', onKeyDown);

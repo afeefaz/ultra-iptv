@@ -373,13 +373,14 @@ export function togglePause(): void {
   }
 }
 
-/** Relative seek for media (Left/Right, FF/REW). Live streams ignore it. */
-export function seekBy(seconds: number): void {
-  if (!player || !media()) return;
+/** Relative seek for media (Left/Right, FF/REW); returns how far it moved. Live streams ignore it. */
+export function seekBy(seconds: number): number {
+  if (!player || !media()) return 0;
   const { current: pos, duration } = player.position();
   const target = Math.max(0, duration ? Math.min(duration - 1, pos + seconds) : pos + seconds);
   player.seek(target);
   setPosition({ current: target, duration });
+  return target - pos;
 }
 
 /**

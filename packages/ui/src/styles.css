@@ -2695,6 +2695,50 @@ h3 {
   font-weight: 700;
 }
 
+/* The badge after Left/Right/REW/FF: how far it jumped, without opening the controls. */
+.seek-flash {
+  position: absolute;
+  top: 50%;
+  left: 12%;
+  display: flex;
+  align-items: center;
+  padding: 0.8rem 1.6rem 0.8rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 99rem;
+  background: rgba(13, 17, 26, 0.85);
+  color: var(--strong);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.seek-flash.forward {
+  right: 12%;
+  left: auto;
+}
+
+.seek-flash .seek-icon {
+  margin-right: 0.8rem;
+  color: var(--accent);
+  font-size: 2.4rem;
+}
+
+.seek-flash-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.seek-flash-amount {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.seek-flash-time {
+  color: var(--muted);
+  font-size: 1rem;
+}
+
 .player-paused-sub {
   color: var(--muted);
   font-size: 1rem;

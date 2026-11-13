@@ -10,6 +10,11 @@ describe('toKey', () => {
     expect(toKey({ key: '7' })).toBe('digit7');
   });
 
+  it('makes Space play and pause', () => {
+    expect(toKey({ key: ' ' })).toBe('playPause');
+    expect(toKey({ key: 'Unidentified', keyCode: 32 })).toBe('playPause');
+  });
+
   it('falls back to keyCodes when key is missing or Unidentified', () => {
     expect(toKey({ key: 'Unidentified', keyCode: 10009 })).toBe('back');
     expect(toKey({ keyCode: 461 })).toBe('back');
