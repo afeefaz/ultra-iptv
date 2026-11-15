@@ -45,6 +45,7 @@ import androidx.media3.exoplayer.source.MediaSource;
 import androidx.media3.extractor.DefaultExtractorsFactory;
 import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory;
 import androidx.media3.ui.AspectRatioFrameLayout;
+import androidx.media3.ui.CaptionStyleCompat;
 import androidx.media3.ui.SubtitleView;
 
 import com.getcapacitor.JSArray;
@@ -113,7 +114,11 @@ public class UltraPlayerPlugin extends Plugin {
         aspect.addView(surface, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         container.addView(aspect, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER));
         subtitles = new SubtitleView(ctx);
-        subtitles.setUserDefaultStyle();
+        // White text with a black outline and no box behind it: Android TV's default caption style
+        // (setUserDefaultStyle) fills a black box under every line. The size still follows the
+        // system's caption setting.
+        subtitles.setStyle(new CaptionStyleCompat(Color.WHITE, Color.TRANSPARENT, Color.TRANSPARENT,
+                CaptionStyleCompat.EDGE_TYPE_OUTLINE, Color.BLACK, null));
         subtitles.setUserDefaultTextSize();
         container.addView(subtitles, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         // LEFT, not the default START: when the system language is Hebrew or Arabic, START is the
