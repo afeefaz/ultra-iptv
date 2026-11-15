@@ -1,15 +1,15 @@
 {
-  "version": "0.9.4",
-  "notes": "Jumping in a movie or episode with Left/Right (or REW/FF) no longer opens the controls: a small badge shows how far it jumped.\nOn the computer, Space plays and pauses.",
-  "pub_date": "2026-11-13T20:21:07.339Z",
+  "version": "0.9.5",
+  "notes": "Subtitles are white with a black outline, without the black box behind them (Android TV, Samsung and web).",
+  "pub_date": "2026-11-15T17:33:23.380Z",
   "platforms": {
     "darwin-aarch64": {
-      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.4/UltraIPTV-mac.app.tar.gz",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzg3azBscTUvMlZJMEMyQWdOUWoySmJsTjVNVUxnK0NzdC9UV0R5d1JZeE9HT0tCSWJvRHQ3Y3ZJamRrY01lOU1MR01aWUswYjYyVlo2QW5GZTE0RVFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NjAwNzIxCWZpbGU6VWx0cmEgSVBUVi5hcHAudGFyLmd6CXZlcnNpb246MC45LjQKbGlkaVlkejB4b2Z3d05reFpvRmFYc1BmQnB2TmJLUzBUb0xxQy9aOGRWTmx5NHdOMDlEQWFsMUF1YmxWRHUyQjlvbWV3NlpkMlR0WC9POGNCZXlPQnc9PQo="
+      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.5/UltraIPTV-mac.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxV3lJaFEzb1pBdndqZWRiVDlvMWExUUxiNFNFOHVPdkhRLzlFZUk2REV5YmRNeHlPWndTb09wRDhlZnNoWG15NVNqWTNWQlpPMm1nc2ZuUUViazR4L1E4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NzYzNzA3CWZpbGU6VWx0cmEgSVBUVi5hcHAudGFyLmd6CXZlcnNpb246MC45LjUKNnc4VTFTMkhYZVMvbXRLSEZPQTkxbHVnb0t5UFU1TkhFZEJ4NTdTbmhiY2Y0QzBDTHhrVkc2Q3JTVHlyb1VBcmlNODR3MGlVVVRTL21iTGlkaG13QUE9PQo="
     },
     "windows-x86_64": {
-      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.4/UltraIPTV-windows-setup.exe",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzZUdjA5M2xCeGtYb1RUaE5WSlNIbngrLzBIdDl6TDBjUEFtOGtBeFB6MFJUSXV0V0s4b09xVElycE1QbDZ0NTVzbEMxT0EySXNPbnpjWmhwTlljN2c0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NjAxMTk3CWZpbGU6VWx0cmEgSVBUVl8wLjkuNF94NjQtc2V0dXAuZXhlCXZlcnNpb246MC45LjQKVnpsbDNEWDJwTjRUUU1pVU1EOGFDUFpLaWw2MkVHZkxmRnhWOExQbE82Mm01ckJuTHRkamlDVTNxMjNqbStEb3FkdmhJU095cTRhQXdsR093T2lrQmc9PQo="
+      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.5/UltraIPTV-windows-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzRLUzZPZjkxWURmUWlNaW1Td2g4clFWVkczaTQ2ZWJ4d2ZBL2lrbUx1U0pKL24zK05KczA4bkozK3hrWS9DM0lOaGZ4cHZqQWZLSXNvSTdESHY3TlFRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NzYzOTQzCWZpbGU6VWx0cmEgSVBUVl8wLjkuNV94NjQtc2V0dXAuZXhlCXZlcnNpb246MC45LjUKNzRLaThsWGNINktaUC9seVlJcDFhek5kaGx2L2tXS3JCWWhpOVM5UEZvRHlGdUozQTRGUzBLajZwV1Q5R0FLVEgwMURuY0xKNElWaGwxUVd2TDhYRFE9PQo="
     }
   }
 }

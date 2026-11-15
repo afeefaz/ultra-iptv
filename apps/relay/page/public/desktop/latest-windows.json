@@ -1,17 +1,15 @@
 {
-  "versionCode": 9004,
-  "versionName": "0.9.4",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.4/UltraIPTV-windows-setup.exe",
-  "sha256": "efda9e11c4c5acdde7a1387765373a69437e660826aadc0d8ce4e04a724a9f32",
-  "size": 35765127,
+  "versionCode": 9005,
+  "versionName": "0.9.5",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.5/UltraIPTV-windows-setup.exe",
+  "sha256": "cc4f261b7c1a42ea717abc2446b64ae0b1c3065bda505a34d21e31128888f7e6",
+  "size": 35769102,
   "notes": {
     "en": [
-      "Jumping in a movie or episode with Left/Right (or REW/FF) no longer opens the controls: a small badge shows how far it jumped.",
-      "On the computer, Space plays and pauses."
+      "Subtitles are white with a black outline, without the black box behind them (Android TV, Samsung and web)."
     ],
     "ar": [
-      "التقديم أو الرجوع في فيلم أو حلقة بالسهمين (أو REW/FF) لم يعد يفتح أزرار التحكم: تظهر شارة صغيرة توضّح مقدار القفزة.",
-      "على الكمبيوتر، زر المسافة يشغّل ويوقف مؤقتًا."
+      "الترجمة بيضاء بإطار أسود، من دون المربع الأسود خلفها (Android TV وسامسونج والويب)."
     ]
   }
 }
