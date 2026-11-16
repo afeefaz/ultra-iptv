@@ -323,6 +323,7 @@ export const en = {
   'settings.subtitle': 'Language, playback, subtitles, parental control and playlists',
   'settings.subtitles': 'Subtitles & audio',
   'player.external': 'Open in another player',
+  'player.noExternal': 'No other player found. Install VLC to open streams in it.',
   'player.fullscreen': 'Full screen',
   'player.exitFullscreen': 'Exit full screen',
   'loading.updating': 'Updating your library after an app update. This only happens once.',

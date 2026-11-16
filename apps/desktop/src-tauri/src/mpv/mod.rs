@@ -4,6 +4,7 @@
 //! Stream addresses contain logins, so neither URLs nor mpv's own log lines ever leave this module:
 //! log lines are only read here to tell an HTTP error or a failed connection apart.
 pub mod ffi;
+mod logfile;
 pub mod view;
 
 use ffi::*;
@@ -54,6 +55,10 @@ const OBSERVED: &[(&str, i32)] = &[
     ("video-params/h", MPV_FORMAT_INT64),
     ("video-bitrate", MPV_FORMAT_DOUBLE),
     ("track-list", MPV_FORMAT_STRING),
+    // For the stats line: what the picture is, and whether a surface shows it.
+    ("video-format", MPV_FORMAT_STRING),
+    ("video-params/gamma", MPV_FORMAT_STRING),
+    ("vo-configured", MPV_FORMAT_FLAG),
 ];
 
 impl Mpv {
@@ -75,6 +80,9 @@ impl Mpv {
                 ("vo", "gpu-next".into()),
                 ("gpu-api", "d3d11".into()),
                 ("hwdec", "d3d11va".into()),
+                // An SDR picture always, HDR films tone-mapped by mpv (as on the Mac): an HDR
+                // swap chain under the transparent page can come out black, sound only.
+                ("target-colorspace-hint", "no".into()),
                 // Its surface stays up (black) when nothing plays: the window is transparent, so
                 // without it the Live preview would show the desktop behind the app.
                 ("force-window", "yes".into()),
@@ -112,7 +120,13 @@ impl Mpv {
             for (i, (name, format)) in OBSERVED.iter().enumerate() {
                 mpv_observe_property(handle, i as u64 + 1, c(name).as_ptr(), *format);
             }
-            mpv_request_log_messages(handle, c("warn").as_ptr());
+            // Test builds: mpv's detailed log into a file (logfile.rs), else only its warnings.
+            let level = if logfile::open().is_some() {
+                "v"
+            } else {
+                "warn"
+            };
+            mpv_request_log_messages(handle, c(level).as_ptr());
             Ok(Mpv {
                 handle,
                 view: Mutex::new(view::View::default()),
@@ -233,6 +247,17 @@ pub fn spawn_events(app: AppHandle, handle: usize) {
                 MPV_EVENT_LOG_MESSAGE => unsafe {
                     let m = &*(event.data as *const mpv_event_log_message);
                     let text = CStr::from_ptr(m.text).to_string_lossy();
+                    if logfile::is_open() {
+                        logfile::write(
+                            &CStr::from_ptr(m.level).to_string_lossy(),
+                            &CStr::from_ptr(m.prefix).to_string_lossy(),
+                            &text,
+                        );
+                    }
+                    // Errors are told apart from warnings and errors only, as before.
+                    if m.log_level > 30 {
+                        continue;
+                    }
                     let (status, connect) = classify(&text);
                     let mut problem = player.problem.lock().unwrap();
                     if status.is_some() {

@@ -31,6 +31,8 @@ export class MpvPlayer implements PlayerAdapter {
   private trackCache: PlayerTracks = { audio: [], text: [] };
   private pos = { current: 0, duration: 0 };
   private statsCache: PlayerStats = { engine: 'mpv' };
+  /** The playing video, for the stats line. */
+  private picture = { format: '', gamma: '', surface: false };
   private holeEl: HTMLElement | null = null;
   private live = false;
   private started = false;
@@ -198,7 +200,19 @@ export class MpvPlayer implements PlayerAdapter {
         break;
       case 'hwdec-current':
         this.hw = typeof v === 'string' && v !== 'no' ? v : '';
-        this.statsCache = { ...this.statsCache, engine: this.hw ? `mpv · ${this.hw}` : 'mpv' };
+        this.statsCache = { ...this.statsCache, engine: this.engineLine() };
+        break;
+      case 'video-format':
+        this.picture.format = typeof v === 'string' ? v : '';
+        this.statsCache = { ...this.statsCache, engine: this.engineLine() };
+        break;
+      case 'video-params/gamma':
+        this.picture.gamma = typeof v === 'string' ? v : '';
+        this.statsCache = { ...this.statsCache, engine: this.engineLine() };
+        break;
+      case 'vo-configured':
+        this.picture.surface = v === true;
+        this.statsCache = { ...this.statsCache, engine: this.engineLine() };
         break;
       case 'video-params/w':
         this.statsCache = { ...this.statsCache, width: typeof v === 'number' ? v : undefined };
@@ -210,7 +224,8 @@ export class MpvPlayer implements PlayerAdapter {
         this.statsCache = { ...this.statsCache, bitrateKbps: typeof v === 'number' ? Math.round(v / 1000) : undefined };
         break;
       case 'demuxer-cache-duration':
-        this.statsCache = { ...this.statsCache, bufferSec: typeof v === 'number' ? v : undefined };
+        // Live streams' timestamps can jump, which shows as hours of "buffer": left out.
+        this.statsCache = { ...this.statsCache, bufferSec: typeof v === 'number' && v >= 0 && v < 600 ? Math.round(v * 10) / 10 : undefined };
         break;
       case 'frame-drop-count':
       case 'decoder-frame-drop-count':
@@ -220,6 +235,13 @@ export class MpvPlayer implements PlayerAdapter {
     }
   }
 
+
+  /** "mpv · d3d11va · hevc · HDR (pq)", and a warning when a video has no surface to show it. */
+  private engineLine(): string {
+    const { format, gamma, surface } = this.picture;
+    const hdr = gamma === 'pq' || gamma === 'hlg' ? `HDR (${gamma})` : '';
+    return ['mpv', this.hw, format, hdr, format && !surface ? 'no picture surface' : ''].filter(Boolean).join(' · ');
+  }
 
   private onEnd(e: Extract<MpvEvent, { t: 'end' }>): void {
     if (e.reason === END_EOF) {

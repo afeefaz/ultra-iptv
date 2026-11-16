@@ -325,6 +325,7 @@ export const ar: Record<MessageKey, string> = {
   'settings.subtitle': 'اللغة والتشغيل والترجمة والرقابة الأبوية وقوائم التشغيل',
   'settings.subtitles': 'الترجمة والصوت',
   'player.external': 'فتح في مشغل آخر',
+  'player.noExternal': 'لم يُعثر على مشغل آخر. ثبّت VLC لفتح البث فيه.',
   'player.fullscreen': 'ملء الشاشة',
   'player.exitFullscreen': 'إنهاء ملء الشاشة',
   'loading.updating': 'جارٍ تحديث مكتبتك بعد تحديث التطبيق. يحدث هذا مرة واحدة فقط.',
