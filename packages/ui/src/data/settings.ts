@@ -93,6 +93,9 @@ const [storedPictureSkip, storePictureSkip] = persisted<boolean | null>('playbac
 export const showPictureSkip = (): boolean => storedPictureSkip() ?? !deviceIsTv();
 export const setShowPictureSkip = (show: boolean): void => storePictureSkip(show);
 
+/** Home, Live, Movies and Series in the top bar. Hidden, Back leads to Home and its big buttons lead on. */
+export const [topBarSections, setTopBarSections] = persisted<boolean>('display.topBarSections', true);
+
 /** When an episode ends, count down and play the next one. */
 export const [autoPlayNext, setAutoPlayNext] = persisted<boolean>('playback.autoPlayNext', true);
 

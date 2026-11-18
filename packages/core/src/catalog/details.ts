@@ -66,6 +66,17 @@ export function parseSeriesInfo(raw: unknown): SeriesInfo {
   return { ...baseInfo(obj(root.info)), seasons, episodes };
 }
 
+/**
+ * The YouTube video id in a provider's `youtube_trailer`: panels send a bare id, a watch or
+ * youtu.be link, or an embed link. Anything else (empty, a name, another site) gives null.
+ */
+export function youtubeId(trailer: string | undefined): string | null {
+  const text = (trailer ?? '').trim();
+  if (/^[\w-]{11}$/.test(text)) return text;
+  const m = /(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|v\/)|youtu\.be\/)([\w-]{11})(?![\w-])/i.exec(text);
+  return m ? m[1] : null;
+}
+
 const TAGS = /\b(4k|uhd|fhd|hd|sd|hevc|h\.?265|h\.?264|1080p|720p|2160p|multi|vostfr|subbed|dubbed|multi-?subs?)\b/g;
 
 /**

@@ -57,6 +57,8 @@ export const native = {
     return invoke<void>('update_install', { expectedVersion, onProgress: channel });
   },
   isFullscreen: () => invoke<boolean>('is_fullscreen'),
+  /** Opens the stream in VLC (or another installed player); rejects with "none" when there is none. */
+  openExternal: (url: string, title: string) => invoke<string>('open_external', { url, title }),
   mpv: {
     events(onEvent: (e: MpvEvent) => void) {
       const channel = new Channel<MpvEvent>();

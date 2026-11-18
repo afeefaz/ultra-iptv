@@ -206,12 +206,15 @@ export function PlaylistFormScreen(props: { id?: string }): JSX.Element {
               </div>
             </Show>
 
-            <FocusButton id="form-advanced" class="link-button" selected={advanced()} onSelect={() => setAdvanced(!advanced())}>
-              <Icon name="tune" />
-              <span>{t('form.advanced')}</span>
-              <Icon name={advanced() ? 'up' : 'down'} />
-            </FocusButton>
-            <Show when={advanced()}>
+            {/* Adding asks only for the login (updates every 12 hours); the rest is for editing. */}
+            <Show when={editing}>
+              <FocusButton id="form-advanced" class="link-button" selected={advanced()} onSelect={() => setAdvanced(!advanced())}>
+                <Icon name="tune" />
+                <span>{t('form.advanced')}</span>
+                <Icon name={advanced() ? 'up' : 'down'} />
+              </FocusButton>
+            </Show>
+            <Show when={editing && advanced()}>
               <div class="field-card">
                 <TextField id="form-ua" label={t('form.userAgent')} value={userAgent()} onChange={setUserAgent} hint={t('form.userAgentHint')} />
                 <div class="field">

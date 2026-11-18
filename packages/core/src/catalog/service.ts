@@ -1,3 +1,4 @@
+import { findTrailer } from './trailer';
 import { log, logging } from '../log';
 import { createLimiter } from '../net/limit';
 import { perf } from '../perf/perf';
@@ -362,6 +363,11 @@ export class PlaylistService {
     log.info('favorites', exists ? 'removed' : 'added', { playlist: fav.playlistId, kind: fav.kind });
     this.hooks.changed(fav.playlistId, []);
     return !exists;
+  }
+
+  /** A YouTube trailer for a movie or series the provider has none for (trailer.ts): its video id, or null. */
+  async findTrailer(name: string, year: number | undefined, kind: 'vod' | 'series'): Promise<string | null> {
+    return findTrailer(name, year, kind);
   }
 
   async search(playlistId: string, query: string, limitPerKind?: number): Promise<SearchResults> {

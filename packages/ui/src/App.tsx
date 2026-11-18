@@ -17,7 +17,7 @@ import { activePlaylist, playlists, setActivePlaylist, startPlaylists } from './
 import { startRemoteAccess } from './data/remoteAccess';
 import { startPerfRuntime } from './data/perfRuntime';
 import { accentColor, accentVariables } from './data/accent';
-import { accent, setDeviceIsTv, textScale, theme } from './data/settings';
+import { accent, setDeviceIsTv, textScale, theme, topBarSections } from './data/settings';
 import { startUsage, track } from './data/usage';
 import { DebugScreen } from './debug/DebugScreen';
 import { CONTENT_ZONE, focusManager, FocusZone } from './focus';
@@ -170,7 +170,7 @@ export function App(props: { platform: Platform }): JSX.Element {
       <div class="app" dir={direction()} lang={locale()}>
         <FocusZone id="topbar" remember>
           <header class="topbar">
-            <div class="brand" aria-label={t('app.name')}>
+            <div class="brand" aria-label={t('app.name')} onClick={() => switchTab('home')}>
               <span class="brand-mark">
                 <Icon name="play" />
               </span>
@@ -179,7 +179,8 @@ export function App(props: { platform: Platform }): JSX.Element {
               </span>
             </div>
             <nav class="tabs">
-              <For each={TABS}>{(tab) => <TabButton tab={tab} />}</For>
+              {/* Hidden in Settings: Back returns to Home, and so does the logo (mouse and touch). */}
+              <For each={topBarSections() ? TABS : []}>{(tab) => <TabButton tab={tab} />}</For>
             </nav>
             <div class="topbar-end">
               <SystemUsageReadout />

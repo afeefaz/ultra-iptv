@@ -48,6 +48,7 @@ export interface WorkerApi {
   movePlaylist(id: string, delta: number): Promise<void>;
   refresh(id: string): Promise<RefreshResult>;
   toggleFavorite(fav: Omit<FavoriteRow, 'addedAt'>): Promise<boolean>;
+  findTrailer(name: string, year: number | undefined, kind: 'vod' | 'series'): Promise<string | null>;
   search(playlistId: string, query: string, limitPerKind?: number): Promise<SearchResults>;
   streamUrl(playlistId: string, ref: StreamRef, format: StreamFormat, preferHls: boolean): Promise<ResolvedStream>;
   shortEpg(playlistId: string, streamId: string): Promise<EpgEntry[]>;

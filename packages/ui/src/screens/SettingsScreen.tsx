@@ -82,6 +82,8 @@ import {
   type DetailMode,
   type SortBy,
   type SubtitleSize,
+  setTopBarSections,
+  topBarSections,
 } from '../data/settings';
 import { CONTENT_ZONE, focusManager, FocusZone } from '../focus';
 import { countsText, expiryText } from '../format';
@@ -569,6 +571,20 @@ export function SettingsScreen(): JSX.Element {
                           <span class="option-card-title">{t(c.name)}</span>
                         </span>
                         <Icon name={accentColor(accent()).hex === c.hex ? 'checkCircle' : 'radioOff'} />
+                      </FocusButton>
+                    )}
+                  </For>
+                </div>
+                <div class="setting-name setting-gap">{t('settings.topBarSections')}</div>
+                <div class="setting-desc">{t('settings.topBarSectionsDesc')}</div>
+                <div class="option-cards" role="radiogroup" aria-label={t('settings.topBarSections')} style={{ 'margin-top': '0.8rem' }}>
+                  <For each={[true, false]}>
+                    {(show) => (
+                      <FocusButton id={`settings-topbar-${show}`} selected={topBarSections() === show} onSelect={() => setTopBarSections(show)}>
+                        <span class="option-card-text">
+                          <span class="option-card-title">{t(show ? 'settings.topBarSections.show' : 'settings.topBarSections.hide')}</span>
+                        </span>
+                        <Icon name={topBarSections() === show ? 'checkCircle' : 'radioOff'} />
                       </FocusButton>
                     )}
                   </For>

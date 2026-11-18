@@ -391,9 +391,15 @@ export async function openInExternalPlayer(): Promise<boolean> {
   const source = resolved && (usingFallback && resolved.fallback ? resolved.fallback : resolved);
   const title = media()?.title ?? current()?.name ?? '';
   if (!platform?.openExternal || !source) return false;
+  try {
+    await platform.openExternal(source.url, title);
+  } catch (e) {
+    // Mac and Windows: no player installed that we know how to start.
+    log.warn('player', 'no external player', { error: e instanceof Error ? e.message : String(e) });
+    return false;
+  }
   player?.pause();
   log.info('player', 'open in external player');
-  await platform.openExternal(source.url, title);
   return true;
 }
 

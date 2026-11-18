@@ -51,6 +51,9 @@ export async function createDesktopPlatform(): Promise<Platform> {
       },
     },
     secretKey: () => native.secretKey(),
+    async openExternal(url, title) {
+      await native.openExternal(url, title);
+    },
     http: (request) => native.httpGet(request.url, request.headers, request.timeoutMs),
     catalogFiles: {
       write: (path, text) => native.files.write(path, text),

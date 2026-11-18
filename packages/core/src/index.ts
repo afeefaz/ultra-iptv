@@ -24,13 +24,14 @@ export {
   sectionNames,
   forgetSavedLists,
 } from './catalog/queries';
-export { versionKey } from './catalog/details';
+export { versionKey, youtubeId } from './catalog/details';
 export { nowNext, type NowNext } from './catalog/epg';
 export type { Container, ResolvedStream } from './catalog/stream-url';
 export type { SearchDoc, SearchResults } from './catalog/search';
 export type { RefreshProgress, RefreshResult, TestResult } from './catalog/service';
 export { applyHiddenRule, AUTO_COVERAGE, detectGroups, detectTags, EMPTY_RULE, tagWords, type CategoryTag, groupKey, type CategoryGroup, type GroupedCategories, type HiddenRule } from './catalog/groups';
 export { setSecretKeySource } from './secure/secret-box';
+export { RELAY_URL } from './pair/pair';
 export { DESKTOP_LATEST_URL, LATEST_URL, WINDOWS_LATEST_URL, parseLatest, type LatestRelease } from './update/update';
 export type { RemoteIdentity, TickResult } from './catalog/remote';
 export type { ApplyResult, FetchResult, LinkResult, PushResult, SyncStatus } from './catalog/sync';

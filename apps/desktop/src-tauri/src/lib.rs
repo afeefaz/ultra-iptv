@@ -1,5 +1,6 @@
 //! Ultra IPTV for macOS and Windows: the shared web app in a Tauri window, with native networking, files and
 //! an mpv video player underneath the page (docs/spec.md §3).
+mod external;
 mod files;
 mod http;
 mod mpv;
@@ -45,6 +46,7 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
         ($($extra:path),*) => {
             tauri::generate_handler![
             http::http_get,
+            external::open_external,
             files::files_write,
             files::files_append,
             files::files_read_slice,

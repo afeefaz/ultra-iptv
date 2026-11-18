@@ -54,6 +54,10 @@ const OBSERVED: &[(&str, i32)] = &[
     ("video-params/h", MPV_FORMAT_INT64),
     ("video-bitrate", MPV_FORMAT_DOUBLE),
     ("track-list", MPV_FORMAT_STRING),
+    // For the stats line: what the picture is, and whether a surface shows it.
+    ("video-format", MPV_FORMAT_STRING),
+    ("video-params/gamma", MPV_FORMAT_STRING),
+    ("vo-configured", MPV_FORMAT_FLAG),
 ];
 
 impl Mpv {
@@ -75,6 +79,9 @@ impl Mpv {
                 ("vo", "gpu-next".into()),
                 ("gpu-api", "d3d11".into()),
                 ("hwdec", "d3d11va".into()),
+                // An SDR picture always, HDR films tone-mapped by mpv (as on the Mac): an HDR
+                // swap chain under the transparent page can come out black, sound only.
+                ("target-colorspace-hint", "no".into()),
                 // Its surface stays up (black) when nothing plays: the window is transparent, so
                 // without it the Live preview would show the desktop behind the app.
                 ("force-window", "yes".into()),

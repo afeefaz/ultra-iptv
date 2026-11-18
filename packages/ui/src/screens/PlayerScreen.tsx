@@ -83,7 +83,7 @@ function LivePlayer(): JSX.Element {
     { label: () => t('player.nextChannel'), icon: () => 'down', run: () => void zap(1) },
     { label: () => t('player.channelList'), icon: () => 'list', run: () => setMiniList(true) },
     { label: () => t('player.audioSubs'), icon: () => 'subtitles', text: true, run: () => setSheet(true) },
-    ...externalControl(platform),
+    ...externalControl(platform, () => showToast(t('player.noExternal'))),
   ];
   /** Index of the button the remote is on; null means the arrows zap as usual. */
   const [control, setControl] = createSignal<number | null>(null);
@@ -379,7 +379,14 @@ function MediaPlayer(): JSX.Element {
   const prevEp: PlayerControl = { label: () => t('player.prevEpisode'), icon: () => 'skipPrevious', disabled: () => !previousEpisode(), run: () => void playEpisode(-1) };
   const nextEp: PlayerControl = { label: () => t('player.nextEpisode'), icon: () => 'skipNext', disabled: () => !nextEpisode(), run: () => void playEpisode(1) };
   const audioSubs: PlayerControl = { label: () => t('player.audioSubs'), icon: () => 'subtitles', text: true, run: () => setSheet(true) };
-  const external = externalControl(platform);
+  const [toast, setToast] = createSignal('');
+  let toastTimer: ReturnType<typeof setTimeout> | undefined;
+  const showToast = (text: string) => {
+    setToast(text);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => setToast(''), 3500);
+  };
+  const external = externalControl(platform, () => showToast(t('player.noExternal')));
   const isEpisode = () => playingMedia()?.kind === 'episode';
   const controls = createMemo<PlayerControl[]>(() =>
     isEpisode()
@@ -453,6 +460,7 @@ function MediaPlayer(): JSX.Element {
   onCleanup(() => {
     clearTimeout(hideTimer);
     clearTimeout(seekFlashTimer);
+    clearTimeout(toastTimer);
     releaseSurface('fullscreen');
   });
 
@@ -757,6 +765,11 @@ function MediaPlayer(): JSX.Element {
       <Show when={sheet()}>
         <TrackSheet onClose={() => setSheet(false)} />
       </Show>
+      <Show when={toast()}>
+        <div class="toast" role="status">
+          {toast()}
+        </div>
+      </Show>
     </div>
   );
 }
@@ -885,10 +898,14 @@ function PausedPill(): JSX.Element {
   );
 }
 
-/** "Open in another player": only where the platform supports it (Android). */
-function externalControl(platform: Platform): PlayerControl[] {
+/** "Open in another player": Android's "Open with", or VLC (and others) on the Mac and Windows. */
+function externalControl(platform: Platform, onMissing: () => void): PlayerControl[] {
   const own: PlayerControl[] = [];
-  if (platform.openExternal) own.push({ label: () => t('player.external'), icon: () => 'forward', text: true, run: () => void openInExternalPlayer() });
+  const run = () =>
+    void openInExternalPlayer().then((opened) => {
+      if (!opened) onMissing();
+    });
+  if (platform.openExternal) own.push({ label: () => t('player.external'), icon: () => 'forward', text: true, run });
   return own.concat(fullscreenControl(platform));
 }
 

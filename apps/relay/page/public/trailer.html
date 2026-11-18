@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <title>Trailer</title>
+    <!--
+      Ultra IPTV's trailer popup loads this page in a frame. YouTube's player refuses to play
+      inside the apps themselves (error 153: their pages have no web address), but plays inside a
+      page on a real site. The video id comes after #, which browsers never send to this server.
+      Messages are passed both ways between the app and YouTube's player, so the remote controls it.
+    -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+      }
+      iframe {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      (function () {
+        var match = /(?:^#|&)v=([\w-]{11})(?:&|$)/.exec(location.hash);
+        if (!match) return;
+        var frame = document.createElement('iframe');
+        frame.allow = 'autoplay; encrypted-media; fullscreen; picture-in-picture';
+        frame.src =
+          'https://www.youtube-nocookie.com/embed/' +
+          match[1] +
+          '?autoplay=1&enablejsapi=1&rel=0&playsinline=1&origin=' +
+          encodeURIComponent(location.origin);
+        document.body.appendChild(frame);
+        frame.onload = function () {
+          // Asks the player to report its state (it then sends onReady, infoDelivery, onError).
+          frame.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*');
+        };
+        window.addEventListener('message', function (e) {
+          if (e.source === frame.contentWindow) parent.postMessage(e.data, '*');
+          else if (e.source === parent) frame.contentWindow.postMessage(e.data, '*');
+        });
+      })();
+    </script>
+  </body>
+</html>

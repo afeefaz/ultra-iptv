@@ -90,6 +90,7 @@ const api: WorkerApi = {
   movePlaylist: (id, delta) => service.move(id, delta),
   refresh: (id) => service.refresh(id),
   toggleFavorite: (fav) => service.toggleFavorite(fav),
+  findTrailer: (name, year, kind) => service.findTrailer(name, year, kind),
   search: (playlistId, query, limit) => service.search(playlistId, query, limit),
   streamUrl: (playlistId, ref, format, preferHls) => service.streamUrl(playlistId, ref, format, preferHls),
   shortEpg: (playlistId, streamId) => service.shortEpg(playlistId, streamId),

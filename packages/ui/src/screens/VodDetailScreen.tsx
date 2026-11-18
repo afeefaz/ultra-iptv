@@ -1,8 +1,9 @@
-import { favoriteKeys, getItem, log, type VodInfo, type VodRow } from '@ultra/core';
+import { favoriteKeys, getItem, log, youtubeId, type VodInfo, type VodRow } from '@ultra/core';
 import { createEffect, createMemo, createSignal, For, on, Show, type JSX } from 'solid-js';
 import { BackButton } from '../components/BackButton';
 import { FocusButton } from '../components/FocusButton';
 import { Icon } from '../components/Icon';
+import { TrailerDialog } from '../components/TrailerDialog';
 import { PosterTile, qualityOf } from '../components/PosterTile';
 import { catalog } from '../data/catalog';
 import { movieItem, progressRatio, resumePosition, useProgress, watch } from '../data/media';
@@ -38,6 +39,9 @@ export function VodDetailScreen(props: DetailProps): JSX.Element {
   const [more, setMore] = createSignal<VodRow[]>([]);
   const [categoryName, setCategoryName] = createSignal('');
   const [favorite, setFavorite] = createSignal(false);
+  /** The provider's YouTube trailer, if it sent one; otherwise Trailer searches YouTube. */
+  const trailerId = () => youtubeId(info()?.trailer);
+  const [trailerOpen, setTrailerOpen] = createSignal(false);
   const progress = useProgress();
 
   createEffect(
@@ -212,6 +216,12 @@ export function VodDetailScreen(props: DetailProps): JSX.Element {
                         <Icon name={favorite() ? 'bookmarked' : 'bookmark'} />
                         <span>{favorite() ? t('live.removeFav') : t('live.addFav')}</span>
                       </FocusButton>
+                      <Show when={row()}>
+                        <FocusButton id="detail-trailer" class="btn-lg" onSelect={() => setTrailerOpen(true)}>
+                          <Icon name="movie" />
+                          <span>{t('detail.trailer')}</span>
+                        </FocusButton>
+                      </Show>
                     </div>
                   </FocusZone>
                   <Show when={info()?.plot} fallback={<p class="hint">{infoLoading() ? t('detail.loadingInfo') : ''}</p>}>
@@ -290,6 +300,22 @@ export function VodDetailScreen(props: DetailProps): JSX.Element {
           )}
         </Show>
       </Show>
+      <Show when={trailerOpen() && row()}>
+        {(r) => (
+          <TrailerDialog
+            providerId={trailerId()}
+            search={() => catalog().call('findTrailer', r().name, r().year ?? yearOf(info()?.releaseDate), 'vod')}
+            title={r().name}
+            onClose={() => setTrailerOpen(false)}
+          />
+        )}
+      </Show>
     </div>
   );
+}
+
+/** The year in a release date such as "2026-03-01". */
+function yearOf(date: string | undefined): number | undefined {
+  const m = /\b(19|20)\d{2}\b/.exec(date ?? '');
+  return m ? Number(m[0]) : undefined;
 }

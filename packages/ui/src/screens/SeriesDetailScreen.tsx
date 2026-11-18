@@ -1,8 +1,9 @@
-import { favoriteKeys, getItem, log, type SeriesInfo, type SeriesRow } from '@ultra/core';
+import { favoriteKeys, getItem, log, youtubeId, type SeriesInfo, type SeriesRow } from '@ultra/core';
 import { createEffect, createMemo, createSignal, For, on, Show, type JSX } from 'solid-js';
 import { BackButton } from '../components/BackButton';
 import { FocusButton } from '../components/FocusButton';
 import { Icon } from '../components/Icon';
+import { TrailerDialog } from '../components/TrailerDialog';
 import { VirtualList, type VirtualListApi } from '../components/VirtualList';
 import type { DetailProps } from './VodDetailScreen';
 import { catalog } from '../data/catalog';
@@ -23,6 +24,9 @@ export function SeriesDetailScreen(props: DetailProps): JSX.Element {
   const [error, setError] = createSignal('');
   const [season, setSeason] = createSignal<number | null>(null);
   const [favorite, setFavorite] = createSignal(false);
+  /** The provider's YouTube trailer, if it sent one; otherwise Trailer searches YouTube. */
+  const trailerId = () => youtubeId(info()?.trailer);
+  const [trailerOpen, setTrailerOpen] = createSignal(false);
   const progress = useProgress();
   let list: VirtualListApi | undefined;
 
@@ -233,6 +237,12 @@ export function SeriesDetailScreen(props: DetailProps): JSX.Element {
                         <Icon name={favorite() ? 'bookmarked' : 'bookmark'} />
                         <span>{favorite() ? t('live.removeFav') : t('live.addFav')}</span>
                       </FocusButton>
+                      <Show when={row()}>
+                        <FocusButton id="series-trailer" class="btn-lg" onSelect={() => setTrailerOpen(true)}>
+                          <Icon name="movie" />
+                          <span>{t('detail.trailer')}</span>
+                        </FocusButton>
+                      </Show>
                     </div>
                   </FocusZone>
                   <Show when={info()?.plot}>
@@ -307,6 +317,22 @@ export function SeriesDetailScreen(props: DetailProps): JSX.Element {
           )}
         </Show>
       </Show>
+      <Show when={trailerOpen() && row()}>
+        {(r) => (
+          <TrailerDialog
+            providerId={trailerId()}
+            search={() => catalog().call('findTrailer', r().name, r().year ?? yearOf(info()?.releaseDate), 'series')}
+            title={r().name}
+            onClose={() => setTrailerOpen(false)}
+          />
+        )}
+      </Show>
     </div>
   );
+}
+
+/** The year in a release date such as "2026-03-01". */
+function yearOf(date: string | undefined): number | undefined {
+  const m = /\b(19|20)\d{2}\b/.exec(date ?? '');
+  return m ? Number(m[0]) : undefined;
 }
