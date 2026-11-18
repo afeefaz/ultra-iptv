@@ -1,15 +1,15 @@
 {
-  "version": "0.9.5",
-  "notes": "Subtitles are white with a black outline, without the black box behind them (Android TV, Samsung and web).",
-  "pub_date": "2026-11-15T17:33:23.380Z",
+  "version": "0.9.6",
+  "notes": "Trailer on every movie and series: plays in a large window, found on YouTube when the provider has none.\nMac and Windows: open a stream in VLC or another player installed on the computer.\nSettings: hide Home, Live, Movies and Series from the top bar; Back takes you Home.\nAdding a playlist is simpler: it updates by itself every 12 hours.",
+  "pub_date": "2026-11-18T16:09:55.034Z",
   "platforms": {
     "darwin-aarch64": {
-      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.5/UltraIPTV-mac.app.tar.gz",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxV3lJaFEzb1pBdndqZWRiVDlvMWExUUxiNFNFOHVPdkhRLzlFZUk2REV5YmRNeHlPWndTb09wRDhlZnNoWG15NVNqWTNWQlpPMm1nc2ZuUUViazR4L1E4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NzYzNzA3CWZpbGU6VWx0cmEgSVBUVi5hcHAudGFyLmd6CXZlcnNpb246MC45LjUKNnc4VTFTMkhYZVMvbXRLSEZPQTkxbHVnb0t5UFU1TkhFZEJ4NTdTbmhiY2Y0QzBDTHhrVkc2Q3JTVHlyb1VBcmlNODR3MGlVVVRTL21iTGlkaG13QUE9PQo="
+      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.6/UltraIPTV-mac.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzhpbGU0eVhuU25uTlV2blRFK3RUMS9rRURCZXN4eU42R29RL3V2dGdYdGsvU043TktwQVFHWTdUMllWSEV4YzZOUWR2RXYvc0VtZi9KNXpma25HZkFJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MDE3NzkxCWZpbGU6VWx0cmEgSVBUVi5hcHAudGFyLmd6CXZlcnNpb246MC45LjYKM0htdXZJbE5Gd0hqUVZCamFaMnVFUThnRWZXSm5naWlIb0FGRmRpWkdXcmJBV1l2ZVZPbS9pKzFNRnZRakJhZ0owWjc0YzloZ0VkWjJZcDJQMk9OQ0E9PQo="
     },
     "windows-x86_64": {
-      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.5/UltraIPTV-windows-setup.exe",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzRLUzZPZjkxWURmUWlNaW1Td2g4clFWVkczaTQ2ZWJ4d2ZBL2lrbUx1U0pKL24zK05KczA4bkozK3hrWS9DM0lOaGZ4cHZqQWZLSXNvSTdESHY3TlFRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NzYzOTQzCWZpbGU6VWx0cmEgSVBUVl8wLjkuNV94NjQtc2V0dXAuZXhlCXZlcnNpb246MC45LjUKNzRLaThsWGNINktaUC9seVlJcDFhek5kaGx2L2tXS3JCWWhpOVM5UEZvRHlGdUozQTRGUzBLajZwV1Q5R0FLVEgwMURuY0xKNElWaGwxUVd2TDhYRFE9PQo="
+      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.6/UltraIPTV-windows-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzZzbEdQQkdRSjcrVGdGRTVZMk5Mdm1SR1BYTXlMSXdiQjhRbHB1L3ppS21wakhNZU55ZE5qdTM2dUx4c3RKMDdLdFlSWktwL3RTaWN1RXNObWdremdrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MDE4MTMwCWZpbGU6VWx0cmEgSVBUVl8wLjkuNl94NjQtc2V0dXAuZXhlCXZlcnNpb246MC45LjYKTE1Na0orenQ4TjdGVlpFZWQ2eEJwNXNMWG42Tm9XeFdVRHUxZVd0VEZabGw3QVcwQUl1WVhkRVZTYktIc29zSW1qKzQ0SlRpR3hrZUdZNS9LWVV4RHc9PQo="
     }
   }
 }

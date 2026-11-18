@@ -1,15 +1,21 @@
 {
-  "versionCode": 20,
-  "versionName": "0.9.5",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.5/UltraIPTV.apk",
-  "sha256": "80bf00a6ac40bdccbc2c6c3f2092ff76c258b2be306e5a0b972c041d2e7361dd",
-  "size": 12504912,
+  "versionCode": 21,
+  "versionName": "0.9.6",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.6/UltraIPTV.apk",
+  "sha256": "2f32562344d83de10ef468164c98bef556d324cf8262b31a0e8fa7c310752a2c",
+  "size": 12507980,
   "notes": {
     "en": [
-      "Subtitles are white with a black outline, without the black box behind them (Android TV, Samsung and web)."
+      "Trailer on every movie and series: plays in a large window, found on YouTube when the provider has none.",
+      "Mac and Windows: open a stream in VLC or another player installed on the computer.",
+      "Settings: hide Home, Live, Movies and Series from the top bar; Back takes you Home.",
+      "Adding a playlist is simpler: it updates by itself every 12 hours."
     ],
     "ar": [
-      "الترجمة بيضاء بإطار أسود، من دون المربع الأسود خلفها (Android TV وسامسونج والويب)."
+      "إعلان لكل فيلم ومسلسل: يُعرض في نافذة كبيرة، ويُبحث عنه في YouTube إذا لم يوفّره المزوّد.",
+      "ماك وويندوز: افتح البث في VLC أو مشغّل آخر مثبّت على الكمبيوتر.",
+      "الإعدادات: إخفاء الرئيسية والمباشر والأفلام والمسلسلات من الشريط العلوي؛ زر الرجوع يعيدك إلى الرئيسية.",
+      "إضافة قائمة تشغيل أسهل: تتحدّث تلقائيًا كل 12 ساعة."
     ]
   }
 }
