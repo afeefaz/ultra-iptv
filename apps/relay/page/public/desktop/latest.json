@@ -1,21 +1,21 @@
 {
-  "versionCode": 9006,
-  "versionName": "0.9.6",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.6/UltraIPTV-mac.app.tar.gz",
-  "sha256": "3d4c2cf5633fcc90bb97dbb5f67d7bee0862bdbee64dac14f0d349dce5117a94",
-  "size": 16436467,
+  "versionCode": 9007,
+  "versionName": "0.9.7",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.7/UltraIPTV-mac.app.tar.gz",
+  "sha256": "56a5cf17befd6326d4651981395b1e562681df8687744ea977e83445671f6b31",
+  "size": 16436954,
   "notes": {
     "en": [
-      "Trailer on every movie and series: plays in a large window, found on YouTube when the provider has none.",
-      "Mac and Windows: open a stream in VLC or another player installed on the computer.",
-      "Settings: hide Home, Live, Movies and Series from the top bar; Back takes you Home.",
-      "Adding a playlist is simpler: it updates by itself every 12 hours."
+      "Android: a picture that freezes during a live channel now reconnects by itself after 20 seconds.",
+      "The stream's bitrate shows next to the resolution on live channels, and in the stream info.",
+      "New Stream info button in the player, for remotes without an Info button.",
+      "Arabic: the memory readout reads correctly."
     ],
     "ar": [
-      "إعلان لكل فيلم ومسلسل: يُعرض في نافذة كبيرة، ويُبحث عنه في YouTube إذا لم يوفّره المزوّد.",
-      "ماك وويندوز: افتح البث في VLC أو مشغّل آخر مثبّت على الكمبيوتر.",
-      "الإعدادات: إخفاء الرئيسية والمباشر والأفلام والمسلسلات من الشريط العلوي؛ زر الرجوع يعيدك إلى الرئيسية.",
-      "إضافة قائمة تشغيل أسهل: تتحدّث تلقائيًا كل 12 ساعة."
+      "أندرويد: إذا تجمّدت الصورة أثناء قناة مباشرة، يُعاد الاتصال تلقائيًا بعد 20 ثانية.",
+      "معدّل البث يظهر بجانب الدقة في القنوات المباشرة، وفي معلومات البث.",
+      "زر جديد «معلومات البث» في المشغّل، لأجهزة التحكم التي ليس فيها زر المعلومات.",
+      "العربية: عرض الذاكرة يظهر بشكل صحيح."
     ]
   }
 }

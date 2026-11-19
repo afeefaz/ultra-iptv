@@ -1,15 +1,15 @@
 {
-  "version": "0.9.6",
-  "notes": "Trailer on every movie and series: plays in a large window, found on YouTube when the provider has none.\nMac and Windows: open a stream in VLC or another player installed on the computer.\nSettings: hide Home, Live, Movies and Series from the top bar; Back takes you Home.\nAdding a playlist is simpler: it updates by itself every 12 hours.",
-  "pub_date": "2026-11-18T16:09:55.034Z",
+  "version": "0.9.7",
+  "notes": "Android: a picture that freezes during a live channel now reconnects by itself after 20 seconds.\nThe stream's bitrate shows next to the resolution on live channels, and in the stream info.\nNew Stream info button in the player, for remotes without an Info button.\nArabic: the memory readout reads correctly.",
+  "pub_date": "2026-11-19T13:53:23.031Z",
   "platforms": {
     "darwin-aarch64": {
-      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.6/UltraIPTV-mac.app.tar.gz",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzhpbGU0eVhuU25uTlV2blRFK3RUMS9rRURCZXN4eU42R29RL3V2dGdYdGsvU043TktwQVFHWTdUMllWSEV4YzZOUWR2RXYvc0VtZi9KNXpma25HZkFJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MDE3NzkxCWZpbGU6VWx0cmEgSVBUVi5hcHAudGFyLmd6CXZlcnNpb246MC45LjYKM0htdXZJbE5Gd0hqUVZCamFaMnVFUThnRWZXSm5naWlIb0FGRmRpWkdXcmJBV1l2ZVZPbS9pKzFNRnZRakJhZ0owWjc0YzloZ0VkWjJZcDJQMk9OQ0E9PQo="
+      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.7/UltraIPTV-mac.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzQ1V3ZHSkNwdkZZbzU1QXdzN2lRVFI1S2ttOWVoMkNwWlVRTEJscHJsa3dza1QzUjE2ZkUxVm1na0J6V0pBUjZ5SlVkYW42MDVwd080dWdiNE16ckFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MDk2MTI2CWZpbGU6VWx0cmEgSVBUVi5hcHAudGFyLmd6CXZlcnNpb246MC45LjcKV3NDUGtRd2NZYU80VmUzK01QaTVyVldQd1NqUzBzVGx4TVRkTE04TTYwUXNQRFp5ODVwUHVXQkdJTXNsMEJ3YzdzUHZCdDF2ek44RXh4eDJqTjNjQWc9PQo="
     },
     "windows-x86_64": {
-      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.6/UltraIPTV-windows-setup.exe",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzZzbEdQQkdRSjcrVGdGRTVZMk5Mdm1SR1BYTXlMSXdiQjhRbHB1L3ppS21wakhNZU55ZE5qdTM2dUx4c3RKMDdLdFlSWktwL3RTaWN1RXNObWdremdrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MDE4MTMwCWZpbGU6VWx0cmEgSVBUVl8wLjkuNl94NjQtc2V0dXAuZXhlCXZlcnNpb246MC45LjYKTE1Na0orenQ4TjdGVlpFZWQ2eEJwNXNMWG42Tm9XeFdVRHUxZVd0VEZabGw3QVcwQUl1WVhkRVZTYktIc29zSW1qKzQ0SlRpR3hrZUdZNS9LWVV4RHc9PQo="
+      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.7/UltraIPTV-windows-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzR6OEw1WlZ6emVRbEszTGFlYkt1VGtwZFRqUnJiK3d6M0hEZm9NRzlta1pZVTc0L0h2Z3kxUWljQlo3NGkvWXZyakxrK3N5elhWemhVaGFiRVdoK2dvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MDk2MzQ0CWZpbGU6VWx0cmEgSVBUVl8wLjkuN194NjQtc2V0dXAuZXhlCXZlcnNpb246MC45LjcKcGJTRkVSYm15N09heHhSWFo0dWE2L1kzTTlSMTdyeVVaRnJMNVBKN1pFeEF5SE5PZGpDclBBQW9KdE5hMHNJaU5ScE9xYnJVcDMxeWpwTzFCREZhQlE9PQo="
     }
   }
 }
