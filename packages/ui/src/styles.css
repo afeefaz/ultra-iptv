@@ -4355,13 +4355,34 @@ h3 {
   white-space: nowrap;
 }
 
-.system-usage span {
-  margin-left: 1rem;
+.system-usage-item {
+  display: flex;
+  align-items: baseline;
+}
+
+/* Between the two items, on whichever side the next one sits (the bar itself is always left to right). */
+.system-usage-item + .system-usage-item {
+  margin-left: 1.2rem;
+}
+
+.system-usage[dir='rtl'] .system-usage-item + .system-usage-item {
+  margin-left: 0;
+  margin-right: 1.2rem;
 }
 
 .system-usage b {
+  margin-right: 0.4rem;
   color: var(--muted);
   font-weight: 600;
+}
+
+.system-usage[dir='rtl'] b {
+  margin-right: 0;
+  margin-left: 0.4rem;
+}
+
+.system-usage bdi {
+  font-variant-numeric: tabular-nums;
 }
 
 .hidden-note {

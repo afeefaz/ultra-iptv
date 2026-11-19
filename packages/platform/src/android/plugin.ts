@@ -40,7 +40,7 @@ export interface UltraPlayerPlugin {
   addListener(event: 'firstFrame', fn: () => void): Promise<PluginListenerHandle>;
   addListener(
     event: 'progress',
-    fn: (e: { current: number; duration: number; width?: number; height?: number; bitrateKbps?: number; bufferSec?: number; droppedFrames?: number }) => void,
+    fn: (e: { current: number; duration: number; width?: number; height?: number; bitrateKbps?: number; bufferSec?: number; droppedFrames?: number; renderedFrames?: number }) => void,
   ): Promise<PluginListenerHandle>;
 }
 

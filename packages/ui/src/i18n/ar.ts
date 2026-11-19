@@ -249,6 +249,7 @@ export const ar: Record<MessageKey, string> = {
   'player.prevChannel': 'القناة السابقة',
   'player.nextChannel': 'القناة التالية',
   'player.channelList': 'قائمة القنوات',
+  'player.streamInfo': 'معلومات البث',
   'player.audioSubs': 'الصوت والترجمة',
   'player.backBy': 'رجوع {n} ثانية',
   'player.seekedBack': '−{n} ث',

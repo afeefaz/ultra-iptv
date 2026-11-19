@@ -13,6 +13,8 @@ import type {
 import { UltraPlayer } from './plugin';
 
 const STATES: PlayerState[] = ['idle', 'loading', 'playing', 'paused', 'buffering', 'ended', 'error'];
+/** Frames shown before the picture counts towards progress (a radio channel's single still image never would). */
+const MOVING_PICTURE_FRAMES = 50;
 
 /**
  * Media3 ExoPlayer through the UltraPlayer Capacitor plugin (spec §4.2). Plays TS, HLS and files
@@ -26,10 +28,16 @@ export class NativePlayer implements PlayerAdapter {
   private pos = { current: 0, duration: 0 };
   private statsCache: PlayerStats = { engine: 'exoplayer' };
   private holeEl: HTMLElement | null = null;
+  /** When playback last moved on: the clock advanced and, for moving pictures, new frames were shown. */
+  private progressAt: number | undefined;
+  private lastCurrent = -1;
+  private lastRendered = -1;
 
   constructor() {
     void UltraPlayer.addListener('state', (e) => {
       const state = STATES.indexOf(e.state as PlayerState) >= 0 ? (e.state as PlayerState) : 'idle';
+      // A freeze is counted from when it (re)started playing, not from before a pause.
+      if (state === 'playing' && this.progressAt !== undefined) this.progressAt = Date.now();
       this.emit('state', state);
     });
     void UltraPlayer.addListener('error', (e) =>
@@ -41,6 +49,7 @@ export class NativePlayer implements PlayerAdapter {
     });
     void UltraPlayer.addListener('firstFrame', () => this.emit('firstFrame', undefined));
     void UltraPlayer.addListener('progress', (e) => {
+      this.noteProgress(e.current, e.renderedFrames);
       this.pos = { current: e.current, duration: e.duration };
       this.statsCache = {
         engine: 'exoplayer',
@@ -72,6 +81,7 @@ export class NativePlayer implements PlayerAdapter {
   async load(source: StreamSource, options: LoadOptions): Promise<void> {
     this.trackCache = { audio: [], text: [] };
     this.pos = { current: options.startAt ?? 0, duration: 0 };
+    this.resetProgress();
     this.emit('state', 'loading');
     await UltraPlayer.load({
       url: source.url,
@@ -96,12 +106,22 @@ export class NativePlayer implements PlayerAdapter {
     void UltraPlayer.stop();
     this.trackCache = { audio: [], text: [] };
     this.pos = { current: 0, duration: 0 };
+    this.resetProgress();
     this.emit('state', 'idle');
   }
 
   seek(seconds: number): void {
     this.pos = { current: seconds, duration: this.pos.duration };
+    if (this.progressAt !== undefined) this.progressAt = Date.now();
     void UltraPlayer.seek({ seconds });
+  }
+
+  /**
+   * For the freeze watchdog (playback.ts): ExoPlayer can sit "playing" with a still picture and no
+   * sound, with no error and no buffering, e.g. when a live stream's data stops arriving.
+   */
+  lastProgressAt(): number | undefined {
+    return this.progressAt;
   }
 
   position(): { current: number; duration: number } {
@@ -122,6 +142,21 @@ export class NativePlayer implements PlayerAdapter {
 
   stats(): PlayerStats {
     return this.statsCache;
+  }
+
+  private resetProgress(): void {
+    this.progressAt = undefined;
+    this.lastCurrent = -1;
+    this.lastRendered = -1;
+  }
+
+  private noteProgress(current: number, rendered: number | undefined): void {
+    const moved = current !== this.lastCurrent;
+    const moving = rendered !== undefined && rendered >= MOVING_PICTURE_FRAMES;
+    const shown = rendered !== this.lastRendered;
+    if (moved && (!moving || shown)) this.progressAt = Date.now();
+    this.lastCurrent = current;
+    this.lastRendered = rendered ?? -1;
   }
 
   on<E extends keyof PlayerEvents>(event: E, fn: (data: PlayerEvents[E]) => void): () => void {

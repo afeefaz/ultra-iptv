@@ -34,8 +34,11 @@ import androidx.media3.common.Tracks;
 import androidx.media3.common.VideoSize;
 import androidx.media3.common.text.CueGroup;
 import androidx.media3.common.util.UnstableApi;
+import androidx.media3.datasource.DataSource;
+import androidx.media3.datasource.DataSpec;
 import androidx.media3.datasource.DefaultHttpDataSource;
 import androidx.media3.datasource.HttpDataSource;
+import androidx.media3.datasource.TransferListener;
 import androidx.media3.exoplayer.DecoderCounters;
 import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.exoplayer.analytics.AnalyticsListener;
@@ -61,7 +64,11 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.Locale;
 
 /**
@@ -75,6 +82,9 @@ import java.util.Locale;
 public class UltraPlayerPlugin extends Plugin {
     private static final String TAG = "UltraIPTV";
     private static final long PROGRESS_MS = 500;
+    /** A live stream's bitrate is what arrived over this long (the provider sends it as it plays). */
+    private static final long RATE_WINDOW_MS = 10_000;
+    private static final long RATE_MIN_SPAN_MS = 4_000;
 
     private ExoPlayer player;
     /** Always the size of the screen, so where its parent puts it doesn't matter. */
@@ -85,6 +95,33 @@ public class UltraPlayerPlugin extends Plugin {
     private SubtitleView subtitles;
     private String mode = "hidden";
     private boolean firstFrame;
+    /** Bytes received from the network for the current stream (loader thread adds, main thread reads). */
+    private final AtomicLong receivedBytes = new AtomicLong();
+    /** A file's whole size, when its server says (Content-Range or Content-Length); -1 otherwise. */
+    private volatile long fileBytes = -1;
+    /** One file (not HLS, whose requests are each a short segment). */
+    private volatile boolean singleFile;
+    /** (time, receivedBytes) every progress tick, oldest first, for the live bitrate. */
+    private final ArrayDeque<long[]> rateSamples = new ArrayDeque<>();
+    private final TransferListener meter = new TransferListener() {
+        @Override
+        public void onTransferInitializing(DataSource source, DataSpec dataSpec, boolean isNetwork) {}
+
+        @Override
+        public void onTransferStart(DataSource source, DataSpec dataSpec, boolean isNetwork) {
+            if (!isNetwork) return;
+            long total = totalLength(source.getResponseHeaders(), dataSpec.position);
+            if (total > 0 && singleFile) fileBytes = total;
+        }
+
+        @Override
+        public void onBytesTransferred(DataSource source, DataSpec dataSpec, boolean isNetwork, int bytes) {
+            if (isNetwork) receivedBytes.addAndGet(bytes);
+        }
+
+        @Override
+        public void onTransferEnd(DataSource source, DataSpec dataSpec, boolean isNetwork) {}
+    };
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable tick = new Runnable() {
         @Override
@@ -181,7 +218,8 @@ public class UltraPlayerPlugin extends Plugin {
             DefaultHttpDataSource.Factory http = new DefaultHttpDataSource.Factory()
                 .setAllowCrossProtocolRedirects(true)
                 .setConnectTimeoutMs(15_000)
-                .setReadTimeoutMs(20_000);
+                .setReadTimeoutMs(20_000)
+                .setTransferListener(meter);
             if (userAgent != null && !userAgent.isEmpty()) http.setUserAgent(userAgent);
             if (referrer != null && !referrer.isEmpty()) http.setDefaultRequestProperties(Collections.singletonMap("Referer", referrer));
             DefaultExtractorsFactory extractors = new DefaultExtractorsFactory()
@@ -196,6 +234,10 @@ public class UltraPlayerPlugin extends Plugin {
             }
             MediaSource source = new DefaultMediaSourceFactory(http, extractors).createMediaSource(item.build());
             firstFrame = false;
+            receivedBytes.set(0);
+            fileBytes = -1;
+            singleFile = !"hls".equals(kind);
+            rateSamples.clear();
             if (startAt != null && startAt > 0) player.setMediaSource(source, (long) (startAt * 1000));
             else player.setMediaSource(source);
             player.prepare();
@@ -475,11 +517,65 @@ public class UltraPlayerPlugin extends Plugin {
         if (video != null) {
             e.put("width", video.width);
             e.put("height", video.height);
-            if (video.bitrate > 0) e.put("bitrateKbps", video.bitrate / 1000);
         }
+        long kbps = bitrateKbps(live, duration, video);
+        if (kbps > 0) e.put("bitrateKbps", kbps);
         DecoderCounters counters = player.getVideoDecoderCounters();
-        if (counters != null) e.put("droppedFrames", counters.droppedBufferCount);
+        if (counters != null) {
+            e.put("droppedFrames", counters.droppedBufferCount);
+            // Frames actually shown: a picture can freeze while the clock (driven by the sound) runs on.
+            e.put("renderedFrames", counters.renderedOutputBufferCount);
+        }
         notifyListeners("progress", e);
+    }
+
+    /**
+     * The stream's bitrate (picture and sound). Few live channels declare one, so for them it's what
+     * arrived over the last 10 s; a file's is its size over its length. Download speed isn't used for
+     * a file: the player fetches it in bursts.
+     */
+    private long bitrateKbps(boolean live, long durationMs, Format video) {
+        long now = SystemClock.elapsedRealtime();
+        long bytes = receivedBytes.get();
+        rateSamples.addLast(new long[] {now, bytes});
+        while (rateSamples.size() > 2 && now - rateSamples.peekFirst()[0] > RATE_WINDOW_MS) rateSamples.removeFirst();
+        if (!live && fileBytes > 0 && durationMs > 0 && durationMs != C.TIME_UNSET) return fileBytes * 8 / durationMs;
+        if (video != null && video.bitrate > 0) return video.bitrate / 1000;
+        if (!live) return 0;
+        long[] first = rateSamples.peekFirst();
+        long span = now - first[0];
+        return span >= RATE_MIN_SPAN_MS ? (bytes - first[1]) * 8 / span : 0;
+    }
+
+    /** "Content-Range: bytes 0-99/12345" → 12345; or the Content-Length of a request from the start. */
+    private static long totalLength(Map<String, List<String>> headers, long position) {
+        String range = header(headers, "Content-Range");
+        if (range != null) {
+            int slash = range.lastIndexOf('/');
+            if (slash >= 0) {
+                try {
+                    return Long.parseLong(range.substring(slash + 1).trim());
+                } catch (NumberFormatException ignored) {
+                    return -1; // "*": unknown
+                }
+            }
+        }
+        String length = header(headers, "Content-Length");
+        if (length != null && position == 0) {
+            try {
+                return Long.parseLong(length.trim());
+            } catch (NumberFormatException ignored) {
+                return -1;
+            }
+        }
+        return -1;
+    }
+
+    private static String header(Map<String, List<String>> headers, String name) {
+        for (Map.Entry<String, List<String>> h : headers.entrySet()) {
+            if (h.getKey() != null && h.getKey().equalsIgnoreCase(name) && !h.getValue().isEmpty()) return h.getValue().get(0);
+        }
+        return null;
     }
 
     private void keepScreenOn(boolean on) {

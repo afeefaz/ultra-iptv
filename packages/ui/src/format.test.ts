@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { formatBytes, resolutionLabel } from './format';
+import { formatBitrate, formatBytes, resolutionLabel } from './format';
+
+describe('formatBitrate', () => {
+  it('uses megabits from 1000 kbps', () => {
+    expect(formatBitrate(5240)).toBe('5.2 Mbps');
+    expect(formatBitrate(1000)).toBe('1.0 Mbps');
+    expect(formatBitrate(849.6)).toBe('850 kbps');
+  });
+});
 
 describe('formatBytes', () => {
   it('shows enough digits to see it change', () => {

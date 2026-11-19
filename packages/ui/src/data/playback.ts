@@ -1,7 +1,7 @@
 import { getProgress, log, perf, RESUME_MIN_SECONDS, WATCHED_RATIO, type ChannelRow, type MediaRef, type ProgressRow, type ResolvedStream } from '@ultra/core';
 import { CANNOT_CONNECT, type Platform, type PlayerAdapter, type PlayerError, type PlayerState, type PlayerStats, type PlayerTracks, type Track, type VideoRect } from '@ultra/platform';
 import { createSignal } from 'solid-js';
-import { resolutionLabel } from '../format';
+import { formatBitrate, resolutionLabel } from '../format';
 import { catalog } from './catalog';
 import { HEARTBEAT_EVERY_MS, isFrozen, isStuttering, steadyAgain, WATCH_EVERY_MS } from './stallWatch';
 import { track } from './usage';
@@ -135,9 +135,14 @@ export const videoResolution = (): string | null => {
   return size ? resolutionLabel(size.width, size.height) : null;
 };
 
+const [videoBitrate, setVideoBitrate] = createSignal<string | null>(null);
+/** The playing stream's bitrate ("5.2 Mbps"): declared, or measured as it arrives (see the engines). */
+export { videoBitrate };
+
 function readVideoSize(): void {
   if (state() !== 'playing' || !player) return;
-  const { width, height } = player.stats();
+  const { width, height, bitrateKbps } = player.stats();
+  setVideoBitrate(bitrateKbps ? formatBitrate(bitrateKbps) : null);
   const size = videoSize();
   if (width && height && (size?.width !== width || size?.height !== height)) {
     setVideoSize({ width, height });
@@ -532,7 +537,10 @@ function onState(s: PlayerState): void {
   }
   if (s === 'loading') pauses = [];
   setState(s);
-  if (s === 'loading') setVideoSize(null);
+  if (s === 'loading') {
+    setVideoSize(null);
+    setVideoBitrate(null);
+  }
   clearTimeout(stallTimer);
   if (s === 'playing') {
     if (retryPending) return;

@@ -247,6 +247,7 @@ export const en = {
   'player.prevChannel': 'Previous channel',
   'player.nextChannel': 'Next channel',
   'player.channelList': 'Channel list',
+  'player.streamInfo': 'Stream info',
   'player.audioSubs': 'Audio & subtitles',
   'player.backBy': 'Back {n} seconds',
   'player.seekedBack': '−{n} s',

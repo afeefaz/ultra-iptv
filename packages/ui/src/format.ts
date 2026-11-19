@@ -10,6 +10,11 @@ export function resolutionLabel(width: number, height: number): string {
   return `${height}p`;
 }
 
+/** A stream's bitrate: "5.2 Mbps", or "850 kbps" below one megabit. */
+export function formatBitrate(kbps: number): string {
+  return kbps >= 1000 ? `${(kbps / 1000).toFixed(1)} Mbps` : `${Math.round(kbps)} kbps`;
+}
+
 /** Two decimals for gigabytes, one for megabytes below 100, so changes are visible as they happen. */
 export function formatBytes(bytes: number, unit: 'GB' | 'MB'): string {
   if (unit === 'GB') return `${(bytes / 1024 ** 3).toFixed(2)} GB`;

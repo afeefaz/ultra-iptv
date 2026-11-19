@@ -30,11 +30,12 @@ import {
   seekTo,
   togglePause,
   zap,
+  videoBitrate,
   videoResolution,
   zapTo,
 } from '../data/playback';
 import { seekSeconds, showPictureSkip } from '../data/settings';
-import { formatDuration } from '../format';
+import { formatBitrate, formatDuration } from '../format';
 import { formatNumber, t } from '../i18n';
 import { useKeyBarrier, useKeys } from '../keys';
 import { usePlatform } from '../platform-context';
@@ -83,6 +84,8 @@ function LivePlayer(): JSX.Element {
     { label: () => t('player.nextChannel'), icon: () => 'down', run: () => void zap(1) },
     { label: () => t('player.channelList'), icon: () => 'list', run: () => setMiniList(true) },
     { label: () => t('player.audioSubs'), icon: () => 'subtitles', text: true, run: () => setSheet(true) },
+    // Also Info or Blue; most Google TV remotes have neither.
+    { label: () => t('player.streamInfo'), icon: () => 'info', run: () => setStats(!stats()) },
     ...externalControl(platform, () => showToast(t('player.noExternal'))),
   ];
   /** Index of the button the remote is on; null means the arrows zap as usual. */
@@ -230,6 +233,13 @@ function LivePlayer(): JSX.Element {
                 </span>
                 <span class="pill pill-live">{t('player.live')}</span>
                 <Show when={videoResolution()}>{(r) => <span class="pill pill-resolution">{r()}</span>}</Show>
+                <Show when={videoBitrate()}>
+                  {(b) => (
+                    <span class="pill pill-resolution" dir="ltr">
+                      {b()}
+                    </span>
+                  )}
+                </Show>
               </div>
             </div>
             <div class="player-bottom">
@@ -348,7 +358,7 @@ function statsText(): string {
   return [
     s.engine,
     s.width ? `${s.width}×${s.height}` : '',
-    s.bitrateKbps ? `${formatNumber(s.bitrateKbps)} kbps` : '',
+    s.bitrateKbps ? formatBitrate(s.bitrateKbps) : '',
     s.bufferSec !== undefined ? `buffer ${s.bufferSec}s` : '',
     s.droppedFrames !== undefined ? `dropped ${s.droppedFrames}` : '',
     lastZapMs() !== null ? `zap ${lastZapMs()} ms` : '',
@@ -379,6 +389,7 @@ function MediaPlayer(): JSX.Element {
   const prevEp: PlayerControl = { label: () => t('player.prevEpisode'), icon: () => 'skipPrevious', disabled: () => !previousEpisode(), run: () => void playEpisode(-1) };
   const nextEp: PlayerControl = { label: () => t('player.nextEpisode'), icon: () => 'skipNext', disabled: () => !nextEpisode(), run: () => void playEpisode(1) };
   const audioSubs: PlayerControl = { label: () => t('player.audioSubs'), icon: () => 'subtitles', text: true, run: () => setSheet(true) };
+  const streamInfo: PlayerControl = { label: () => t('player.streamInfo'), icon: () => 'info', run: () => setStats(!stats()) };
   const [toast, setToast] = createSignal('');
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
   const showToast = (text: string) => {
@@ -390,8 +401,8 @@ function MediaPlayer(): JSX.Element {
   const isEpisode = () => playingMedia()?.kind === 'episode';
   const controls = createMemo<PlayerControl[]>(() =>
     isEpisode()
-      ? [back, prevEp, skipBack, playPause, skipForward, nextEp, audioSubs, ...external]
-      : [back, skipBack, playPause, skipForward, audioSubs, ...external],
+      ? [back, prevEp, skipBack, playPause, skipForward, nextEp, audioSubs, streamInfo, ...external]
+      : [back, skipBack, playPause, skipForward, audioSubs, streamInfo, ...external],
   );
   /** Which button of the next-episode card the remote is on: 0 plays now, 1 cancels. */
   const [nextChoice, setNextChoice] = createSignal(0);
