@@ -151,7 +151,7 @@ interface PlayerAdapter {
 |---|---|
 | Android | Capacitor native HTTP (no CORS restrictions) |
 | Tizen | `<access origin="*" subdomains="true"/>` in `config.xml` |
-| Mac | the page's `fetch` first, then native HTTP in Rust (reqwest) for providers it can't reach; Fast mode's files in the app's data folder |
+| Mac | the page's `fetch` first, then native HTTP in Rust (reqwest) for providers it can't reach; the catalogue's files in the app's data folder |
 | webOS | packaged-app origin |
 | Web | plain `fetch`; only providers that allow cross-origin requests work. **No proxy of any kind, including in development.** A blocked request shows "This provider can't be reached from a browser" and logs the reason (CORS / mixed content / network) |
 

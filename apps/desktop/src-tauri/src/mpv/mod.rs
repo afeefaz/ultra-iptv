@@ -355,6 +355,19 @@ pub fn mpv_select(player: State<'_, Mpv>, kind: String, id: Option<String>) -> R
     )
 }
 
+/// How a picture of another shape meets the screen: whole with black bars ("fit"), cropped at
+/// its edges to fill it ("fill"), or stretched to fill it ("stretch").
+#[tauri::command]
+pub fn mpv_set_fit(player: State<'_, Mpv>, fit: String) -> Result<(), String> {
+    let (keepaspect, panscan) = match fit.as_str() {
+        "fill" => ("yes", "1.0"),
+        "stretch" => ("no", "0.0"),
+        _ => ("yes", "0.0"),
+    };
+    player.set("keepaspect", keepaspect)?;
+    player.set("panscan", panscan)
+}
+
 /** Where the picture goes: hidden, the whole page, or a box in CSS pixels (the Live preview). */
 #[tauri::command]
 pub fn mpv_set_rect(

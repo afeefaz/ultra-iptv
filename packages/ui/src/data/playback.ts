@@ -1,12 +1,12 @@
 import { getProgress, log, perf, RESUME_MIN_SECONDS, WATCHED_RATIO, type ChannelRow, type MediaRef, type ProgressRow, type ResolvedStream } from '@ultra/core';
-import { CANNOT_CONNECT, type Platform, type PlayerAdapter, type PlayerError, type PlayerState, type PlayerStats, type PlayerTracks, type Track, type VideoRect } from '@ultra/platform';
+import { CANNOT_CONNECT, type PictureFit, type Platform, type PlayerAdapter, type PlayerError, type PlayerState, type PlayerStats, type PlayerTracks, type Track, type VideoRect } from '@ultra/platform';
 import { createSignal } from 'solid-js';
 import { formatBitrate, resolutionLabel } from '../format';
 import { catalog } from './catalog';
 import { HEARTBEAT_EVERY_MS, isFrozen, isStuttering, steadyAgain, WATCH_EVERY_MS } from './stallWatch';
 import { track } from './usage';
 import { ensureUnlocked, isChannelLocked } from './parental';
-import { autoPlayNext, bufferProfile, preferredAudio, preferredText, setPreferredAudio, setPreferredText, streamFormat } from './settings';
+import { autoPlayNext, bufferProfile, PICTURE_FITS, pictureFit, preferredAudio, preferredText, setPictureFitSetting, setPreferredAudio, setPreferredText, streamFormat } from './settings';
 
 /** Reconnect schedule (spec §4.2): 0.5 s → 8 s, at most 6 attempts; switch container once. */
 const MAX_ATTEMPTS = 6;
@@ -182,6 +182,19 @@ function watchProgress(): void {
   }
 }
 
+/** Picture size in full screen, remembered for every channel and film. */
+export function choosePictureFit(fit: PictureFit): void {
+  setPictureFitSetting(fit);
+  player?.setFit?.(fit);
+}
+
+/** The player's Picture button: Fit → Fill → Stretch → Fit. */
+export function nextPictureFit(): PictureFit {
+  const next = PICTURE_FITS[(PICTURE_FITS.indexOf(pictureFit()) + 1) % PICTURE_FITS.length];
+  choosePictureFit(next);
+  return next;
+}
+
 export function initPlayback(p: Platform, layer: HTMLElement): void {
   if (player) {
     player.attach(layer); // the layer was re-created (hot reload in development)
@@ -190,6 +203,7 @@ export function initPlayback(p: Platform, layer: HTMLElement): void {
   platform = p;
   player = p.createPlayer();
   player.attach(layer);
+  player.setFit?.(pictureFit());
   player.on('state', onState);
   player.on('error', onError);
   player.on('tracks', onTracks);

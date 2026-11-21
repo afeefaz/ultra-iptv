@@ -72,5 +72,6 @@ export const native = {
     seek: (seconds: number) => invoke<void>('mpv_seek', { seconds }),
     select: (kind: 'audio' | 'text', id: string | null) => invoke<void>('mpv_select', { kind, id }),
     setRect: (mode: 'hidden' | 'behind' | 'box', x = 0, y = 0, w = 0, h = 0) => invoke<void>('mpv_set_rect', { mode, x, y, w, h }),
+    setFit: (fit: 'fit' | 'fill' | 'stretch') => invoke<void>('mpv_set_fit', { fit }),
   },
 };

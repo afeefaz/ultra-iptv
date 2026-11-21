@@ -1,6 +1,6 @@
 import { CANNOT_CONNECT } from '../errors';
 import { createHoleFrame, placeBox, VIDEO_BEHIND_CLASS, VIDEO_HOLE_CLASS } from '../surface';
-import type { LoadOptions, PlayerAdapter, PlayerEvents, PlayerState, PlayerStats, PlayerTracks, StreamSource, Track, VideoRect } from '../types';
+import type { LoadOptions, PictureFit, PlayerAdapter, PlayerEvents, PlayerState, PlayerStats, PlayerTracks, StreamSource, Track, VideoRect } from '../types';
 import type { MpvEvent, MpvTrack } from './plugin';
 
 /** What the player needs from the native side; the real one is `native.mpv`, tests pass a fake. */
@@ -12,6 +12,8 @@ export interface MpvBridge {
   seek(seconds: number): Promise<void>;
   select(kind: 'audio' | 'text', id: string | null): Promise<void>;
   setRect(mode: 'hidden' | 'behind' | 'box', x?: number, y?: number, w?: number, h?: number): Promise<void>;
+  /** How the picture meets the screen (mpv's keepaspect and panscan). */
+  setFit?(fit: PictureFit): Promise<void>;
   /** Keeps the display awake while something plays. */
   keepAwake?(on: boolean): Promise<void>;
 }
@@ -34,6 +36,10 @@ export class MpvPlayer implements PlayerAdapter {
   /** The playing video, for the stats line. */
   private picture = { format: '', gamma: '', surface: false };
   private holeEl: HTMLElement | null = null;
+  private fit: PictureFit = 'fit';
+  private fullscreen = false;
+  /** What mpv was last told, so moving the preview box doesn't repeat it. */
+  private appliedFit: PictureFit = 'fit';
   private live = false;
   private started = false;
   private paused = false;
@@ -53,7 +59,22 @@ export class MpvPlayer implements PlayerAdapter {
     // The native view lives beside the page; nothing to attach in it.
   }
 
+  setFit(fit: PictureFit): void {
+    this.fit = fit;
+    this.applyFit();
+  }
+
+  /** The chosen fit in full screen; the whole picture in the Live preview. */
+  private applyFit(): void {
+    const fit = this.fullscreen ? this.fit : 'fit';
+    if (fit === this.appliedFit || !this.mpv.setFit) return;
+    this.appliedFit = fit;
+    void this.mpv.setFit(fit);
+  }
+
   setRect(rect: VideoRect): void {
+    this.fullscreen = rect === 'fullscreen';
+    this.applyFit();
     const root = document.documentElement.classList;
     root.toggle(VIDEO_BEHIND_CLASS, rect === 'fullscreen');
     root.toggle(VIDEO_HOLE_CLASS, !!rect && rect !== 'fullscreen');

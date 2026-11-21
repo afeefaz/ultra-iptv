@@ -32,7 +32,7 @@ export const androidPlatform: Platform = {
       };
     },
   },
-  // Fast loading keeps the catalogue in the app's own files (Settings → Playlists → Loading).
+  // The catalogue is kept in the app's own files, outside the web database.
   catalogFiles: {
     write: (path, text) => UltraFiles.write({ path, text }),
     append: (path, text, start) => UltraFiles.append({ path, text, start }),
@@ -41,7 +41,6 @@ export const androidPlatform: Platform = {
     removeDir: (path) => UltraFiles.removeDir({ path }),
     freeBytes: () => UltraFiles.freeBytes().then((r) => r.bytes, () => undefined),
   },
-  catalogFilesByDefault: false,
   fileExport: {
     async exportText(filename, mimeType, text) {
       await UltraPlayer.shareText({ filename, mimeType, text });

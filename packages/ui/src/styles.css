@@ -1766,6 +1766,19 @@ h3 {
   margin-left: 0.9rem;
 }
 
+/* The subscription's end, before "Updated …"; the colour warns in its last two weeks. */
+.home-expiry {
+  display: flex;
+  align-items: center;
+  margin-right: 1.4rem;
+}
+
+.home-expiry .icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-right: 0.4rem;
+}
+
 /* ---------- Movies & Series ---------- */
 .vod .pane-categories {
   width: calc(21% + (var(--text-scale, 1) - 1) * 18%);

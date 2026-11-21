@@ -33,8 +33,9 @@ import {
   videoBitrate,
   videoResolution,
   zapTo,
+  nextPictureFit,
 } from '../data/playback';
-import { seekSeconds, showPictureSkip } from '../data/settings';
+import { pictureFit, seekSeconds, showPictureSkip } from '../data/settings';
 import { formatBitrate, formatDuration } from '../format';
 import { formatNumber, t } from '../i18n';
 import { useKeyBarrier, useKeys } from '../keys';
@@ -86,6 +87,7 @@ function LivePlayer(): JSX.Element {
     { label: () => t('player.audioSubs'), icon: () => 'subtitles', text: true, run: () => setSheet(true) },
     // Also Info or Blue; most Google TV remotes have neither.
     { label: () => t('player.streamInfo'), icon: () => 'info', run: () => setStats(!stats()) },
+    pictureControl((text) => showToast(text)),
     ...externalControl(platform, () => showToast(t('player.noExternal'))),
   ];
   /** Index of the button the remote is on; null means the arrows zap as usual. */
@@ -398,11 +400,12 @@ function MediaPlayer(): JSX.Element {
     toastTimer = setTimeout(() => setToast(''), 3500);
   };
   const external = externalControl(platform, () => showToast(t('player.noExternal')));
+  const picture = pictureControl(showToast);
   const isEpisode = () => playingMedia()?.kind === 'episode';
   const controls = createMemo<PlayerControl[]>(() =>
     isEpisode()
-      ? [back, prevEp, skipBack, playPause, skipForward, nextEp, audioSubs, streamInfo, ...external]
-      : [back, skipBack, playPause, skipForward, audioSubs, streamInfo, ...external],
+      ? [back, prevEp, skipBack, playPause, skipForward, nextEp, audioSubs, streamInfo, picture, ...external]
+      : [back, skipBack, playPause, skipForward, audioSubs, streamInfo, picture, ...external],
   );
   /** Which button of the next-episode card the remote is on: 0 plays now, 1 cancels. */
   const [nextChoice, setNextChoice] = createSignal(0);
@@ -783,6 +786,16 @@ function MediaPlayer(): JSX.Element {
       </Show>
     </div>
   );
+}
+
+/** Picture size: each press moves to the next (Fit, Fill, Stretch) and says what it does. */
+function pictureControl(say: (text: string) => void): PlayerControl {
+  return {
+    label: () => t('player.picture', { mode: t(`fit.${pictureFit()}`) }),
+    icon: () => 'fullscreen',
+    text: true,
+    run: () => say(t(`fit.${nextPictureFit()}Desc`)),
+  };
 }
 
 interface PlayerControl {

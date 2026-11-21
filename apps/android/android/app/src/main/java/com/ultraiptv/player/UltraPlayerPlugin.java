@@ -94,6 +94,8 @@ public class UltraPlayerPlugin extends Plugin {
     private AspectRatioFrameLayout aspect;
     private SubtitleView subtitles;
     private String mode = "hidden";
+    /** Full screen: "fit" (whole, black bars), "fill" (cropped to fill) or "stretch". */
+    private String fit = "fit";
     private boolean firstFrame;
     /** Bytes received from the network for the current stream (loader thread adds, main thread reads). */
     private final AtomicLong receivedBytes = new AtomicLong();
@@ -299,6 +301,7 @@ public class UltraPlayerPlugin extends Plugin {
             View webView = getBridge().getWebView();
             float density = webView.getResources().getDisplayMetrics().density;
             mode = next;
+            applyFit();
             // True black beside full-screen video (the strip at the camera cutout), so the
             // picture's black bars have no visible edge; the app's canvas colour otherwise.
             getActivity().getWindow().getDecorView().setBackgroundColor(
@@ -326,6 +329,25 @@ public class UltraPlayerPlugin extends Plugin {
             }
             call.resolve();
         });
+    }
+
+    @PluginMethod
+    public void setFit(PluginCall call) {
+        String next = call.getString("fit", "fit");
+        getActivity().runOnUiThread(() -> {
+            fit = next;
+            applyFit();
+            call.resolve();
+        });
+    }
+
+    /** The chosen fit in full screen; the preview box always shows the whole picture. */
+    private void applyFit() {
+        if (aspect == null) return;
+        int resize = AspectRatioFrameLayout.RESIZE_MODE_FIT;
+        if ("behind".equals(mode) && "fill".equals(fit)) resize = AspectRatioFrameLayout.RESIZE_MODE_ZOOM;
+        else if ("behind".equals(mode) && "stretch".equals(fit)) resize = AspectRatioFrameLayout.RESIZE_MODE_FILL;
+        aspect.setResizeMode(resize);
     }
 
     // ---------- Tracks ----------

@@ -94,14 +94,9 @@ export interface Platform {
   http?: (request: HttpRequest) => Promise<HttpResponse>;
   /**
    * Files in the app's own folder, outside the browser's storage limit (a Samsung TV gives the web
-   * database 80 MB). Missing where the database has room enough.
+   * database 80 MB): where the catalogue is kept. Missing in a browser, which keeps it in the database.
    */
   catalogFiles?: CatalogFiles;
-  /**
-   * Whether Fast (files) is the starting choice. Samsung needs it (its database is too small for big
-   * providers); on Android the database has room, so Classic stays the default and Fast is a choice.
-   */
-  catalogFilesByDefault?: boolean;
   /** Device and app memory, for the optional readout next to the playlist. */
   systemUsage?: () => Promise<SystemUsage>;
   /** Reads a URL natively without keeping the data (speed test). Others read it with `fetch`. */
@@ -226,6 +221,12 @@ export interface PlayerError {
   blocked?: boolean;
 }
 
+/**
+ * How a full-screen picture of another shape meets the screen: whole with black bars (`fit`),
+ * cropped at its edges to fill it (`fill`), or stretched to fill it (`stretch`).
+ */
+export type PictureFit = 'fit' | 'fill' | 'stretch';
+
 /** A rectangle in CSS pixels relative to the viewport, or the whole screen, or hidden. */
 export type VideoRect = { left: number; top: number; width: number; height: number } | 'fullscreen' | null;
 
@@ -242,6 +243,8 @@ export interface PlayerAdapter {
   /** Puts the video surface in the app's video layer. */
   attach(layer: HTMLElement): void;
   setRect(rect: VideoRect): void;
+  /** Full screen only: the Live preview always shows the whole picture. */
+  setFit?(fit: PictureFit): void;
   load(source: StreamSource, options: LoadOptions): Promise<void>;
   play(): void;
   pause(): void;

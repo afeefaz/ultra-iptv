@@ -88,6 +88,15 @@ export function HomeScreen(): JSX.Element {
               <div class="section-head">
                 <h2 class="section-title">{t('home.library')}</h2>
                 <div class="home-status">
+                  {/* Here rather than in the banner, which a movie in progress replaces. */}
+                  <Show when={expiryText(p())}>
+                    {(e) => (
+                      <span class="home-expiry" classList={{ 'text-warn': e().level === 'soon', 'text-error': e().level === 'expired' }}>
+                        <Icon name="calendar" />
+                        <span>{e().text}</span>
+                      </span>
+                    )}
+                  </Show>
                   <span classList={{ 'text-error': !!p().lastError && !refreshing()[p().id] }}>{statusText(p(), !!refreshing()[p().id])}</span>
                   <FocusButton id="home-refresh" class="chip-button" onSelect={() => void refreshPlaylist(p().id)}>
                     <Icon name="sync" />
@@ -205,14 +214,6 @@ function WelcomeBackHero(): JSX.Element {
           <span>{t('home.libMoviesSub', { n: formatNumber(p()?.counts?.vod ?? 0) })}</span>
           <span>·</span>
           <span>{t('home.libSeriesSub', { n: formatNumber(p()?.counts?.series ?? 0) })}</span>
-          <Show when={p() && expiryText(p()!)}>
-            {(e) => (
-              <>
-                <span>·</span>
-                <span classList={{ 'text-warn': e().level === 'soon', 'text-error': e().level === 'expired' }}>{e().text}</span>
-              </>
-            )}
-          </Show>
         </div>
         <div class="button-row">
           <FocusButton id="home-live" class="btn-primary btn-lg" autofocus onSelect={() => openRoot({ name: 'live' })}>

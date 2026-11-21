@@ -1,5 +1,5 @@
 import type { StreamFormat } from '@ultra/core';
-import type { BufferProfile } from '@ultra/platform';
+import type { BufferProfile, PictureFit } from '@ultra/platform';
 import { createSignal, type Accessor } from 'solid-js';
 import { DEFAULT_ACCENT } from './accent';
 import { track } from './usage';
@@ -147,6 +147,10 @@ export const [categoryGrouping, setCategoryGrouping] = persisted<CategoryGroupin
 
 /** The colour of the app, as the preset's hex (see accent.ts). */
 export const [accent, setAccent] = persisted<string>('display.accent', DEFAULT_ACCENT);
+
+/** How a full-screen picture of another shape fills the screen (Settings → Playback, and the player's button). */
+export const PICTURE_FITS: PictureFit[] = ['fit', 'fill', 'stretch'];
+export const [pictureFit, setPictureFitSetting] = persisted<PictureFit>('playback.pictureFit', 'fit');
 
 /** The live memory and storage readout next to the playlist. */
 export const [showSystemUsage, setShowSystemUsage] = persisted<boolean>('display.systemUsage', false);

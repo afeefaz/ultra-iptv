@@ -86,7 +86,6 @@ export async function createDesktopPlatform(): Promise<Platform> {
       },
     },
     // Fast from the start: faster loading and less memory for big playlists (Settings can change it).
-    catalogFilesByDefault: true,
     systemUsage: () => native.systemUsage(),
     async download(url, { seconds, onProgress, isCancelled }) {
       const result = await native.measureDownload(url, seconds, (p) => {

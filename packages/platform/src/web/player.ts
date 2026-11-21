@@ -5,6 +5,7 @@ import type Mpegts from 'mpegts.js';
 import type {
   BufferProfile,
   LoadOptions,
+  PictureFit,
   PlayerAdapter,
   PlayerError,
   PlayerEvents,
@@ -34,8 +35,12 @@ const HLS_BUFFER: Record<BufferProfile, Partial<HlsConfig>> = {
  * (one instance reused across channels), raw MPEG-TS through mpegts.js, files natively.
  * Neither library may print to the console: URLs must only reach logs through the redactor.
  */
+const OBJECT_FIT: Record<PictureFit, string> = { fit: 'contain', fill: 'cover', stretch: 'fill' };
+
 export class WebPlayer implements PlayerAdapter {
   readonly engine = 'web';
+  private rect: VideoRect = null;
+  private fit: PictureFit = 'fit';
   private readonly video: HTMLVideoElement;
   private hls: Hls | null = null;
   private ts: Mpegts.Player | null = null;
@@ -99,8 +104,15 @@ export class WebPlayer implements PlayerAdapter {
     if (this.video.parentElement !== layer) layer.appendChild(this.video);
   }
 
+  setFit(fit: PictureFit): void {
+    this.fit = fit;
+    this.setRect(this.rect);
+  }
+
   setRect(rect: VideoRect): void {
+    this.rect = rect;
     const s = this.video.style;
+    s.objectFit = rect === 'fullscreen' ? OBJECT_FIT[this.fit] : 'contain';
     if (!rect) {
       s.display = 'none';
       return;

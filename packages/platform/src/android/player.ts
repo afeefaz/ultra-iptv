@@ -1,6 +1,7 @@
 import { createHoleFrame, placeBox, VIDEO_BEHIND_CLASS, VIDEO_HOLE_CLASS } from '../surface';
 import type {
   LoadOptions,
+  PictureFit,
   PlayerAdapter,
   PlayerError,
   PlayerEvents,
@@ -64,6 +65,10 @@ export class NativePlayer implements PlayerAdapter {
 
   attach(): void {
     // The native view lives beside the WebView; nothing to attach in the page.
+  }
+
+  setFit(fit: PictureFit): void {
+    void UltraPlayer.setFit({ fit });
   }
 
   setRect(rect: VideoRect): void {

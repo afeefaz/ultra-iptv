@@ -24,6 +24,8 @@ export interface UltraPlayerPlugin {
   seek(options: { seconds: number }): Promise<void>;
   /** CSS pixels relative to the WebView. `overlay`: above the page (preview); `behind`: full screen under a transparent page. */
   setRect(options: { mode: 'hidden' | 'overlay' | 'behind'; left?: number; top?: number; width?: number; height?: number }): Promise<void>;
+  /** Full screen only (`behind`): the preview always shows the whole picture. */
+  setFit(options: { fit: 'fit' | 'fill' | 'stretch' }): Promise<void>;
   selectAudio(options: { id: string }): Promise<void>;
   selectText(options: { id: string | null }): Promise<void>;
   openExternal(options: { url: string; title: string }): Promise<void>;

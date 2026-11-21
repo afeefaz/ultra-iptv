@@ -171,7 +171,7 @@ export async function sectionNames(playlistId: string, kind: ContentKind): Promi
 
 /**
  * Forgets which lists were saved and where, so every playlist loads in full on its next refresh.
- * For changing where the catalogue is kept (Settings → Playlists → Loading).
+ * For moving a catalogue saved in the database (before 0.9.8) into files.
  */
 export async function forgetSavedLists(): Promise<void> {
   const db = await openUltraDb();

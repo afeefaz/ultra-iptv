@@ -68,6 +68,7 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
             mpv::mpv_seek,
             mpv::mpv_select,
             mpv::mpv_set_rect,
+            mpv::mpv_set_fit,
             power::keep_awake,
             updater::update_info,
             updater::update_install,

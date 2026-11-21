@@ -11,11 +11,13 @@ import { SpeedTestCard } from '../components/SpeedTestCard';
 import { ACCENT_COLORS, accentColor } from '../data/accent';
 import { CATEGORY_SORTS, useCategoryNames, useHiddenCategories } from '../data/categories';
 import { lockedCategories, lockedChannels, pinSet, requestPin } from '../data/parental';
-import { changeStorageMode, fastStorageAvailable, storageMode, type StorageMode } from '../data/catalog';
 import { activePlaylist } from '../data/playlists';
+import { choosePictureFit } from '../data/playback';
 import {
   accent,
   autoPlayNext,
+  PICTURE_FITS,
+  pictureFit,
   categoryGrouping,
   setCategoryGrouping,
   setTheme,
@@ -439,6 +441,21 @@ export function SettingsScreen(): JSX.Element {
                           <span class="option-card-sub">{t(`settings.buffer.${b}Sub`)}</span>
                         </span>
                         <Icon name={bufferProfile() === b ? 'checkCircle' : 'radioOff'} />
+                      </FocusButton>
+                    )}
+                  </For>
+                </div>
+                <div class="setting-name setting-gap">{t('settings.picture')}</div>
+                <div class="setting-desc">{t('settings.pictureDesc')}</div>
+                <div class="option-cards" role="radiogroup" aria-label={t('settings.picture')} style={{ 'margin-top': '0.8rem' }}>
+                  <For each={PICTURE_FITS}>
+                    {(f) => (
+                      <FocusButton id={`settings-picture-${f}`} selected={pictureFit() === f} onSelect={() => choosePictureFit(f)}>
+                        <span class="option-card-text">
+                          <span class="option-card-title">{t(`fit.${f}`)}</span>
+                          <span class="option-card-sub">{t(`fit.${f}Desc`)}</span>
+                        </span>
+                        <Icon name={pictureFit() === f ? 'checkCircle' : 'radioOff'} />
                       </FocusButton>
                     )}
                   </For>
@@ -879,23 +896,6 @@ export function SettingsScreen(): JSX.Element {
                     <span>{t('playlists.manage')}</span>
                   </FocusButton>
                 </div>
-                <Show when={fastStorageAvailable()}>
-                  <div class="setting-name setting-gap">{t('settings.storage')}</div>
-                  <div class="setting-desc">{t('settings.storageDesc')}</div>
-                  <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
-                    <For each={['fast', 'classic'] as StorageMode[]}>
-                      {(mode) => (
-                        <FocusButton id={`settings-storage-${mode}`} selected={storageMode() === mode} onSelect={() => void changeStorageMode(mode)}>
-                          <span class="option-card-text">
-                            <span class="option-card-title">{t(`settings.storage.${mode}`)}</span>
-                            <span class="option-card-sub">{t(`settings.storage.${mode}Sub`)}</span>
-                          </span>
-                          <Icon name={storageMode() === mode ? 'checkCircle' : 'radioOff'} />
-                        </FocusButton>
-                      )}
-                    </For>
-                  </div>
-                </Show>
               </Card>
             </Show>
 

@@ -3,6 +3,7 @@ import { createHoleFrame, placeBox, VIDEO_BEHIND_CLASS, VIDEO_HOLE_CLASS } from 
 import type {
   BufferProfile,
   LoadOptions,
+  PictureFit,
   PlayerAdapter,
   PlayerError,
   PlayerEvents,
@@ -20,6 +21,11 @@ export { VIDEO_HOLE_CLASS };
 const PLANE_WIDTH = 1920;
 
 const BUFFER_SECONDS: Record<BufferProfile, number> = { low: 2, balanced: 4, stable: 8 };
+const DISPLAY_METHOD: Record<PictureFit, string> = {
+  fit: 'PLAYER_DISPLAY_MODE_LETTER_BOX',
+  fill: 'PLAYER_DISPLAY_MODE_CROPPED_FULL',
+  stretch: 'PLAYER_DISPLAY_MODE_FULL_SCREEN',
+};
 
 function parseExtra(track: AvPlayTrack): Record<string, unknown> {
   try {
@@ -44,6 +50,7 @@ export class AvPlayPlayer implements PlayerAdapter {
   readonly engine = 'avplay';
   private readonly listeners = new Map<keyof PlayerEvents, Set<(data: unknown) => void>>();
   private rect: VideoRect = null;
+  private fit: PictureFit = 'fit';
   private objectEl: HTMLElement | null = null;
   private subsEl: HTMLElement | null = null;
   private holeEl: HTMLElement | null = null;
@@ -83,6 +90,11 @@ export class AvPlayPlayer implements PlayerAdapter {
       this.holeEl = createHoleFrame();
     }
     this.setRect(this.rect);
+  }
+
+  setFit(fit: PictureFit): void {
+    this.fit = fit;
+    this.applyDisplayRect();
   }
 
   setRect(rect: VideoRect): void {
@@ -150,7 +162,6 @@ export class AvPlayPlayer implements PlayerAdapter {
       this.av.setBufferingParam('PLAYER_BUFFER_FOR_PLAY', 'PLAYER_BUFFER_SIZE_IN_SECOND', seconds);
       this.av.setBufferingParam('PLAYER_BUFFER_FOR_RESUME', 'PLAYER_BUFFER_SIZE_IN_SECOND', seconds);
       if (source.headers?.userAgent) this.av.setStreamingProperty('USER_AGENT', source.headers.userAgent);
-      this.av.setDisplayMethod('PLAYER_DISPLAY_MODE_LETTER_BOX');
       this.applyDisplayRect();
     } catch (e) {
       this.fail(toError(errorName(e)));
@@ -326,6 +337,7 @@ export class AvPlayPlayer implements PlayerAdapter {
     if (!this.opened || !rect) return;
     const scale = PLANE_WIDTH / window.innerWidth;
     this.guard(() => {
+      this.av.setDisplayMethod(rect === 'fullscreen' ? DISPLAY_METHOD[this.fit] : 'PLAYER_DISPLAY_MODE_LETTER_BOX');
       if (rect === 'fullscreen') this.av.setDisplayRect(0, 0, PLANE_WIDTH, Math.round(window.innerHeight * scale));
       else this.av.setDisplayRect(Math.round(rect.left * scale), Math.round(rect.top * scale), Math.round(rect.width * scale), Math.round(rect.height * scale));
     });
