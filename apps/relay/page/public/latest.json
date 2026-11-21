@@ -1,21 +1,19 @@
 {
-  "versionCode": 22,
-  "versionName": "0.9.7",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.7/UltraIPTV.apk",
-  "sha256": "9c0919d31a2a8701ae75e377a51e9a3280597e8f3f2f17ba406d7974d436a0eb",
-  "size": 12508444,
+  "versionCode": 23,
+  "versionName": "0.9.8",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.8/UltraIPTV.apk",
+  "sha256": "ebd6968f4ccfb85468a1011fc7401e62676da80bd493506cb9bbde9a8b4a5651",
+  "size": 12508616,
   "notes": {
     "en": [
-      "Android: a picture that freezes during a live channel now reconnects by itself after 20 seconds.",
-      "The stream's bitrate shows next to the resolution on live channels, and in the stream info.",
-      "New Stream info button in the player, for remotes without an Info button.",
-      "Arabic: the memory readout reads correctly."
+      "Picture size: Fit, Fill or Stretch, from the player's Picture button or Settings → Playback.",
+      "Home shows when your subscription ends, even while something is in progress.",
+      "Playlists are always kept the fast way; the Loading choice is gone. Android devices load their playlists again once after updating."
     ],
     "ar": [
-      "أندرويد: إذا تجمّدت الصورة أثناء قناة مباشرة، يُعاد الاتصال تلقائيًا بعد 20 ثانية.",
-      "معدّل البث يظهر بجانب الدقة في القنوات المباشرة، وفي معلومات البث.",
-      "زر جديد «معلومات البث» في المشغّل، لأجهزة التحكم التي ليس فيها زر المعلومات.",
-      "العربية: عرض الذاكرة يظهر بشكل صحيح."
+      "حجم الصورة: ملاءمة أو ملء أو تمديد، من زر «الصورة» في المشغّل أو من الإعدادات ← التشغيل.",
+      "الصفحة الرئيسية تعرض موعد انتهاء الاشتراك، حتى أثناء متابعة مشاهدة شيء ما.",
+      "تُحفظ قوائم التشغيل دائمًا بالطريقة السريعة، وأُزيل خيار التحميل. أجهزة أندرويد تعيد تحميل قوائمها مرة واحدة بعد التحديث."
     ]
   }
 }
