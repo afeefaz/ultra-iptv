@@ -1,19 +1,15 @@
 {
-  "versionCode": 9009,
-  "versionName": "0.9.9",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.9/UltraIPTV-mac.app.tar.gz",
-  "sha256": "74e07eaa3f2e97092d41975d44d20129c4a4eec915299357588ceea2591a65f9",
-  "size": 16441010,
+  "versionCode": 9010,
+  "versionName": "0.9.10",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.10/UltraIPTV-mac.app.tar.gz",
+  "sha256": "11b5e02b30c7a4f93dd379f287a7f362e846406a4cdbc99633c6a02e8f857546",
+  "size": 16441291,
   "notes": {
     "en": [
-      "Phones can be held upright: Settings → Appearance → Screen orientation (Auto, Landscape or Portrait), with a layout made for it.",
-      "Movies, episodes and channels play on the phone's side, and it turns back when you leave the player.",
-      "Tapping the picture shows or hides the controls; it no longer pauses."
+      "Phones and touch screens: double tap on the right of a movie or episode to jump forward, on the left to jump back. Keep tapping to jump further."
     ],
     "ar": [
-      "يمكن استخدام الهاتف بالطول: الإعدادات ← المظهر ← اتجاه الشاشة (تلقائي أو أفقي أو عمودي)، مع تصميم مناسب له.",
-      "تُعرض الأفلام والحلقات والقنوات بالعرض، ويعود الهاتف كما كان عند الخروج من المشغّل.",
-      "النقر على الصورة يُظهر أدوات التحكم أو يخفيها، ولم يعد يوقف التشغيل."
+      "الهواتف والشاشات اللمسية: انقر مرتين على يمين الفيلم أو الحلقة للتقديم، وعلى اليسار للترجيع. واصل النقر للتقدّم أكثر."
     ]
   }
 }

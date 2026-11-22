@@ -1,19 +1,15 @@
 {
-  "versionCode": 9009,
-  "versionName": "0.9.9",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.9/UltraIPTV-windows-setup.exe",
-  "sha256": "1c3d1e2723efda94a7caed81c24593b04b843c2aff5f9ec5bfa423b71dc380a0",
-  "size": 35779951,
+  "versionCode": 9010,
+  "versionName": "0.9.10",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.10/UltraIPTV-windows-setup.exe",
+  "sha256": "8bc062e3605f74d46f2c8e31c8e9851d15fd10bd5b7468f1765bb664f61ca519",
+  "size": 35778935,
   "notes": {
     "en": [
-      "Phones can be held upright: Settings → Appearance → Screen orientation (Auto, Landscape or Portrait), with a layout made for it.",
-      "Movies, episodes and channels play on the phone's side, and it turns back when you leave the player.",
-      "Tapping the picture shows or hides the controls; it no longer pauses."
+      "Phones and touch screens: double tap on the right of a movie or episode to jump forward, on the left to jump back. Keep tapping to jump further."
     ],
     "ar": [
-      "يمكن استخدام الهاتف بالطول: الإعدادات ← المظهر ← اتجاه الشاشة (تلقائي أو أفقي أو عمودي)، مع تصميم مناسب له.",
-      "تُعرض الأفلام والحلقات والقنوات بالعرض، ويعود الهاتف كما كان عند الخروج من المشغّل.",
-      "النقر على الصورة يُظهر أدوات التحكم أو يخفيها، ولم يعد يوقف التشغيل."
+      "الهواتف والشاشات اللمسية: انقر مرتين على يمين الفيلم أو الحلقة للتقديم، وعلى اليسار للترجيع. واصل النقر للتقدّم أكثر."
     ]
   }
 }

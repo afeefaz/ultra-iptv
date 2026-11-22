@@ -1,15 +1,15 @@
 {
-  "version": "0.9.9",
-  "notes": "Phones can be held upright: Settings → Appearance → Screen orientation (Auto, Landscape or Portrait), with a layout made for it.\nMovies, episodes and channels play on the phone's side, and it turns back when you leave the player.\nTapping the picture shows or hides the controls; it no longer pauses.",
-  "pub_date": "2026-11-22T17:52:35.347Z",
+  "version": "0.9.10",
+  "notes": "Phones and touch screens: double tap on the right of a movie or episode to jump forward, on the left to jump back. Keep tapping to jump further.",
+  "pub_date": "2026-11-22T18:47:15.455Z",
   "platforms": {
     "darwin-aarch64": {
-      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.9/UltraIPTV-mac.app.tar.gz",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVy9OeEdyMURCNVJhV3djVEFvSjA5Q1ZXWmtMcVRweGJTRnZLdEZ1YmJiQ2o0cTlFOHRSeHh3UytpSnl6cWc4dFJjcFZCVE5RSzZnbDZzeHNUVlZuTEFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MzY5NTgzCWZpbGU6VWx0cmEgSVBUVi5hcHAudGFyLmd6CXZlcnNpb246MC45LjkKdnBiZFhZbDE3eHNFM3lPcVBIcy9qSHFRRGp0bm94Tm80ZnRBQVo5dG1IU3cyMFJDOGNPS2xIY3BnZ3VkOEtWeU9VVzdLQWUwZ2JWQUhUdDJYdk1zQVE9PQo="
+      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.10/UltraIPTV-mac.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzd5dS9RZXppSmNSZXA0RzNGVXdGQlZBUCsyOXpZcjBtSU1RMFNGS2lyQ0dlVUpwNkdZSitBejc3TytESTNKNE05ZlJPdGNna0JaK3dvTFNhRWJOSndNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MzcyNzc3CWZpbGU6VWx0cmEgSVBUVi5hcHAudGFyLmd6CXZlcnNpb246MC45LjEwCmxlbzlOSEJoYXV3bE1nZmU4cituYnZhUlQ2SGdSZWNSOVJYenpwcGdVMHZSL0E5bEZRVnJFUW1sMVZ5ZGlKQ0ozSzlCUlQxZEhLSUVSOHVXL1k3c0J3PT0K"
     },
     "windows-x86_64": {
-      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.9/UltraIPTV-windows-setup.exe",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzc0K1d4YUZpWGFKaUl5eUh0bEpFdjVhSHBPK1BFOFhLaDJoaGd4aHNtaUdGRzVHbVdTYVF0V3U0aFptWGNPMStkUFBwSHEzVFNyUml6TmFoQXhUbWdBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MzY5ODkxCWZpbGU6VWx0cmEgSVBUVl8wLjkuOV94NjQtc2V0dXAuZXhlCXZlcnNpb246MC45LjkKajJFaFN2MGtmejBWcHE0aXZBOU80L2J4TVRyWDFvbHBNQVZtcjl2aEdHaXV0NW5qLytoK1pGQlJiYWt1c2h2VU9BdXJZdEo1NVVYQVlEWTRzNG56QlE9PQo="
+      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.10/UltraIPTV-windows-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzZOM2NxZWI0RDl5YU1MRjBJajJkTi83QnJMb0lUaUdIZGd6d0JiTEh4K1dicE9rcmR5bHRuTTRqejgrNTdOc0QwRU1PaS9TOWNTTzRrajk1T1VLM3dnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MzczMTc0CWZpbGU6VWx0cmEgSVBUVl8wLjkuMTBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjAuOS4xMApMVmlPajZOODE5RG01dy9ZMjU1VjdNZ2c5M1ZlUTNVWGFvVVdvdmZlRXlGdmF6aDlFOW5yaVJYdStJSnFydG00d2NQTDI5YVZZclE0SExUNXRISExBUT09Cg=="
     }
   }
 }
