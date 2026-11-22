@@ -84,9 +84,9 @@ function LivePlayer(): JSX.Element {
     { label: () => t('player.prevChannel'), icon: () => 'up', run: () => void zap(-1) },
     { label: () => t('player.nextChannel'), icon: () => 'down', run: () => void zap(1) },
     { label: () => t('player.channelList'), icon: () => 'list', run: () => setMiniList(true) },
-    { label: () => t('player.audioSubs'), icon: () => 'subtitles', text: true, run: () => setSheet(true) },
+    { label: () => t('player.audioSubs'), icon: () => 'subtitles', text: true, extra: true, run: () => setSheet(true) },
     // Also Info or Blue; most Google TV remotes have neither.
-    { label: () => t('player.streamInfo'), icon: () => 'info', run: () => setStats(!stats()) },
+    { label: () => t('player.streamInfo'), icon: () => 'info', extra: true, run: () => setStats(!stats()) },
     pictureControl((text) => showToast(text)),
     ...externalControl(platform, () => showToast(t('player.noExternal'))),
   ];
@@ -107,6 +107,12 @@ function LivePlayer(): JSX.Element {
       setControl(null);
     }, OVERLAY_MS);
   };
+  const hideOverlay = () => {
+    clearTimeout(hideTimer);
+    setOverlay(false);
+    setControl(null);
+  };
+  const tap = tapOnPicture(overlay, showOverlay, hideOverlay);
 
   onMount(() => {
     if (!channel()) {
@@ -213,7 +219,16 @@ function LivePlayer(): JSX.Element {
   });
 
   return (
-    <div class="player-screen" onMouseMove={showOverlay}>
+    <div
+      class="player-screen"
+      onMouseMove={showOverlay}
+      onTouchStart={tap.down}
+      onMouseDown={tap.down}
+      onClick={(e) => {
+        // A tap on the picture shows or hides the controls; it never pauses or zaps.
+        if (e.target === e.currentTarget) tap.click();
+      }}
+    >
       <Show when={overlay() && channel()}>
         {(c) => (
           <>
@@ -390,8 +405,8 @@ function MediaPlayer(): JSX.Element {
   // Always there for an episode, and dimmed at either end, so the row doesn't shift under the remote.
   const prevEp: PlayerControl = { label: () => t('player.prevEpisode'), icon: () => 'skipPrevious', disabled: () => !previousEpisode(), run: () => void playEpisode(-1) };
   const nextEp: PlayerControl = { label: () => t('player.nextEpisode'), icon: () => 'skipNext', disabled: () => !nextEpisode(), run: () => void playEpisode(1) };
-  const audioSubs: PlayerControl = { label: () => t('player.audioSubs'), icon: () => 'subtitles', text: true, run: () => setSheet(true) };
-  const streamInfo: PlayerControl = { label: () => t('player.streamInfo'), icon: () => 'info', run: () => setStats(!stats()) };
+  const audioSubs: PlayerControl = { label: () => t('player.audioSubs'), icon: () => 'subtitles', text: true, extra: true, run: () => setSheet(true) };
+  const streamInfo: PlayerControl = { label: () => t('player.streamInfo'), icon: () => 'info', extra: true, run: () => setStats(!stats()) };
   const [toast, setToast] = createSignal('');
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
   const showToast = (text: string) => {
@@ -466,6 +481,13 @@ function MediaPlayer(): JSX.Element {
       setOnTimeline(false);
     }, OVERLAY_MS);
   };
+  const hideOverlay = () => {
+    clearTimeout(hideTimer);
+    setOverlay(false);
+    setControl(null);
+    setOnTimeline(false);
+  };
+  const tap = tapOnPicture(overlay, showOverlay, hideOverlay);
 
   onMount(() => {
     claimSurface('fullscreen', 'fullscreen');
@@ -633,12 +655,12 @@ function MediaPlayer(): JSX.Element {
     <div
       class="player-screen"
       onMouseMove={showOverlay}
+      onTouchStart={tap.down}
+      onMouseDown={tap.down}
       onClick={(e) => {
-        // Clicking the picture (not a control) pauses/resumes, like most web players.
-        if (e.target === e.currentTarget && !counting()) {
-          togglePause();
-          showOverlay();
-        }
+        // A tap or click on the picture (not a control) shows or hides the controls: playing and
+        // pausing is the play button's (or the remote's) job, so a stray touch doesn't stop it.
+        if (e.target === e.currentTarget && !counting()) tap.click();
       }}
     >
       <Show when={overlay() && !counting() && playingMedia()}>
@@ -788,12 +810,31 @@ function MediaPlayer(): JSX.Element {
   );
 }
 
+/**
+ * A tap on the picture toggles the controls. A tap also sends a mouse move (which shows them)
+ * before its click, so what counts is whether they were up when the finger or button went down.
+ */
+function tapOnPicture(shown: () => boolean, show: () => void, hide: () => void): { down: (e: Event) => void; click: () => void } {
+  let wasShown = false;
+  let touchedAt = 0;
+  return {
+    down: (e) => {
+      // The mouse-down a touch sends comes after its mouse move: the touch already answered.
+      if (e.type === 'touchstart') touchedAt = Date.now();
+      else if (Date.now() - touchedAt < 1000) return;
+      wasShown = shown();
+    },
+    click: () => (wasShown ? hide() : show()),
+  };
+}
+
 /** Picture size: each press moves to the next (Fit, Fill, Stretch) and says what it does. */
 function pictureControl(say: (text: string) => void): PlayerControl {
   return {
     label: () => t('player.picture', { mode: t(`fit.${pictureFit()}`) }),
     icon: () => 'fullscreen',
     text: true,
+    extra: true,
     run: () => say(t(`fit.${nextPictureFit()}Desc`)),
   };
 }
@@ -806,6 +847,8 @@ interface PlayerControl {
   /** A skip button: the icon points this way, with the number of seconds in it. */
   seek?: -1 | 1;
   wide?: boolean;
+  /** Not about moving through the video (tracks, info, picture…): a phone held upright puts these on a second row. */
+  extra?: boolean;
   /** Dimmed: the remote steps over it, and pressing it does nothing. */
   disabled?: () => boolean;
   run: () => void;
@@ -884,6 +927,10 @@ function PlayerControls(props: { controls: PlayerControl[]; focused: number | nu
     <div class="player-controls" dir="ltr">
       <For each={props.controls}>
         {(c, i) => (
+          <>
+          <Show when={c.extra && !props.controls[i() - 1]?.extra}>
+            <span class="player-controls-break" />
+          </Show>
           <div
             class="player-button"
             classList={{ wide: !!c.wide, 'is-focused': props.focused === i(), 'is-disabled': !!c.disabled?.() }}
@@ -904,6 +951,7 @@ function PlayerControls(props: { controls: PlayerControl[]; focused: number | nu
               <span>{c.label()}</span>
             </Show>
           </div>
+          </>
         )}
       </For>
     </div>
@@ -929,7 +977,7 @@ function externalControl(platform: Platform, onMissing: () => void): PlayerContr
     void openInExternalPlayer().then((opened) => {
       if (!opened) onMissing();
     });
-  if (platform.openExternal) own.push({ label: () => t('player.external'), icon: () => 'forward', text: true, run });
+  if (platform.openExternal) own.push({ label: () => t('player.external'), icon: () => 'forward', text: true, extra: true, run });
   return own.concat(fullscreenControl(platform));
 }
 

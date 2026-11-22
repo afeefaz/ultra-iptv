@@ -17,7 +17,7 @@ import { PinButton } from '../components/PinButton';
 import { RenameDialog } from '../components/RenameDialog';
 import { Icon, type IconName } from '../components/Icon';
 import { TextField } from '../components/TextField';
-import { guideOnEveryRow, liveLayout, liveShowRecent } from '../data/settings';
+import { guideOnEveryRow, liveLayout, liveShowRecent, portraitLayout } from '../data/settings';
 import { showToast as showMessage } from '../data/toast';
 import { track } from '../data/usage';
 import { arrangeCategories, CATEGORY_SORTS, categorySort, makeMatcher, normalizeText, useCategoryNames, useHiddenCategories, usePins, withoutHidden } from '../data/categories';
@@ -104,9 +104,12 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
   };
   let channelList: VirtualListApi | undefined;
   /** Settings → Appearance → Live TV layout. */
-  const large = () => liveLayout() === 'large';
+  // Upright on a phone there's room only for the standard layout, stacked.
+  const large = () => !portraitLayout() && liveLayout() === 'large';
   /** Settings → Appearance → Live TV layout → Split: a big category list, and the channels as boxes beside it. */
-  const split = () => liveLayout() === 'split';
+  const split = () => !portraitLayout() && liveLayout() === 'split';
+  /** Upright on a phone: the categories as a sheet over the screen. */
+  const [catsOpen, setCatsOpen] = createSignal(false);
   // Always opens on the categories (from Home, on the channel it was asked for). The screen stays
   // alive under the player, so the step survives watching a channel.
   const [largeStep, setLargeStep] = createSignal<'categories' | 'items'>(props.focusKey ? 'items' : 'categories');
@@ -350,6 +353,7 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
     if (c.id === 'hidden') return void openHidden();
     if (c.locked && !(await ensureUnlocked())) return;
     chooseCategory(c.id);
+    setCatsOpen(false);
     // Remote: move into the channels. Touch: stay put.
     if (!focusManager.pointerMode) focusChannel(0);
   };
@@ -466,6 +470,10 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
   const dialogOpen = () => !!document.querySelector('.dialog-backdrop');
 
   useKeys((press) => {
+    if (press.key === 'back' && catsOpen()) {
+      setCatsOpen(false);
+      return true;
+    }
     if (press.key.indexOf('digit') === 0) {
       setDigits((d) => (d + press.key.slice(5)).slice(-5));
       clearTimeout(zapTimer);
@@ -686,10 +694,22 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
                   onFocusRow={(c) => setFocusedCategory(c)}
                   onOpen={(c) => void openCategory(c)}
                   onHide={(c) => hideCategory(categoryItems().find((x) => x.id === c.id) ?? null)}
+                  sheetOpen={catsOpen()}
+                  onCloseSheet={() => setCatsOpen(false)}
                 />
               </FocusZone>
               <FocusZone id="live-channels" remember>
                 <div class="pane pane-channels">
+                  <Show when={portraitLayout()}>
+                    <FocusButton id="live-cats" class="sheet-button" onSelect={() => setCatsOpen(true)}>
+                      <Icon name="list" />
+                      <span class="sheet-button-name">
+                        <bdi>{categoryName(category())}</bdi>
+                      </span>
+                      <span class="pill">{formatNumber(channels().length)}</span>
+                      <Icon name="down" />
+                    </FocusButton>
+                  </Show>
                   <div class="pane-tools">
                     <TextField
                       id="lch-search"

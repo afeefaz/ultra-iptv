@@ -21,6 +21,7 @@ import i_fullscreen from '@material-symbols/svg-400/outlined/fullscreen.svg?raw'
 import i_fullscreenExit from '@material-symbols/svg-400/outlined/fullscreen_exit.svg?raw';
 import i_forward from '@material-symbols/svg-400/outlined/arrow_forward.svg?raw';
 import i_grid from '@material-symbols/svg-400/outlined/grid_view.svg?raw';
+import i_home from '@material-symbols/svg-400/outlined/home.svg?raw';
 import i_history from '@material-symbols/svg-400/outlined/history.svg?raw';
 import i_info from '@material-symbols/svg-400/outlined/info.svg?raw';
 import i_key from '@material-symbols/svg-400/outlined/key.svg?raw';
@@ -82,6 +83,7 @@ const ICONS = {
   fullscreenExit: i_fullscreenExit,
   grid: i_grid,
   history: i_history,
+  home: i_home,
   info: i_info,
   key: i_key,
   language: i_language,

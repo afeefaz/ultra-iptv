@@ -2,7 +2,7 @@ import { log, logging, perf, type ContentKind } from '@ultra/core';
 import type { KeyPress, Platform } from '@ultra/platform';
 import { createEffect, createRenderEffect, createSignal, For, Match, on, onCleanup, onMount, Show, Switch, type JSX } from 'solid-js';
 import { FocusButton } from './components/FocusButton';
-import { Icon } from './components/Icon';
+import { Icon, type IconName } from './components/Icon';
 import { LoadingLine } from './components/LoadingProgress';
 import { PickerDialog } from './components/PickerDialog';
 import { PinHost } from './components/PinDialog';
@@ -17,7 +17,7 @@ import { activePlaylist, playlists, setActivePlaylist, startPlaylists } from './
 import { startRemoteAccess } from './data/remoteAccess';
 import { startPerfRuntime } from './data/perfRuntime';
 import { accentColor, accentVariables } from './data/accent';
-import { accent, setDeviceIsTv, textScale, theme, topBarSections } from './data/settings';
+import { accent, portraitLayout, screenOrientation, setDeviceIsTv, setPortraitLayout, textScale, theme, topBarSections } from './data/settings';
 import { startUsage, track } from './data/usage';
 import { DebugScreen } from './debug/DebugScreen';
 import { CONTENT_ZONE, focusManager, FocusZone } from './focus';
@@ -41,6 +41,19 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { VodDetailScreen } from './screens/VodDetailScreen';
 import { VodScreen } from './screens/VodScreen';
 
+/**
+ * Development only: `localStorage['ultra.devPortrait'] = '1'` gives the browser the phone's portrait
+ * layout, to work on it with the mock provider.
+ */
+function devPortrait(): boolean {
+  if (!import.meta.env.DEV) return false;
+  try {
+    return localStorage.getItem('ultra.devPortrait') === '1';
+  } catch {
+    return false;
+  }
+}
+
 /** The root size in styles.css: one rem is 1/120 of the screen's width at 100%. */
 const BASE_ROOT_VW = 0.8333;
 
@@ -51,17 +64,38 @@ const BIG_TEXT_PERCENT = 125;
 export function App(props: { platform: Platform }): JSX.Element {
   applyLocaleToDocument();
   setCatalogPlatform(props.platform);
+  // A phone can turn upright (Settings → Display); a TV or a computer can't.
+  const [phone, setPhone] = createSignal(false);
   Promise.resolve(props.platform.isTv?.()).then(
-    (tv) => setDeviceIsTv(!!tv),
+    (tv) => {
+      setDeviceIsTv(!!tv);
+      setPhone(!tv && (!!props.platform.orientation || devPortrait()));
+    },
     (e) => log.warn('app', 'could not tell if this is a TV', { error: e }),
   );
+  createEffect(() => {
+    const orientation = props.platform.orientation;
+    if (!phone() || !orientation) return;
+    // Full-screen video is wide: the player turns the phone on its side, and leaving it turns it
+    // back to the setting.
+    const mode = currentRoute().name === 'player' ? 'landscape' : screenOrientation();
+    orientation.set(mode).catch((e) => log.warn('app', 'could not set the orientation', { error: e }));
+  });
+  const upright = window.matchMedia('(orientation: portrait)');
+  const [tall, setTall] = createSignal(upright.matches);
+  const onTurn = () => setTall(upright.matches);
+  // Chrome 53 (old TVs) only has addListener; TVs never turn, but the call must not throw.
+  if (upright.addEventListener) upright.addEventListener('change', onTurn);
+  else upright.addListener(onTurn);
+  createRenderEffect(() => setPortraitLayout(phone() && tall()));
   onBackNavigated(restoreFocus);
   if (props.platform.reducedEffects) document.documentElement.classList.add('reduced-effects');
 
   let scaled = false;
   createRenderEffect(() => {
     const root = document.documentElement.style;
-    root.fontSize = `${(BASE_ROOT_VW * textScale()) / 100}vw`;
+    // Upright, the long side sets the size, so text is as big as when the phone is turned.
+    root.fontSize = `${(BASE_ROOT_VW * textScale()) / 100}${portraitLayout() ? 'vmax' : 'vw'}`;
     root.setProperty('--text-scale', String(textScale() / 100));
     // Big text leaves less room: the Live preview shrinks and its key hints go.
     document.documentElement.classList.toggle('big-text', textScale() >= BIG_TEXT_PERCENT);
@@ -167,7 +201,7 @@ export function App(props: { platform: Platform }): JSX.Element {
 
   return (
     <PlatformContext.Provider value={props.platform}>
-      <div class="app" dir={direction()} lang={locale()}>
+      <div class="app" classList={{ 'has-tabs': topBarSections() && currentRoute().name !== 'player', portrait: portraitLayout() }} dir={direction()} lang={locale()}>
         <FocusZone id="topbar" remember>
           <header class="topbar">
             <div class="brand" aria-label={t('app.name')} onClick={() => switchTab('home')}>
@@ -269,6 +303,8 @@ export function App(props: { platform: Platform }): JSX.Element {
   );
 }
 
+const TAB_ICONS: Record<Tab, IconName> = { home: 'home', live: 'live', movies: 'movie', series: 'series', settings: 'settings' };
+
 function TabButton(props: { tab: Tab }): JSX.Element {
   return (
     <FocusButton
@@ -277,7 +313,9 @@ function TabButton(props: { tab: Tab }): JSX.Element {
       selected={tabOf(currentRoute()) === props.tab}
       onSelect={() => switchTab(props.tab)}
     >
-      {t(`tab.${props.tab}`)}
+      {/* The icons show on a phone held upright, where the tabs sit at the bottom. */}
+      <Icon name={TAB_ICONS[props.tab]} class="tab-icon" />
+      <span class="tab-label">{t(`tab.${props.tab}`)}</span>
     </FocusButton>
   );
 }

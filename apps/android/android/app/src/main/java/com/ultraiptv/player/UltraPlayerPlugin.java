@@ -4,6 +4,7 @@ import android.app.ActivityManager;
 import android.app.UiModeManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Color;
@@ -192,15 +193,38 @@ public class UltraPlayerPlugin extends Plugin {
     /** One APK for phones and TVs. Touch can't tell them apart: some TVs report a touch screen. */
     @PluginMethod
     public void isTv(PluginCall call) {
+        JSObject out = new JSObject();
+        out.put("tv", deviceIsTv());
+        call.resolve(out);
+    }
+
+    private boolean deviceIsTv() {
         Context context = getContext();
         UiModeManager uiMode = (UiModeManager) context.getSystemService(Context.UI_MODE_SERVICE);
         PackageManager packages = context.getPackageManager();
-        boolean tv = (uiMode != null && uiMode.getCurrentModeType() == Configuration.UI_MODE_TYPE_TELEVISION)
+        return (uiMode != null && uiMode.getCurrentModeType() == Configuration.UI_MODE_TYPE_TELEVISION)
                 || packages.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
                 || packages.hasSystemFeature(PackageManager.FEATURE_TELEVISION);
-        JSObject out = new JSObject();
-        out.put("tv", tv);
-        call.resolve(out);
+    }
+
+    /**
+     * Phones only (Settings → Display): "auto" follows how the phone is held (and its own rotation
+     * lock), "portrait" and "landscape" stay put. A TV keeps the manifest's landscape.
+     */
+    @PluginMethod
+    public void setOrientation(PluginCall call) {
+        String mode = call.getString("mode", "landscape");
+        if (deviceIsTv()) {
+            call.resolve();
+            return;
+        }
+        int requested = "auto".equals(mode) ? ActivityInfo.SCREEN_ORIENTATION_FULL_USER
+                : "portrait".equals(mode) ? ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+                : ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE;
+        getActivity().runOnUiThread(() -> {
+            getActivity().setRequestedOrientation(requested);
+            call.resolve();
+        });
     }
 
     @PluginMethod

@@ -15,6 +15,7 @@ export const androidPlatform: Platform = {
   // The system keyboard works on phones and on TVs (Android TV's on-screen keyboard).
   textInput: 'native',
   isTv: () => UltraPlayer.isTv().then((r) => r.tv),
+  orientation: { set: (mode) => UltraPlayer.setOrientation({ mode }) },
   // ExoPlayer plays raw MPEG-TS natively; it's what providers serve most reliably.
   prefersHls: false,
   createPlayer: () => new NativePlayer(),

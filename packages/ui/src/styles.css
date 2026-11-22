@@ -138,6 +138,11 @@ h3 {
   margin-right: 0.6rem;
 }
 
+/* Shown only on a phone held upright, where the tabs are a bar at the bottom. */
+.btn.tab .tab-icon {
+  display: none;
+}
+
 .btn.tab {
   padding: 0.55rem 1.4rem;
   border-color: transparent;
@@ -3624,6 +3629,64 @@ h3 {
   opacity: 0.5;
 }
 
+/* Screen orientation: phone outlines, on its side and upright. */
+.sketch-orientation {
+  align-items: center;
+  justify-content: center;
+}
+
+.sketch-phone {
+  display: flex;
+  box-sizing: border-box;
+  padding: 0.3rem;
+  border: 0.15rem solid currentColor;
+  border-radius: 0.5rem;
+  opacity: 0.85;
+}
+
+.sketch-phone-wide {
+  width: 62%;
+  height: 62%;
+}
+
+.sketch-phone-tall {
+  flex-direction: column;
+  width: 26%;
+  height: 92%;
+}
+
+.sketch-phone-tall .sketch-video {
+  height: 22%;
+  margin-bottom: 10%;
+}
+
+.sketch-phone-tall .sketch-line {
+  height: 7%;
+  margin-bottom: 7%;
+}
+
+.sketch-preview-wide {
+  width: 62%;
+  margin-left: 6%;
+}
+
+/* Auto: both phones, smaller, with the turn arrow between. */
+.sketch-orientation-auto .sketch-phone-tall {
+  width: 22%;
+  height: 80%;
+}
+
+.sketch-orientation-auto .sketch-phone-wide {
+  width: 50%;
+  height: 50%;
+}
+
+.sketch-turn {
+  margin: 0 5%;
+  font-size: 1.2rem;
+  opacity: 0.7;
+}
+
 .sketch-boxes {
   display: flex;
   flex-wrap: wrap;
@@ -4036,61 +4099,6 @@ h3 {
 .kv-value {
   text-align: right;
   word-break: break-all;
-}
-
-/* Narrow browser windows in portrait (not a target; keeps the dev view usable). */
-@media (max-width: 700px) {
-  html {
-    font-size: 12px;
-  }
-
-  .topbar {
-    flex-wrap: wrap;
-    height: auto;
-    padding: 0.5rem 1rem;
-  }
-
-  .screen {
-    padding: 1rem;
-  }
-
-  .panes,
-  .debug-body,
-  .detail-body,
-  .settings-layout,
-  .form-layout,
-  .catchup-body {
-    flex-direction: column;
-  }
-
-  .pane,
-  .pane-categories,
-  .pane-channels {
-    width: auto;
-    max-height: 40vh;
-    margin: 0 0 1rem 0;
-  }
-
-  /* Two columns of short entries, so the page itself stays on screen. */
-  .settings-menu {
-    display: flex;
-    flex-shrink: 0;
-    flex-wrap: wrap;
-    align-self: stretch;
-    width: auto;
-    margin: 0 0 1rem 0;
-    padding: 0.5rem;
-  }
-
-  .settings-menu .eyebrow,
-  .settings-menu .list-item .icon:last-child {
-    display: none;
-  }
-
-  .settings-menu .list-item {
-    width: 50%;
-    box-sizing: border-box;
-  }
 }
 
 /* Native players (Android) draw full-screen video under a transparent page. */
@@ -4930,4 +4938,350 @@ h3 {
 
 .hidden-list .list-count {
   min-width: 4rem;
+}
+
+/* ---------- Portrait (phones held upright) ----------
+   The class `portrait` on .app (not the root: the stylesheet's left/right rules are keyed on the
+   direction set above it) is set on Android phones held upright (Settings → Display → Screen
+   orientation), and in the browser with the development flag. One rem is 1/120 of the long side
+   there, so text matches the phone turned on its side, and the screen is about 55rem wide. */
+.portrait .topbar {
+  height: 6rem;
+  padding: 0 1.5rem;
+}
+
+.portrait .brand {
+  margin-right: auto;
+}
+
+.portrait .system-usage,
+.portrait .topbar-clock {
+  display: none;
+}
+
+.portrait .btn.playlist-chip {
+  max-width: 20rem;
+}
+
+/* The sections become a bar along the bottom, with icons, as phone apps have them. */
+.portrait .tabs {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 20;
+  height: 7.5rem;
+  padding: 0 0.5rem;
+  background: var(--canvas);
+  border-top: 1px solid var(--line);
+}
+
+.portrait .tabs > .btn {
+  margin-right: 0;
+}
+
+.portrait .btn.tab {
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  padding: 0;
+  border-radius: 0;
+  font-size: 1.1rem;
+}
+
+.portrait .btn.tab .tab-icon {
+  display: inline-block;
+  margin-bottom: 0.3rem;
+  font-size: 2.4rem;
+}
+
+.portrait.has-tabs .content {
+  padding-bottom: 7.5rem;
+}
+
+/* The player has the whole screen. */
+.portrait:not(.has-tabs) .tabs {
+  display: none;
+}
+
+.portrait .screen {
+  padding: 1.2rem 1.5rem;
+}
+
+/* Home */
+.portrait .hero {
+  min-height: 0;
+  margin: 0 -1.5rem;
+  padding: 3rem 1.5rem 2rem;
+}
+
+.portrait .hero-body {
+  max-width: 100%;
+}
+
+.portrait .hero-title {
+  font-size: 3.2rem;
+}
+
+.portrait .shelf {
+  margin: 0 -1.5rem;
+  padding: 0.6rem 1.5rem 1rem;
+}
+
+.portrait .section-head {
+  flex-wrap: wrap;
+}
+
+.portrait .home-status {
+  flex-wrap: wrap;
+  width: 100%;
+  margin-top: 0.6rem;
+}
+
+.portrait .home-status .btn {
+  margin-left: auto;
+}
+
+.portrait .library {
+  flex-direction: column;
+}
+
+.portrait .btn.library-card {
+  margin: 0 0 1rem;
+}
+
+/* Live, Movies and Series: one column; the categories open as a sheet over the screen. */
+.portrait .panes {
+  flex-direction: column;
+}
+
+.portrait .pane {
+  width: auto;
+  margin: 0 0 1rem;
+}
+
+.portrait .pane-categories {
+  display: none;
+}
+
+.portrait .pane-categories.sheet-open {
+  display: flex;
+  position: fixed;
+  top: 6rem;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 30;
+  width: auto;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--canvas);
+}
+
+.portrait .pane-channels,
+.portrait .pane-grid {
+  flex: 1;
+  min-height: 0;
+}
+
+/* The picture first, full width; what it would say beside it is shortened. */
+.portrait .pane-preview {
+  flex: none;
+  order: -1;
+  padding: 0;
+  border: 0;
+}
+
+.portrait .live .keys-hint {
+  display: none;
+}
+
+.btn.sheet-button {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 0.7rem;
+}
+
+.sheet-button-name {
+  flex: 1;
+  min-width: 0;
+  margin: 0 0.6rem;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sheet-button .pill {
+  margin-right: 0.6rem;
+}
+
+/* The category button already shows how many. */
+.portrait .pane-grid .pane-tools .count {
+  display: none;
+}
+
+/* Settings: the menu is a page of its own; a section opens full width, with Back to the menu. */
+.portrait .settings-layout {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.portrait .settings-menu {
+  width: auto;
+  margin: 0;
+}
+
+.portrait .settings-layout.page-shown .settings-menu,
+.portrait .settings-layout:not(.page-shown) .settings-sections {
+  display: none;
+}
+
+.btn.settings-page-back {
+  margin-bottom: 1rem;
+}
+
+/* Choices one under another: side by side they'd be squeezed to a word a line. */
+/* (The colours wrap as they are; the sketches stay side by side.) */
+.portrait .option-cards:not(.layout-picks):not(.option-cards-wrap) {
+  flex-direction: column;
+}
+
+.portrait .option-cards:not(.layout-picks):not(.option-cards-wrap) > .btn {
+  margin: 0 0 0.6rem;
+}
+
+.portrait .settings-menu .list-item {
+  padding-top: 1.2rem;
+  padding-bottom: 1.2rem;
+}
+
+.portrait .setting-row {
+  flex-wrap: wrap;
+}
+
+/* Key hints mean nothing on a phone's touch screen. */
+.portrait .player-hint {
+  display: none;
+}
+
+/* Dialogs fit the narrow screen, with a margin each side. */
+.portrait .dialog {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: calc(100% - 3rem);
+  padding: 1.6rem;
+}
+
+.portrait .trailer-dialog {
+  width: 100%;
+  height: auto;
+  border-radius: 0;
+}
+
+/* Playlists, the playlist form and catch-up: what sat beside the main column goes under it. */
+.portrait .playlists-layout,
+.portrait .form-layout,
+.portrait .catchup-body,
+.portrait .debug-body {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.portrait .playlists-aside,
+.portrait .form-aside {
+  width: auto;
+  margin: 1.5rem 0 0;
+}
+
+.portrait .screen-header-row {
+  flex-wrap: wrap;
+}
+
+.portrait .catchup-list {
+  margin: 0 0 1rem;
+}
+
+.portrait .programme-panel {
+  flex-shrink: 0;
+  width: auto;
+}
+
+/* Player buttons: moving through the video on the first row, the rest (tracks, info, picture) on
+   the second. Elsewhere the break takes no room. */
+.player-controls-break {
+  display: none;
+}
+
+.portrait .player-controls {
+  flex-wrap: wrap;
+}
+
+.portrait .player-controls-break {
+  display: block;
+  flex-basis: 100%;
+  height: 0.8rem;
+}
+
+/* Upright, each row of buttons spans the width, the buttons sharing it evenly. */
+.portrait .player-controls {
+  justify-content: center;
+  margin-right: -0.25rem;
+  margin-left: -0.25rem;
+}
+
+.portrait .player-button {
+  flex: 1 1 auto;
+  margin-right: 0.25rem;
+  margin-left: 0.25rem;
+}
+
+/* Movie and series pages: the poster beside the title and facts; under them, full width, the
+   buttons on one row, then the overview, then the credits. */
+.portrait .detail-side {
+  width: 15rem;
+  margin-right: 1.6rem;
+}
+
+.portrait .detail-poster {
+  height: 22.5rem;
+}
+
+.portrait .detail-title {
+  font-size: 2.6rem;
+}
+
+.detail-more {
+  position: relative;
+  flex-shrink: 0;
+  margin-top: 1.4rem;
+}
+
+.portrait .detail-more .detail-actions {
+  flex-wrap: nowrap;
+  margin-right: -0.3rem;
+  margin-left: -0.3rem;
+}
+
+.portrait .detail-more .detail-actions > .btn {
+  flex: 1 1 0;
+  justify-content: center;
+  min-width: 0;
+  margin: 0 0.3rem 0.8rem;
+  padding: 0.9rem 0.8rem;
+  font-size: 1.25rem;
+}
+
+.portrait .detail-more .detail-actions > .btn > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.portrait .detail-more .credits {
+  max-width: none;
 }

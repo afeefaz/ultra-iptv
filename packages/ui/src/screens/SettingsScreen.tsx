@@ -1,5 +1,5 @@
 import type { ContentKind, StreamFormat } from '@ultra/core';
-import type { BufferProfile } from '@ultra/platform';
+import type { BufferProfile, ScreenOrientation } from '@ultra/platform';
 import { createSignal, For, onMount, Show, type JSX } from 'solid-js';
 import { FocusButton } from '../components/FocusButton';
 import { Icon, type IconName } from '../components/Icon';
@@ -16,6 +16,11 @@ import { choosePictureFit } from '../data/playback';
 import {
   accent,
   autoPlayNext,
+  deviceIsTv,
+  portraitLayout,
+  ORIENTATIONS,
+  screenOrientation,
+  setScreenOrientation,
   PICTURE_FITS,
   pictureFit,
   categoryGrouping,
@@ -304,6 +309,77 @@ function LayoutPicker(props: {
   );
 }
 
+/** A phone on its side: the list beside the picture, as the app looks turned. */
+function PhoneLandscape(): JSX.Element {
+  return (
+    <span class="sketch-phone sketch-phone-wide">
+      <span class="sketch-col sketch-rail">
+        <For each={[1, 2, 3, 4]}>{() => <span class="sketch-line" />}</For>
+      </span>
+      <span class="sketch-col sketch-preview-wide">
+        <span class="sketch-video" />
+        <span class="sketch-line short" />
+      </span>
+    </span>
+  );
+}
+
+/** A phone held upright: the picture on top, the list under it. */
+function PhonePortrait(): JSX.Element {
+  return (
+    <span class="sketch-phone sketch-phone-tall">
+      <span class="sketch-video" />
+      <For each={[1, 2, 3, 4, 5]}>{() => <span class="sketch-line" />}</For>
+    </span>
+  );
+}
+
+function OrientationSketch(props: { mode: ScreenOrientation }): JSX.Element {
+  return (
+    <span class="sketch" aria-hidden="true">
+      <span class="sketch-inner sketch-orientation" classList={{ 'sketch-orientation-auto': props.mode === 'auto' }}>
+        <Show when={props.mode !== 'portrait'}>
+          <PhoneLandscape />
+        </Show>
+        <Show when={props.mode === 'auto'}>
+          <span class="sketch-turn">
+            <Icon name="sync" />
+          </span>
+        </Show>
+        <Show when={props.mode !== 'landscape'}>
+          <PhonePortrait />
+        </Show>
+      </span>
+    </span>
+  );
+}
+
+/** Phones only: which way up the screen may be. */
+function OrientationPicker(): JSX.Element {
+  return (
+    <>
+      <div class="setting-name setting-gap">{t('settings.orientation')}</div>
+      <div class="setting-desc">{t('settings.orientationDesc')}</div>
+      <div class="option-cards layout-picks layout-picks-three" role="radiogroup" aria-label={t('settings.orientation')}>
+        <For each={ORIENTATIONS}>
+          {(mode) => (
+            <FocusButton id={`settings-orientation-${mode}`} class="layout-pick" selected={screenOrientation() === mode} onSelect={() => setScreenOrientation(mode)}>
+              <OrientationSketch mode={mode} />
+              <span class="layout-pick-label">
+                <span class="option-card-text">
+                  <span class="option-card-title">{t(`settings.orientation.${mode}`)}</span>
+                  <span class="option-card-sub">{t(`settings.orientation.${mode}Sub`)}</span>
+                </span>
+                <Icon name={screenOrientation() === mode ? 'checkCircle' : 'radioOff'} />
+              </span>
+            </FocusButton>
+          )}
+        </For>
+      </div>
+    </>
+  );
+}
+
 function BoxesSketch(props: { columns: number; rows: number }): JSX.Element {
   return (
     <span class="sketch" aria-hidden="true">
@@ -338,11 +414,20 @@ const HIDDEN_KINDS: Array<{ kind: ContentKind; title: MessageKey }> = [
 
 export function SettingsScreen(): JSX.Element {
   const platform = usePlatform();
+  // Phones (and the browser while developing); never a TV or a computer.
+  const canTurn = () => (!!platform.orientation || import.meta.env.DEV) && !deviceIsTv();
   const section = (id: string) => SECTIONS.filter((s) => s.id === id)[0];
   const shows = (id: string) => openPage().sections.indexOf(id) >= 0;
   let content: HTMLDivElement | undefined;
+  /** Upright on a phone there's room for the menu or a page, not both: whether a page is showing. */
+  const [pageShown, setPageShown] = createSignal(false);
+  const backToMenu = () => {
+    setPageShown(false);
+    setTimeout(() => focusManager.focus(`settings-menu-${openPage().id}`), 0);
+  };
   const open = (p: Page) => {
     setOpenPage(p);
+    setPageShown(true);
     if (content) content.scrollTop = 0;
     // The page's controls register after this has rendered.
     setTimeout(() => focusManager.focus(p.first()), 0);
@@ -359,6 +444,10 @@ export function SettingsScreen(): JSX.Element {
 
   // Back from a page returns to the menu; Back from the menu leaves Settings. Dialogs get it first.
   useKeys((press) => {
+    if (press.key === 'back' && portraitLayout() && pageShown()) {
+      backToMenu();
+      return true;
+    }
     const id = focusManager.currentId;
     if (press.key !== 'back' || !id || !focusManager.isInZone(id, 'settings')) return false;
     return focusManager.focus(`settings-menu-${openPage().id}`);
@@ -373,7 +462,7 @@ export function SettingsScreen(): JSX.Element {
           <div class="sub">{t('settings.subtitle')}</div>
         </div>
       </div>
-      <div class="settings-layout">
+      <div class="settings-layout" classList={{ 'page-shown': pageShown() }}>
         <FocusZone id="settings-menu" remember>
           <nav class="settings-menu">
             <div class="eyebrow">{t('settings.menu')}</div>
@@ -390,6 +479,12 @@ export function SettingsScreen(): JSX.Element {
         </FocusZone>
         <FocusZone id="settings" remember>
           <div class="settings-sections" ref={(el) => (content = el)}>
+            <Show when={portraitLayout()}>
+              <FocusButton id="settings-page-back" class="settings-page-back" onSelect={backToMenu}>
+                <Icon name="back" />
+                <span>{t(openPage().title)}</span>
+              </FocusButton>
+            </Show>
             <Show when={shows('general')}>
               <Card section={section('general')} aside={t('settings.lang.aside')}>
                 <div class="option-cards">
@@ -561,6 +656,9 @@ export function SettingsScreen(): JSX.Element {
                   reset={100}
                   onChange={setTextScale}
                 />
+                <Show when={canTurn()}>
+                  <OrientationPicker />
+                </Show>
                 <div class="setting-name setting-gap">{t('settings.theme')}</div>
                 <div class="setting-desc">{t('settings.themeDesc')}</div>
                 <div class="option-cards" role="radiogroup" aria-label={t('settings.theme')} style={{ 'margin-top': '0.8rem' }}>

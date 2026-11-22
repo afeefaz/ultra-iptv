@@ -40,6 +40,12 @@ export interface CategoryRailProps {
   /** Hide the category the cursor was on. Missing where hiding isn't offered. */
   onHide?: (item: RailItem) => void;
   ref?: (api: VirtualListApi) => void;
+  /**
+   * A phone held upright shows the categories as a sheet over the screen, opened by the
+   * category button above the list: whether it's open, and how to close it.
+   */
+  sheetOpen?: boolean;
+  onCloseSheet?: () => void;
 }
 
 /**
@@ -130,7 +136,7 @@ export function CategoryRail(props: CategoryRailProps): JSX.Element {
   });
 
   return (
-    <div class="pane pane-categories" classList={{ 'pane-categories-big': !!props.big }}>
+    <div class="pane pane-categories" classList={{ 'pane-categories-big': !!props.big, 'sheet-open': !!props.sheetOpen }}>
       <div class="pane-tools">
         <TextField id={`${props.id}-search`} compact label={t('search.categories')} value={query()} onChange={setQuery} />
         <Show when={groups().length}>
@@ -152,6 +158,11 @@ export function CategoryRail(props: CategoryRailProps): JSX.Element {
             }}
           >
             <Icon name="eyeOff" />
+          </FocusButton>
+        </Show>
+        <Show when={props.sheetOpen && props.onCloseSheet}>
+          <FocusButton id={`${props.id}-close`} class="icon-button sheet-close" label={t('common.close')} onSelect={() => props.onCloseSheet?.()}>
+            <Icon name="close" />
           </FocusButton>
         </Show>
       </div>

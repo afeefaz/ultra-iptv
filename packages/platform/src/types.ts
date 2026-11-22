@@ -105,6 +105,11 @@ export interface Platform {
   openExternal?: (url: string, title: string) => Promise<void>;
   /** Installs a new version from inside the app. Missing where a platform can't (Samsung, web). */
   updater?: AppUpdater;
+  /**
+   * Which way up the screen may be (Android phones: Settings → Display). Missing elsewhere: TVs and
+   * computers stay landscape.
+   */
+  orientation?: { set(mode: ScreenOrientation): Promise<void> };
   /** The app window filling the whole screen (desktop). Missing where the app is always full screen. */
   windowFullscreen?: { get(): Promise<boolean>; set(on: boolean): Promise<void> };
   /**
@@ -226,6 +231,9 @@ export interface PlayerError {
  * cropped at its edges to fill it (`fill`), or stretched to fill it (`stretch`).
  */
 export type PictureFit = 'fit' | 'fill' | 'stretch';
+
+/** Follows how the phone is held, or stays landscape or portrait. */
+export type ScreenOrientation = 'auto' | 'landscape' | 'portrait';
 
 /** A rectangle in CSS pixels relative to the viewport, or the whole screen, or hidden. */
 export type VideoRect = { left: number; top: number; width: number; height: number } | 'fullscreen' | null;

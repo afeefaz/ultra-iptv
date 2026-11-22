@@ -8,6 +8,7 @@ import { PosterTile, qualityOf } from '../components/PosterTile';
 import { catalog } from '../data/catalog';
 import { movieItem, progressRatio, resumePosition, useProgress, watch } from '../data/media';
 import { activePlaylist } from '../data/playlists';
+import { portraitLayout } from '../data/settings';
 import { focusManager, FocusZone } from '../focus';
 import { useKeys } from '../keys';
 import { formatDuration, formatLeft, timeAgo } from '../format';
@@ -111,6 +112,70 @@ export function VodDetailScreen(props: DetailProps): JSX.Element {
   const year = () => row()?.year ?? (info()?.releaseDate ? Number(info()!.releaseDate!.slice(0, 4)) || undefined : undefined);
   const poster = () => info()?.poster ?? row()?.logo;
 
+  /** The buttons, the overview and the credits: beside the poster, or under it on a phone held upright. */
+  const actionsAndAbout = () => (
+    <>
+      <FocusZone id="detail-actions">
+        <div class="button-row detail-actions">
+          <Show
+            when={resumeAt()}
+            fallback={
+              <FocusButton id="detail-play" class="btn-primary btn-lg" autofocus onSelect={() => play(0)}>
+                <Icon name="play" />
+                <span>{t('detail.play')}</span>
+              </FocusButton>
+            }
+          >
+            <FocusButton id="detail-resume" class="btn-primary btn-lg" autofocus onSelect={() => play(resumeAt())}>
+              <Icon name="play" />
+              <span>{t('detail.resume', { time: formatDuration(resumeAt()) })}</span>
+            </FocusButton>
+            <FocusButton id="detail-restart" class="btn-lg" onSelect={() => play(0)}>
+              <Icon name="restart" />
+              <span>{t('detail.startOver')}</span>
+            </FocusButton>
+          </Show>
+          <FocusButton id="detail-fav" class="btn-lg" onSelect={() => void toggleFavorite()}>
+            <Icon name={favorite() ? 'bookmarked' : 'bookmark'} />
+            <span>{favorite() ? t('live.removeFav') : t('live.addFav')}</span>
+          </FocusButton>
+          <Show when={row()}>
+            <FocusButton id="detail-trailer" class="btn-lg" onSelect={() => setTrailerOpen(true)}>
+              <Icon name="movie" />
+              <span>{t('detail.trailer')}</span>
+            </FocusButton>
+          </Show>
+        </div>
+      </FocusZone>
+      <Show when={info()?.plot} fallback={<p class="hint">{infoLoading() ? t('detail.loadingInfo') : ''}</p>}>
+        <div class="overview-title">{t('detail.overview')}</div>
+        <p class="detail-plot">
+          <bdi>{info()!.plot}</bdi>
+        </p>
+      </Show>
+      <Show when={info()?.director || info()?.cast}>
+        <div class="credits">
+          <Show when={info()?.director}>
+            <div class="credit">
+              <span class="credit-key">{t('detail.directorLabel')}</span>
+              <span class="credit-value accent">
+                <bdi>{info()!.director}</bdi>
+              </span>
+            </div>
+          </Show>
+          <Show when={info()?.cast}>
+            <div class="credit">
+              <span class="credit-key">{t('detail.castLabel')}</span>
+              <span class="credit-value">
+                <bdi>{info()!.cast}</bdi>
+              </span>
+            </div>
+          </Show>
+        </div>
+      </Show>
+    </>
+  );
+
   return (
     <div class="screen detail" classList={{ embedded: !!props.embedded }}>
       <Show when={info()?.backdrop}>
@@ -192,66 +257,13 @@ export function VodDetailScreen(props: DetailProps): JSX.Element {
                       </span>
                     </Show>
                   </div>
-                  <FocusZone id="detail-actions">
-                    <div class="button-row detail-actions">
-                      <Show
-                        when={resumeAt()}
-                        fallback={
-                          <FocusButton id="detail-play" class="btn-primary btn-lg" autofocus onSelect={() => play(0)}>
-                            <Icon name="play" />
-                            <span>{t('detail.play')}</span>
-                          </FocusButton>
-                        }
-                      >
-                        <FocusButton id="detail-resume" class="btn-primary btn-lg" autofocus onSelect={() => play(resumeAt())}>
-                          <Icon name="play" />
-                          <span>{t('detail.resume', { time: formatDuration(resumeAt()) })}</span>
-                        </FocusButton>
-                        <FocusButton id="detail-restart" class="btn-lg" onSelect={() => play(0)}>
-                          <Icon name="restart" />
-                          <span>{t('detail.startOver')}</span>
-                        </FocusButton>
-                      </Show>
-                      <FocusButton id="detail-fav" class="btn-lg" onSelect={() => void toggleFavorite()}>
-                        <Icon name={favorite() ? 'bookmarked' : 'bookmark'} />
-                        <span>{favorite() ? t('live.removeFav') : t('live.addFav')}</span>
-                      </FocusButton>
-                      <Show when={row()}>
-                        <FocusButton id="detail-trailer" class="btn-lg" onSelect={() => setTrailerOpen(true)}>
-                          <Icon name="movie" />
-                          <span>{t('detail.trailer')}</span>
-                        </FocusButton>
-                      </Show>
-                    </div>
-                  </FocusZone>
-                  <Show when={info()?.plot} fallback={<p class="hint">{infoLoading() ? t('detail.loadingInfo') : ''}</p>}>
-                    <div class="overview-title">{t('detail.overview')}</div>
-                    <p class="detail-plot">
-                      <bdi>{info()!.plot}</bdi>
-                    </p>
-                  </Show>
-                  <Show when={info()?.director || info()?.cast}>
-                    <div class="credits">
-                      <Show when={info()?.director}>
-                        <div class="credit">
-                          <span class="credit-key">{t('detail.directorLabel')}</span>
-                          <span class="credit-value accent">
-                            <bdi>{info()!.director}</bdi>
-                          </span>
-                        </div>
-                      </Show>
-                      <Show when={info()?.cast}>
-                        <div class="credit">
-                          <span class="credit-key">{t('detail.castLabel')}</span>
-                          <span class="credit-value">
-                            <bdi>{info()!.cast}</bdi>
-                          </span>
-                        </div>
-                      </Show>
-                    </div>
-                  </Show>
+                  <Show when={!portraitLayout()}>{actionsAndAbout()}</Show>
                 </div>
               </div>
+              {/* A phone held upright: the buttons, the overview and the credits each get the width. */}
+              <Show when={portraitLayout()}>
+                <div class="detail-more">{actionsAndAbout()}</div>
+              </Show>
 
               <Show when={versions().length > 0}>
                 <div class="section-head">

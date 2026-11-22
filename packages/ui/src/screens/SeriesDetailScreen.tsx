@@ -10,6 +10,7 @@ import { catalog } from '../data/catalog';
 import { episodeItem, episodeKey, episodesOf, progressRatio, resumePosition, useProgress, watch, type EpisodeEntry } from '../data/media';
 import { playingMedia } from '../data/playback';
 import { activePlaylist } from '../data/playlists';
+import { portraitLayout } from '../data/settings';
 import { FocusZone } from '../focus';
 import { errorText, formatDuration } from '../format';
 import { formatNumber, t } from '../i18n';
@@ -151,6 +152,39 @@ export function SeriesDetailScreen(props: DetailProps): JSX.Element {
 
   const poster = () => info()?.poster ?? row()?.logo;
 
+  /** The buttons and the overview: beside the poster, or under it on a phone held upright. */
+  const actionsAndAbout = () => (
+    <>
+      <FocusZone id="series-actions">
+        <div class="button-row detail-actions">
+          <Show when={upNext()}>
+            {(n) => (
+              <FocusButton id="series-next" class="btn-primary btn-lg" autofocus onSelect={() => play(episodes()[n().index], n().startAt)}>
+                <Icon name="play" />
+                <span>{upNextLabel()}</span>
+              </FocusButton>
+            )}
+          </Show>
+          <FocusButton id="series-fav" class="btn-lg" onSelect={() => void toggleFavorite()}>
+            <Icon name={favorite() ? 'bookmarked' : 'bookmark'} />
+            <span>{favorite() ? t('live.removeFav') : t('live.addFav')}</span>
+          </FocusButton>
+          <Show when={row()}>
+            <FocusButton id="series-trailer" class="btn-lg" onSelect={() => setTrailerOpen(true)}>
+              <Icon name="movie" />
+              <span>{t('detail.trailer')}</span>
+            </FocusButton>
+          </Show>
+        </div>
+      </FocusZone>
+      <Show when={info()?.plot}>
+        <p class="detail-plot clamp">
+          <bdi>{info()!.plot}</bdi>
+        </p>
+      </Show>
+    </>
+  );
+
   return (
     <div class="screen detail" classList={{ embedded: !!props.embedded }}>
       <Show when={info()?.backdrop}>
@@ -223,35 +257,13 @@ export function SeriesDetailScreen(props: DetailProps): JSX.Element {
                       {t('series.episodes', { n: formatNumber(episodes().length) })}
                     </span>
                   </div>
-                  <FocusZone id="series-actions">
-                    <div class="button-row detail-actions">
-                      <Show when={upNext()}>
-                        {(n) => (
-                          <FocusButton id="series-next" class="btn-primary btn-lg" autofocus onSelect={() => play(episodes()[n().index], n().startAt)}>
-                            <Icon name="play" />
-                            <span>{upNextLabel()}</span>
-                          </FocusButton>
-                        )}
-                      </Show>
-                      <FocusButton id="series-fav" class="btn-lg" onSelect={() => void toggleFavorite()}>
-                        <Icon name={favorite() ? 'bookmarked' : 'bookmark'} />
-                        <span>{favorite() ? t('live.removeFav') : t('live.addFav')}</span>
-                      </FocusButton>
-                      <Show when={row()}>
-                        <FocusButton id="series-trailer" class="btn-lg" onSelect={() => setTrailerOpen(true)}>
-                          <Icon name="movie" />
-                          <span>{t('detail.trailer')}</span>
-                        </FocusButton>
-                      </Show>
-                    </div>
-                  </FocusZone>
-                  <Show when={info()?.plot}>
-                    <p class="detail-plot clamp">
-                      <bdi>{info()!.plot}</bdi>
-                    </p>
-                  </Show>
+                  <Show when={!portraitLayout()}>{actionsAndAbout()}</Show>
                 </div>
               </div>
+              {/* A phone held upright: the buttons and the overview each get the width. */}
+              <Show when={portraitLayout()}>
+                <div class="detail-more">{actionsAndAbout()}</div>
+              </Show>
 
               <Show when={seasons().length > 1}>
                 <FocusZone id="series-seasons" remember>

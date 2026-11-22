@@ -48,6 +48,9 @@ pnpm dev            # planned: starts the Vite dev server for apps/web
   ```sh
   pnpm build:legacy && pnpm preview:legacy   # planned
   ```
+- **A phone held upright** (the portrait layout, Android phones only in the apps): in the dev
+  server, run `localStorage['ultra.devPortrait'] = '1'` and reload, then pick a phone size in
+  DevTools' device toolbar (for example 393×852). Remove the key to go back.
 
 ---
 

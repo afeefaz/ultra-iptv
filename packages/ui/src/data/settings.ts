@@ -1,5 +1,5 @@
 import type { StreamFormat } from '@ultra/core';
-import type { BufferProfile, PictureFit } from '@ultra/platform';
+import type { BufferProfile, PictureFit, ScreenOrientation } from '@ultra/platform';
 import { createSignal, type Accessor } from 'solid-js';
 import { DEFAULT_ACCENT } from './accent';
 import { track } from './usage';
@@ -83,7 +83,18 @@ export const [seekSeconds, setSeekSeconds] = persisted<number>('playback.seekSec
 
 /** Set at startup, once the platform has answered. Nothing reads it before a player opens. */
 const [deviceIsTv, setDeviceIsTv] = createSignal(false);
-export { setDeviceIsTv };
+export { deviceIsTv, setDeviceIsTv };
+
+/**
+ * Which way up a phone's screen may be (Settings → Display). TVs and computers stay landscape. Each
+ * device keeps its own: it isn't pushed to the others.
+ */
+export const ORIENTATIONS: ScreenOrientation[] = ['auto', 'landscape', 'portrait'];
+export const [screenOrientation, setScreenOrientation] = persisted<ScreenOrientation>('display.orientation', 'landscape');
+
+/** A phone held upright: the screens use their portrait layout (the `portrait` class on the root). */
+const [portraitLayout, setPortraitLayout] = createSignal(false);
+export { portraitLayout, setPortraitLayout };
 
 const [storedPictureSkip, storePictureSkip] = persisted<boolean | null>('playback.showPictureSkip', null);
 /**

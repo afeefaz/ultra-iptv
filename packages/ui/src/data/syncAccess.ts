@@ -7,7 +7,8 @@ import { track } from './usage';
 const PREFIX = 'ultraiptv.';
 const ACTIVE_KEY = 'ultraiptv.activePlaylist';
 /** Belong to this device: what it's measured, and how it logs. Every other setting travels. */
-const NOT_SYNCED = ['ultraiptv.usage', 'ultraiptv.log.salt', 'ultraiptv.log.level', ACTIVE_KEY];
+// Which way up the screen is belongs to one phone, not to every device.
+const NOT_SYNCED = ['ultraiptv.usage', 'ultraiptv.log.salt', 'ultraiptv.log.level', 'ultraiptv.display.orientation', ACTIVE_KEY];
 
 const [status, setStatus] = createSignal<SyncStatus | null>(null);
 export { status as syncStatus };
@@ -20,12 +21,17 @@ export async function loadSyncStatus(): Promise<void> {
   }
 }
 
+/** Whether a stored key is a setting that Push and Pull carry to the other devices. */
+export function isSyncedSetting(key: string): boolean {
+  return key.indexOf(PREFIX) === 0 && NOT_SYNCED.indexOf(key) < 0;
+}
+
 /** Every device setting, so one added later syncs without touching this. */
 function settingKeys(): string[] {
   const keys: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key && key.indexOf(PREFIX) === 0 && NOT_SYNCED.indexOf(key) < 0) keys.push(key);
+    if (key && isSyncedSetting(key)) keys.push(key);
   }
   return keys;
 }

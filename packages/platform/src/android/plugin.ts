@@ -1,4 +1,5 @@
 import { registerPlugin, type PluginListenerHandle } from '@capacitor/core';
+import type { ScreenOrientation } from '../types';
 
 /** Native side: apps/android/android/app/src/main/java/com/ultraiptv/player/UltraPlayerPlugin.java */
 export interface NativeTrack {
@@ -32,6 +33,8 @@ export interface UltraPlayerPlugin {
   shareText(options: { filename: string; mimeType: string; text: string }): Promise<void>;
   systemUsage(): Promise<{ ramUsed: number; ramTotal: number; appUsed: number }>;
   isTv(): Promise<{ tv: boolean }>;
+  /** Phones only; a TV stays landscape. */
+  setOrientation(options: { mode: ScreenOrientation }): Promise<void>;
   /** Reads the URL for `seconds` and discards the data; 0 stops at the first response. */
   measureDownload(options: { url: string; seconds: number }): Promise<{ status: number; ttfbMs: number; bytes: number; ms: number }>;
   cancelDownload(): Promise<void>;

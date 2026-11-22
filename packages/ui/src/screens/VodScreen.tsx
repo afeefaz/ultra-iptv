@@ -29,7 +29,7 @@ import { catalog } from '../data/catalog';
 import { ensureUnlocked, isCategoryLocked, lockedCategories, unlocked } from '../data/parental';
 import { progressRatio, useProgress } from '../data/media';
 import { activePlaylist, refreshing, versionOf } from '../data/playlists';
-import { detailMode, keepTitleOpen, moviesLayout, seriesLayout, setVodSort, textScale, vodSort, type SortBy } from '../data/settings';
+import { detailMode, keepTitleOpen, moviesLayout, portraitLayout, seriesLayout, setVodSort, textScale, vodSort, type SortBy } from '../data/settings';
 import { focusManager, FocusZone } from '../focus';
 import { formatLeft, statusText } from '../format';
 import { formatNumber, locale, t } from '../i18n';
@@ -55,6 +55,7 @@ const NO_KEYS = new Map<string, Row>();
 const COLUMNS = 6;
 const MIN_COLUMNS = 3;
 const MAX_COLUMNS = 8;
+const PORTRAIT_COLUMNS = 3;
 const SORTS: SortBy[] = ['added', 'name', 'rating', 'year'];
 const lastCategory = new Map<string, string>();
 // Grid position per playlist+kind, so Back from a detail page lands on the same poster.
@@ -105,7 +106,9 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
   const memoryKey = () => `${playlistId()}|${props.kind}`;
 
   /** Settings → Appearance → Movies / Series layout. */
-  const large = () => (props.kind === 'vod' ? moviesLayout() : seriesLayout()) === 'large';
+  // Upright on a phone: the standard layout, stacked, with the categories as a sheet.
+  const large = () => !portraitLayout() && (props.kind === 'vod' ? moviesLayout() : seriesLayout()) === 'large';
+  const [catsOpen, setCatsOpen] = createSignal(false);
   // Opens on the categories, unless Back brought us here from a title that was opened from the posters.
   const [largeStep, setLargeStep] = createSignal<'categories' | 'items'>(
     justWentBack() && lastLargeStep.get(`${activePlaylist()?.id ?? null}|${props.kind}`) === 'items' ? 'items' : 'categories',
@@ -228,8 +231,10 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
     }),
   );
 
-  // Bigger text means bigger posters, so fewer fit across (and more when it's smaller).
-  const columns = () => Math.max(MIN_COLUMNS, Math.min(MAX_COLUMNS, Math.round((COLUMNS * 100) / textScale())));
+  // Bigger text means bigger posters, so fewer fit across (and more when it's smaller). A phone
+  // held upright has room for three.
+  const columns = () =>
+    portraitLayout() ? PORTRAIT_COLUMNS : Math.max(MIN_COLUMNS, Math.min(MAX_COLUMNS, Math.round((COLUMNS * 100) / textScale())));
 
   // The open category was hidden in Settings.
   createEffect(() => {
@@ -338,6 +343,10 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
   };
 
   useKeys((press) => {
+    if (press.key === 'back' && catsOpen()) {
+      setCatsOpen(false);
+      return true;
+    }
     if (large()) {
       if (dialogOpen()) return false;
       if (press.key === 'back' && largeStep() === 'items') {
@@ -483,10 +492,13 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
                   categories={railItems().filter((c) => VIRTUAL.indexOf(c.id) < 0)}
                   selected={category()}
                   onHide={hideCategory}
+                  sheetOpen={catsOpen()}
+                  onCloseSheet={() => setCatsOpen(false)}
                   onOpen={async (c) => {
                     if (c.id === 'hidden') return void openHidden();
                     if (c.locked && !(await ensureUnlocked())) return;
                     chooseCategory(c.id);
+                    setCatsOpen(false);
                     // Remote: move into the grid. Touch: stay put (the finger is free to go anywhere).
                     if (!focusManager.pointerMode && !openId()) setTimeout(() => grid?.focusIndex(0), 0);
                   }}
@@ -498,6 +510,16 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
                     when={openId()}
                     fallback={
                       <>
+                      <Show when={portraitLayout()}>
+                        <FocusButton id="vod-cats" class="sheet-button" onSelect={() => setCatsOpen(true)}>
+                          <Icon name="list" />
+                          <span class="sheet-button-name">
+                            <bdi>{railItems().filter((c) => c.id === category())[0]?.name ?? ''}</bdi>
+                          </span>
+                          <span class="pill">{formatNumber(items().length)}</span>
+                          <Icon name="down" />
+                        </FocusButton>
+                      </Show>
                       <div class="pane-tools">
                         <TextField
                           id="vgrid-search"
