@@ -1,19 +1,19 @@
 {
-  "versionCode": 23,
-  "versionName": "0.9.8",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.8/UltraIPTV.apk",
-  "sha256": "ebd6968f4ccfb85468a1011fc7401e62676da80bd493506cb9bbde9a8b4a5651",
-  "size": 12508616,
+  "versionCode": 24,
+  "versionName": "0.9.9",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.9/UltraIPTV.apk",
+  "sha256": "8c9a8e686015f371958f05108d8a28fb906fb087a4cfc5087e8414f1ee2c9b99",
+  "size": 12511272,
   "notes": {
     "en": [
-      "Picture size: Fit, Fill or Stretch, from the player's Picture button or Settings → Playback.",
-      "Home shows when your subscription ends, even while something is in progress.",
-      "Playlists are always kept the fast way; the Loading choice is gone. Android devices load their playlists again once after updating."
+      "Phones can be held upright: Settings → Appearance → Screen orientation (Auto, Landscape or Portrait), with a layout made for it.",
+      "Movies, episodes and channels play on the phone's side, and it turns back when you leave the player.",
+      "Tapping the picture shows or hides the controls; it no longer pauses."
     ],
     "ar": [
-      "حجم الصورة: ملاءمة أو ملء أو تمديد، من زر «الصورة» في المشغّل أو من الإعدادات ← التشغيل.",
-      "الصفحة الرئيسية تعرض موعد انتهاء الاشتراك، حتى أثناء متابعة مشاهدة شيء ما.",
-      "تُحفظ قوائم التشغيل دائمًا بالطريقة السريعة، وأُزيل خيار التحميل. أجهزة أندرويد تعيد تحميل قوائمها مرة واحدة بعد التحديث."
+      "يمكن استخدام الهاتف بالطول: الإعدادات ← المظهر ← اتجاه الشاشة (تلقائي أو أفقي أو عمودي)، مع تصميم مناسب له.",
+      "تُعرض الأفلام والحلقات والقنوات بالعرض، ويعود الهاتف كما كان عند الخروج من المشغّل.",
+      "النقر على الصورة يُظهر أدوات التحكم أو يخفيها، ولم يعد يوقف التشغيل."
     ]
   }
 }

@@ -1,15 +1,15 @@
 {
-  "version": "0.9.8",
-  "notes": "Picture size: Fit, Fill or Stretch, from the player's Picture button or Settings → Playback.\nHome shows when your subscription ends, even while something is in progress.\nPlaylists are always kept the fast way; the Loading choice is gone. Android devices load their playlists again once after updating.",
-  "pub_date": "2026-11-21T14:54:31.998Z",
+  "version": "0.9.9",
+  "notes": "Phones can be held upright: Settings → Appearance → Screen orientation (Auto, Landscape or Portrait), with a layout made for it.\nMovies, episodes and channels play on the phone's side, and it turns back when you leave the player.\nTapping the picture shows or hides the controls; it no longer pauses.",
+  "pub_date": "2026-11-22T17:52:35.347Z",
   "platforms": {
     "darwin-aarch64": {
-      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.8/UltraIPTV-mac.app.tar.gz",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxV3d4dlNyS3ZNeHl3V2Q5SnVHMFRKNzl5T0VGR3ROcTBDUThyWCt5T29IOWhKS3lIYWlFeU1Yd0d6bStNN2c5Z0lPR0YvTWVMd20zREFCRXo0dXZqVnc4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MjcyMzkwCWZpbGU6VWx0cmEgSVBUVi5hcHAudGFyLmd6CXZlcnNpb246MC45LjgKa2JXTHJMa1JoVm05VGJIb2RHcVhia1F5ZHNjcXgyQ2tVZFFOdS9BZDE5R3VZcmoycmV5dnNVU1J2c0lCVlJvNjBEeTJNYzZRY29HWmJDMTN4TjJIQXc9PQo="
+      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.9/UltraIPTV-mac.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVy9OeEdyMURCNVJhV3djVEFvSjA5Q1ZXWmtMcVRweGJTRnZLdEZ1YmJiQ2o0cTlFOHRSeHh3UytpSnl6cWc4dFJjcFZCVE5RSzZnbDZzeHNUVlZuTEFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MzY5NTgzCWZpbGU6VWx0cmEgSVBUVi5hcHAudGFyLmd6CXZlcnNpb246MC45LjkKdnBiZFhZbDE3eHNFM3lPcVBIcy9qSHFRRGp0bm94Tm80ZnRBQVo5dG1IU3cyMFJDOGNPS2xIY3BnZ3VkOEtWeU9VVzdLQWUwZ2JWQUhUdDJYdk1zQVE9PQo="
     },
     "windows-x86_64": {
-      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.8/UltraIPTV-windows-setup.exe",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxV3o3ZWF4Sm9NalU3VmxxYkhKcmV3L1F6NnpaNnBOaGl4ZlUzZ1d0bkR4RFJaWGEvOWZ1cm5ybWNkSS9JZGxqTG5iblNad3krOW9SMHc5NHJpQmZ4L2djPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MjcyODAyCWZpbGU6VWx0cmEgSVBUVl8wLjkuOF94NjQtc2V0dXAuZXhlCXZlcnNpb246MC45LjgKQk42OWFLV2E4OVNwTmJQWmY0cWZIZnR0NkxZdFRtT0lNYTUwSWRURklXMXRlY2Zrek1LR1RraURDU3BJZExFZWlMT3A0ZHlLcGdJTFc5bS9WdFdkQlE9PQo="
+      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.9/UltraIPTV-windows-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzc0K1d4YUZpWGFKaUl5eUh0bEpFdjVhSHBPK1BFOFhLaDJoaGd4aHNtaUdGRzVHbVdTYVF0V3U0aFptWGNPMStkUFBwSHEzVFNyUml6TmFoQXhUbWdBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MzY5ODkxCWZpbGU6VWx0cmEgSVBUVl8wLjkuOV94NjQtc2V0dXAuZXhlCXZlcnNpb246MC45LjkKajJFaFN2MGtmejBWcHE0aXZBOU80L2J4TVRyWDFvbHBNQVZtcjl2aEdHaXV0NW5qLytoK1pGQlJiYWt1c2h2VU9BdXJZdEo1NVVYQVlEWTRzNG56QlE9PQo="
     }
   }
 }
