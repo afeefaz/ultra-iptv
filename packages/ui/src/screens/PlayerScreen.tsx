@@ -226,7 +226,7 @@ function LivePlayer(): JSX.Element {
       onMouseDown={tap.down}
       onClick={(e) => {
         // A tap on the picture shows or hides the controls; it never pauses or zaps.
-        if (e.target === e.currentTarget) tap.click();
+        if (e.target === e.currentTarget) tap.click(e);
       }}
     >
       <Show when={overlay() && channel()}>
@@ -487,7 +487,8 @@ function MediaPlayer(): JSX.Element {
     setControl(null);
     setOnTimeline(false);
   };
-  const tap = tapOnPicture(overlay, showOverlay, hideOverlay);
+  // Phones: double tap on the right jumps forward, on the left back (the badge shows how far).
+  const tap = tapOnPicture(overlay, showOverlay, hideOverlay, (direction) => jump(direction * seekSeconds()));
 
   onMount(() => {
     claimSurface('fullscreen', 'fullscreen');
@@ -660,7 +661,7 @@ function MediaPlayer(): JSX.Element {
       onClick={(e) => {
         // A tap or click on the picture (not a control) shows or hides the controls: playing and
         // pausing is the play button's (or the remote's) job, so a stray touch doesn't stop it.
-        if (e.target === e.currentTarget && !counting()) tap.click();
+        if (e.target === e.currentTarget && !counting()) tap.click(e);
       }}
     >
       <Show when={overlay() && !counting() && playingMedia()}>
@@ -810,13 +811,29 @@ function MediaPlayer(): JSX.Element {
   );
 }
 
+/** Two taps this close together are a double tap. */
+const DOUBLE_TAP_MS = 300;
+
 /**
  * A tap on the picture toggles the controls. A tap also sends a mouse move (which shows them)
  * before its click, so what counts is whether they were up when the finger or button went down.
+ * With `onDoubleTap` (movies and episodes), a touch screen also seeks: two quick taps on the left
+ * third jump back, on the right third forward, and each further quick tap jumps again. A single
+ * tap there waits a moment for a second one; the middle answers at once.
  */
-function tapOnPicture(shown: () => boolean, show: () => void, hide: () => void): { down: (e: Event) => void; click: () => void } {
+function tapOnPicture(
+  shown: () => boolean,
+  show: () => void,
+  hide: () => void,
+  onDoubleTap?: (direction: -1 | 1) => void,
+): { down: (e: Event) => void; click: (e: MouseEvent) => void } {
   let wasShown = false;
   let touchedAt = 0;
+  let lastTapAt = 0;
+  let lastSide = 0;
+  let seekingUntil = 0;
+  let pending: ReturnType<typeof setTimeout> | undefined;
+  const toggle = (was: boolean) => (was ? hide() : show());
   return {
     down: (e) => {
       // The mouse-down a touch sends comes after its mouse move: the touch already answered.
@@ -824,7 +841,25 @@ function tapOnPicture(shown: () => boolean, show: () => void, hide: () => void):
       else if (Date.now() - touchedAt < 1000) return;
       wasShown = shown();
     },
-    click: () => (wasShown ? hide() : show()),
+    click: (e) => {
+      const now = Date.now();
+      const touch = now - touchedAt < 1000;
+      const third = window.innerWidth / 3;
+      const side = e.clientX < third ? -1 : e.clientX > third * 2 ? 1 : 0;
+      if (!onDoubleTap || !touch || !side) return toggle(wasShown);
+      if (side === lastSide && (now - lastTapAt < DOUBLE_TAP_MS || now < seekingUntil)) {
+        clearTimeout(pending);
+        onDoubleTap(side);
+        lastTapAt = now;
+        seekingUntil = now + DOUBLE_TAP_MS;
+        return;
+      }
+      lastTapAt = now;
+      lastSide = side;
+      const was = wasShown;
+      clearTimeout(pending);
+      pending = setTimeout(() => toggle(was), DOUBLE_TAP_MS);
+    },
   };
 }
 
