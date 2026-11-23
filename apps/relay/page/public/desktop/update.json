@@ -1,15 +1,15 @@
 {
-  "version": "0.9.10",
-  "notes": "Phones and touch screens: double tap on the right of a movie or episode to jump forward, on the left to jump back. Keep tapping to jump further.",
-  "pub_date": "2026-11-22T18:47:15.455Z",
+  "version": "0.9.11",
+  "notes": "Updates: the app now looks for a new version by itself every 12 hours and asks you: Update, or Remind me later. It never interrupts what you're watching.\nSettings: each choice is shown as a small picture of the screen, so you can see what it does before you pick it.\nClose buttons on the playlist and sort pickers and on Audio & subtitles, for phones that go back with a swipe.\nLive TV, Movies and Series: the playlist name no longer repeats above the list.",
+  "pub_date": "2026-11-23T18:22:43.006Z",
   "platforms": {
     "darwin-aarch64": {
-      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.10/UltraIPTV-mac.app.tar.gz",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzd5dS9RZXppSmNSZXA0RzNGVXdGQlZBUCsyOXpZcjBtSU1RMFNGS2lyQ0dlVUpwNkdZSitBejc3TytESTNKNE05ZlJPdGNna0JaK3dvTFNhRWJOSndNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MzcyNzc3CWZpbGU6VWx0cmEgSVBUVi5hcHAudGFyLmd6CXZlcnNpb246MC45LjEwCmxlbzlOSEJoYXV3bE1nZmU4cituYnZhUlQ2SGdSZWNSOVJYenpwcGdVMHZSL0E5bEZRVnJFUW1sMVZ5ZGlKQ0ozSzlCUlQxZEhLSUVSOHVXL1k3c0J3PT0K"
+      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.11/UltraIPTV-mac.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzA3ZlNmQnBEVzk0aFRERzNiQS94dVZyTTJEN1U2OEk5d2dTUENmLzUwT0QrbVpjQzZWcmdBdVY3Wkh1YnZRaW9wZURkSTJtUnhWVFBoMitSTnpPVVEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NDU3NzIyCWZpbGU6VWx0cmEgSVBUVi5hcHAudGFyLmd6CXZlcnNpb246MC45LjExCnh3dmZSNzdKVXNEakhRNzJSc1VLN0NFWE05WnFXQUFDOXFzR1FvNGlPM1NIS0FEWFFrdndtbURqcUZvWXdDU0pDOTIyeHBQemlmVitYdnF1dmhMT0FBPT0K"
     },
     "windows-x86_64": {
-      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.10/UltraIPTV-windows-setup.exe",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzZOM2NxZWI0RDl5YU1MRjBJajJkTi83QnJMb0lUaUdIZGd6d0JiTEh4K1dicE9rcmR5bHRuTTRqejgrNTdOc0QwRU1PaS9TOWNTTzRrajk1T1VLM3dnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MzczMTc0CWZpbGU6VWx0cmEgSVBUVl8wLjkuMTBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjAuOS4xMApMVmlPajZOODE5RG01dy9ZMjU1VjdNZ2c5M1ZlUTNVWGFvVVdvdmZlRXlGdmF6aDlFOW5yaVJYdStJSnFydG00d2NQTDI5YVZZclE0SExUNXRISExBUT09Cg=="
+      "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.11/UltraIPTV-windows-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTMkJlbm1EeVBxVzhrNCt1QUdNWmp0Sm9NYUUxdmZqVGhXc0hHTE83T3lDNU1TcC9KM2Jvd201d2hGSHhIVVpLR3ZFZW1mVHhBbkIwVGRraWhVSXBVZjhwTFFoNUQrbncwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1NDU4MDk2CWZpbGU6VWx0cmEgSVBUVl8wLjkuMTFfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjAuOS4xMQo4ZVhKcHBiOFB0amVXR2JmRVRSTzROL21KeVViZUk2Mzl0Q00zWUZiNllJcTNLNHc1eElpVXoxU2M0SVNBMUlwZHdyeTZ2MTdxZFgrMGVENzdjWU9DUT09Cg=="
     }
   }
 }

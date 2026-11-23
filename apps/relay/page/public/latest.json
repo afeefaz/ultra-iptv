@@ -1,15 +1,21 @@
 {
-  "versionCode": 25,
-  "versionName": "0.9.10",
-  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.10/UltraIPTV.apk",
-  "sha256": "cc2bca00d97a5c34928cfc820e641f0a4d49fcde1881675faa9443418c07a494",
-  "size": 12511408,
+  "versionCode": 26,
+  "versionName": "0.9.11",
+  "url": "https://github.com/afeefaz/ultra-iptv/releases/download/v0.9.11/UltraIPTV.apk",
+  "sha256": "d9819ee54200109ea34e8001cc920821f4d4e3c8c140c42d5435a6bb0d62537c",
+  "size": 12514564,
   "notes": {
     "en": [
-      "Phones and touch screens: double tap on the right of a movie or episode to jump forward, on the left to jump back. Keep tapping to jump further."
+      "Updates: the app now looks for a new version by itself every 12 hours and asks you: Update, or Remind me later. It never interrupts what you're watching.",
+      "Settings: each choice is shown as a small picture of the screen, so you can see what it does before you pick it.",
+      "Close buttons on the playlist and sort pickers and on Audio & subtitles, for phones that go back with a swipe.",
+      "Live TV, Movies and Series: the playlist name no longer repeats above the list."
     ],
     "ar": [
-      "الهواتف والشاشات اللمسية: انقر مرتين على يمين الفيلم أو الحلقة للتقديم، وعلى اليسار للترجيع. واصل النقر للتقدّم أكثر."
+      "التحديثات: يبحث التطبيق الآن عن إصدار جديد تلقائيًا كل 12 ساعة ويسألك: تحديث، أو ذكّرني لاحقًا. ولا يقاطع ما تشاهده أبدًا.",
+      "الإعدادات: يظهر كل خيار كصورة صغيرة للشاشة، لترى ما يفعله قبل اختياره.",
+      "أزرار إغلاق في قائمتي قوائم التشغيل والترتيب وفي الصوت والترجمة، للهواتف التي تعود للخلف بالسحب.",
+      "البث المباشر والأفلام والمسلسلات: لم يعد اسم قائمة التشغيل يتكرر فوق القائمة."
     ]
   }
 }
