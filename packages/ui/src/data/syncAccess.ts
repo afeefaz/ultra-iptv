@@ -7,8 +7,9 @@ import { track } from './usage';
 const PREFIX = 'ultraiptv.';
 const ACTIVE_KEY = 'ultraiptv.activePlaylist';
 /** Belong to this device: what it's measured, and how it logs. Every other setting travels. */
-// Which way up the screen is belongs to one phone, not to every device.
-const NOT_SYNCED = ['ultraiptv.usage', 'ultraiptv.log.salt', 'ultraiptv.log.level', 'ultraiptv.display.orientation', ACTIVE_KEY];
+// Which way up the screen is belongs to one phone, not to every device, and so does when it last
+// looked for an update.
+const NOT_SYNCED = ['ultraiptv.usage', 'ultraiptv.log.salt', 'ultraiptv.log.level', 'ultraiptv.display.orientation', 'ultraiptv.update.lastCheck', ACTIVE_KEY];
 
 const [status, setStatus] = createSignal<SyncStatus | null>(null);
 export { status as syncStatus };

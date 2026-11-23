@@ -4,9 +4,9 @@ import { track } from './usage';
 
 export type CheckResult = { kind: 'available'; latest: LatestRelease } | { kind: 'current' } | { kind: 'offline' };
 
-/** Only when someone presses the button. */
-export async function checkForUpdate(platform: Platform): Promise<CheckResult> {
-  track('update.check');
+/** When someone presses Check now, and by itself every 12 hours (autoUpdate). */
+export async function checkForUpdate(platform: Platform, by: 'press' | 'auto' = 'press'): Promise<CheckResult> {
+  track(by === 'auto' ? 'update.autoCheck' : 'update.check');
   if (!platform.updater || !platform.http) return { kind: 'current' };
   const { updater, http } = platform;
   try {

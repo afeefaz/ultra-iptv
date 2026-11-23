@@ -6,9 +6,11 @@ import { Icon, type IconName } from './components/Icon';
 import { LoadingLine } from './components/LoadingProgress';
 import { PickerDialog } from './components/PickerDialog';
 import { PinHost } from './components/PinDialog';
+import { UpdateHost } from './components/UpdateDialog';
 import { toastText } from './data/toast';
 import { SystemUsageReadout } from './components/SystemUsageReadout';
 import { VideoLayer } from './components/VideoLayer';
+import { startAutoUpdate } from './data/autoUpdate';
 import { setCatalogPlatform } from './data/catalog';
 import { clock, formatClock } from './data/epg';
 import { startParental } from './data/parental';
@@ -181,6 +183,7 @@ export function App(props: { platform: Platform }): JSX.Element {
     startPlaylists();
     startRemoteAccess();
     startParental();
+    startAutoUpdate(props.platform);
     const stopKeys = props.platform.keys.start(handleKey);
     // A tap also sends a fake mouse move, so only a device that can hover counts as having a mouse.
     const canHover = window.matchMedia('(hover: hover)').matches;
@@ -293,6 +296,7 @@ export function App(props: { platform: Platform }): JSX.Element {
         </FocusZone>
         <VideoLayer />
         <PinHost />
+        <UpdateHost />
         <Show when={toastText()}>
           <div class="toast" role="status">
             {toastText()}

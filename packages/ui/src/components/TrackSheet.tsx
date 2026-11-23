@@ -28,10 +28,13 @@ export function TrackSheet(props: { onClose: () => void }): JSX.Element {
       <FocusZone id="track-sheet" trap>
         <div class="sheet-head">
           <Icon name="tune" />
-          <div>
+          <div class="grow">
             <h2>{t('player.audioSubs')}</h2>
             <div class="sheet-sub">{t('player.tracksSub')}</div>
           </div>
+          <FocusButton id="track-close" class="icon-button dialog-close" label={t('common.close')} onSelect={() => props.onClose()}>
+            <Icon name="close" />
+          </FocusButton>
         </div>
         <div class="sheet-label">
           <span>{t('player.audio')}</span>

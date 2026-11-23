@@ -6,7 +6,7 @@ How this codebase is built, and what every change has to respect. `docs/spec.md`
 
 These don't bend for a feature. If a feature seems to need one broken, raise it first.
 
-1. **No third-party services, and no backend that can read your data.** The app talks to the user's IPTV provider, plus our relay (`apps/relay`), which holds encrypted data it has no key for. The app contacts it only when the user presses Refresh, Push, Pull or Link, or changes a playlist after having pressed Refresh once, and never on a timer. A device that has never pressed any of them sends nothing. The other contacts are also only when pressed: Check for updates reads our website and downloads from our GitHub releases, and Trailer loads our website's trailer page (`apps/relay/page/public/trailer.html`), which plays the provider's YouTube trailer. YouTube is the one outside service, because it's free and the app talks to it directly, with nothing of ours to run. No telemetry, crash reporting, CDNs or outside speed-test servers.
+1. **No third-party services, and no backend that can read your data.** The app talks to the user's IPTV provider, plus our relay (`apps/relay`), which holds encrypted data it has no key for. The app contacts it only when the user presses Refresh, Push, Pull or Link, or changes a playlist after having pressed Refresh once, and never on a timer. Apart from the update check, a device that has never pressed any of them sends nothing. The one exception is the update check: where the app can update itself (Android, Mac, Windows), it reads our website's public `latest.json` by itself at most every 12 hours (`data/autoUpdate.ts`), a plain request that sends nothing about the user, and offers the new version in a popup. The other contacts are only when pressed: Check for updates reads the same file, Update downloads from our GitHub releases, and Trailer loads our website's trailer page (`apps/relay/page/public/trailer.html`), which plays the provider's YouTube trailer. YouTube is the one outside service, because it's free and the app talks to it directly, with nothing of ours to run. No telemetry, crash reporting, CDNs or outside speed-test servers.
 2. **Nothing readable leaves the device.** Logs, performance data and usage counts stay local until the user exports them.
 3. **No content.** The app ships no channels, streams or provider details.
 4. **One codebase.** Samsung, Android (phone, TV, Fire TV) and web share the UI. Differences live behind `Platform`, never in `if (samsung)` branches in screens.
@@ -81,7 +81,8 @@ Dependencies only point downward: `ui` → `worker`, `platform` → `core`. `cor
 - **Only the item you're on is filled.** It gets a solid fill, a white border and a breathing ring. Everything else stays unfilled, including primary buttons. A saved choice, like the open category or current tab, gets a marker: a thin border, an underline or accent text. The logo and progress bars are the only other solid accent. On touchscreens nothing stays highlighted, and a button only fills while pressed.
 - **Keep the focus animation cheap.** It only changes the opacity of one ring on its own layer, in 12 steps a second, and holds still while focus is moving. Don't animate a border, shadow or size, which repaint on every frame.
 - **Every screen has an obvious first focus** (`autofocus`), and never lands on Back.
-- **Back always works:** the remote key, the phone gesture, and `BackButton` on any page below a tab. It returns to the same place, with the same scroll, focus and search.
+- **Back always works, and is always on screen:** the remote key, the phone gesture, and a button you can see. Use `BackButton` on any page below a tab, and a Close (or Cancel) button in every dialog, sheet and picker. The gesture alone isn't enough: on a phone the app hides the system bars, so the first swipe from the edge only shows them, and computers have no Back key. Back returns to the same place, with the same scroll, focus and search.
+- **Settings are drawn.** A choice that changes what's on screen gets a small drawing of the screen for each option, through `SketchPicker` (`components/Sketch.tsx`), with the drawings in `screens/settingsSketches.tsx`. Draw only the part the choice changes, keep the rest plain, and use `ink="accent"` for that part. Only choices with nothing to draw stay as plain option cards: languages, sort orders, stream format, the colour swatches and the Home sections.
 - **Lists use `VirtualList` or `VirtualGrid`** when they can be long, with fixed row heights.
 - **Text input** goes through `TextField`, which handles the TV keyboard and the phone's.
 - **Tapping outside closes** dialogs and sheets. Dialogs trap focus.
@@ -134,15 +135,16 @@ Budgets and how to run the tests are in `docs/performance.md`.
 ## New feature checklist
 
 1. Does it respect the product rules? Does it fit an existing screen?
-2. Does it work by remote, touch and mouse, with a sensible first focus and Back?
-3. Strings in English and Arabic?
-4. Does it work at text size 70–150%, on phone and TV?
-5. New platform ability behind `Platform`, handled where absent?
-6. On the legacy bundle (`check-legacy`)?
-7. Traced with `perf`, and counted with `track` if it's a feature?
-8. Does it hold up on a 50,000-item catalogue? Within budget?
-9. Tests for the logic? Tried on the devices in the table above?
-10. Docs updated if behaviour or commands changed?
+2. Does it work by remote, touch and mouse, with a sensible first focus and an on-screen Back or Close?
+3. A new setting that changes the screen: is it drawn (`SketchPicker`)?
+4. Strings in English and Arabic?
+5. Does it work at text size 70–150%, on phone and TV?
+6. New platform ability behind `Platform`, handled where absent?
+7. On the legacy bundle (`check-legacy`)?
+8. Traced with `perf`, and counted with `track` if it's a feature?
+9. Does it hold up on a 50,000-item catalogue? Within budget?
+10. Tests for the logic? Tried on the devices in the table above?
+11. Docs updated if behaviour or commands changed?
 
 ## Git and releases
 

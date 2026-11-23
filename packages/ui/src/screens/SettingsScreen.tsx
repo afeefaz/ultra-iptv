@@ -1,9 +1,10 @@
 import type { ContentKind, StreamFormat } from '@ultra/core';
-import type { BufferProfile, ScreenOrientation } from '@ultra/platform';
+import type { BufferProfile, PictureFit, ScreenOrientation } from '@ultra/platform';
 import { createSignal, For, onMount, Show, type JSX } from 'solid-js';
 import { FocusButton } from '../components/FocusButton';
 import { Icon, type IconName } from '../components/Icon';
 import { RemoteQrPanel } from '../components/RemoteQrPanel';
+import { SketchPicker } from '../components/Sketch';
 import { SyncCard } from '../components/SyncCard';
 import { UpdateRow } from '../components/UpdateRow';
 import { RemoteIdentityLine } from '../components/RemoteRefreshButton';
@@ -98,6 +99,22 @@ import { formatNumber, locale, setLocale, t, type Locale, type MessageKey } from
 import { useKeys } from '../keys';
 import { navigate } from '../nav';
 import { usePlatform } from '../platform-context';
+import {
+  AutoPlayNextSketch,
+  BufferSketch,
+  DetailSketch,
+  GroupingSketch,
+  GroupPickerSketch,
+  GuideRowsSketch,
+  KeepOpenSketch,
+  LiveRecentSketch,
+  PictureSketch,
+  PictureSkipSketch,
+  SubtitleSketch,
+  ThemeSketch,
+  TopBarSketch,
+  UsageSketch,
+} from './settingsSketches';
 
 // Language names are always shown in their own language.
 const LANGUAGES: Array<{ id: Locale; name: string; badge: string; sub: MessageKey }> = [
@@ -286,30 +303,18 @@ function LayoutPicker(props: {
   onPick: (layout: LiveLayout) => void;
 }): JSX.Element {
   return (
-    <>
-      <div class="setting-name setting-gap">{t(props.title)}</div>
-      <Show when={props.desc}>{(d) => <div class="setting-desc">{t(d())}</div>}</Show>
-      <div class="option-cards layout-picks" classList={{ 'layout-picks-three': props.options.length > 2 }} role="radiogroup" aria-label={t(props.title)}>
-        <For each={props.options}>
-          {(l) => (
-            <FocusButton id={`settings-${props.title}-${l}`} class="layout-pick" selected={props.value === l} onSelect={() => props.onPick(l)}>
-              <LayoutSketch layout={l} kind={props.kind} />
-              <span class="layout-pick-label">
-                <span class="option-card-text">
-                  <span class="option-card-title">{t(`settings.liveLayout.${l}`)}</span>
-                  <span class="option-card-sub">{t(`settings.liveLayout.${l}Sub`)}</span>
-                </span>
-                <Icon name={props.value === l ? 'checkCircle' : 'radioOff'} />
-              </span>
-            </FocusButton>
-          )}
-        </For>
-      </div>
-    </>
+    <SketchPicker<LiveLayout>
+      id={`settings-${props.title}`}
+      title={props.title}
+      desc={props.desc}
+      value={props.value}
+      onPick={props.onPick}
+      options={props.options.map((l) => ({ value: l, title: t(`settings.liveLayout.${l}`), sub: t(`settings.liveLayout.${l}Sub`), sketch: () => <LayoutSketch layout={l} kind={props.kind} /> }))}
+    />
   );
 }
 
-/** A phone on its side: the list beside the picture, as the app looks turned. */
+/** A phone on its side/** A phone on its side: the list beside the picture, as the app looks turned. */
 function PhoneLandscape(): JSX.Element {
   return (
     <span class="sketch-phone sketch-phone-wide">
@@ -357,26 +362,14 @@ function OrientationSketch(props: { mode: ScreenOrientation }): JSX.Element {
 /** Phones only: which way up the screen may be. */
 function OrientationPicker(): JSX.Element {
   return (
-    <>
-      <div class="setting-name setting-gap">{t('settings.orientation')}</div>
-      <div class="setting-desc">{t('settings.orientationDesc')}</div>
-      <div class="option-cards layout-picks layout-picks-three" role="radiogroup" aria-label={t('settings.orientation')}>
-        <For each={ORIENTATIONS}>
-          {(mode) => (
-            <FocusButton id={`settings-orientation-${mode}`} class="layout-pick" selected={screenOrientation() === mode} onSelect={() => setScreenOrientation(mode)}>
-              <OrientationSketch mode={mode} />
-              <span class="layout-pick-label">
-                <span class="option-card-text">
-                  <span class="option-card-title">{t(`settings.orientation.${mode}`)}</span>
-                  <span class="option-card-sub">{t(`settings.orientation.${mode}Sub`)}</span>
-                </span>
-                <Icon name={screenOrientation() === mode ? 'checkCircle' : 'radioOff'} />
-              </span>
-            </FocusButton>
-          )}
-        </For>
-      </div>
-    </>
+    <SketchPicker<ScreenOrientation>
+      id="settings-orientation"
+      title="settings.orientation"
+      desc="settings.orientationDesc"
+      value={screenOrientation()}
+      onPick={setScreenOrientation}
+      options={ORIENTATIONS.map((mode) => ({ value: mode, title: t(`settings.orientation.${mode}`), sub: t(`settings.orientation.${mode}Sub`), sketch: () => <OrientationSketch mode={mode} /> }))}
+    />
   );
 }
 
@@ -406,6 +399,12 @@ function BoxesCells(props: { columns: number; rows: number }): JSX.Element {
 }
 
 const VOD_SORTS: SortBy[] = ['added', 'name', 'rating', 'year'];
+const ON_OFF = [true, false];
+const BUFFER_PROFILES: BufferProfile[] = ['low', 'balanced', 'stable'];
+const SUBTITLE_SIZES: SubtitleSize[] = ['small', 'medium', 'large'];
+const THEMES: Theme[] = ['dark', 'light'];
+const DETAIL_MODES: DetailMode[] = ['page', 'inline'];
+const GROUPINGS: CategoryGrouping[] = ['auto', 'on', 'off'];
 const HIDDEN_KINDS: Array<{ kind: ContentKind; title: MessageKey }> = [
   { kind: 'live', title: 'tab.live' },
   { kind: 'vod', title: 'tab.movies' },
@@ -525,36 +524,22 @@ export function SettingsScreen(): JSX.Element {
                     ]}
                   />
                 </div>
-                <div class="setting-name">{t('settings.buffer')}</div>
-                <div class="setting-desc">{t('settings.bufferDesc')}</div>
-                <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
-                  <For each={['low', 'balanced', 'stable'] as BufferProfile[]}>
-                    {(b) => (
-                      <FocusButton id={`settings-buffer-${b}`} selected={bufferProfile() === b} onSelect={() => setBufferProfile(b)}>
-                        <span class="option-card-text">
-                          <span class="option-card-title">{t(`settings.buffer.${b}`)}</span>
-                          <span class="option-card-sub">{t(`settings.buffer.${b}Sub`)}</span>
-                        </span>
-                        <Icon name={bufferProfile() === b ? 'checkCircle' : 'radioOff'} />
-                      </FocusButton>
-                    )}
-                  </For>
-                </div>
-                <div class="setting-name setting-gap">{t('settings.picture')}</div>
-                <div class="setting-desc">{t('settings.pictureDesc')}</div>
-                <div class="option-cards" role="radiogroup" aria-label={t('settings.picture')} style={{ 'margin-top': '0.8rem' }}>
-                  <For each={PICTURE_FITS}>
-                    {(f) => (
-                      <FocusButton id={`settings-picture-${f}`} selected={pictureFit() === f} onSelect={() => choosePictureFit(f)}>
-                        <span class="option-card-text">
-                          <span class="option-card-title">{t(`fit.${f}`)}</span>
-                          <span class="option-card-sub">{t(`fit.${f}Desc`)}</span>
-                        </span>
-                        <Icon name={pictureFit() === f ? 'checkCircle' : 'radioOff'} />
-                      </FocusButton>
-                    )}
-                  </For>
-                </div>
+                <SketchPicker<BufferProfile>
+                  id="settings-buffer"
+                  title="settings.buffer"
+                  desc="settings.bufferDesc"
+                  value={bufferProfile()}
+                  onPick={setBufferProfile}
+                  options={BUFFER_PROFILES.map((b) => ({ value: b, title: t(`settings.buffer.${b}`), sub: t(`settings.buffer.${b}Sub`), sketch: () => <BufferSketch profile={b} /> }))}
+                />
+                <SketchPicker<PictureFit>
+                  id="settings-picture"
+                  title="settings.picture"
+                  desc="settings.pictureDesc"
+                  value={pictureFit()}
+                  onPick={choosePictureFit}
+                  options={PICTURE_FITS.map((f) => ({ value: f, title: t(`fit.${f}`), sub: t(`fit.${f}Desc`), sketch: () => <PictureSketch fit={f} /> }))}
+                />
                 <div class="setting-name setting-gap">{t('settings.seekSeconds')}</div>
                 <div class="setting-desc">{t('settings.seekSecondsDesc')}</div>
                 <Stepper
@@ -568,53 +553,35 @@ export function SettingsScreen(): JSX.Element {
                   reset={MIN_SEEK_SECONDS}
                   onChange={setSeekSeconds}
                 />
-                <div class="setting-name setting-gap">{t('settings.pictureSkip')}</div>
-                <div class="setting-desc">{t('settings.pictureSkipDesc')}</div>
-                <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
-                  <For each={[true, false]}>
-                    {(show) => (
-                      <FocusButton id={`settings-picture-skip-${show}`} selected={showPictureSkip() === show} onSelect={() => setShowPictureSkip(show)}>
-                        <span class="option-card-text">
-                          <span class="option-card-title">{t(show ? 'settings.usage.on' : 'settings.usage.off')}</span>
-                        </span>
-                        <Icon name={showPictureSkip() === show ? 'checkCircle' : 'radioOff'} />
-                      </FocusButton>
-                    )}
-                  </For>
-                </div>
-                <div class="setting-name setting-gap">{t('settings.autoPlayNext')}</div>
-                <div class="setting-desc">{t('settings.autoPlayNextDesc')}</div>
-                <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
-                  <For each={[true, false]}>
-                    {(on) => (
-                      <FocusButton id={`settings-auto-next-${on}`} selected={autoPlayNext() === on} onSelect={() => setAutoPlayNext(on)}>
-                        <span class="option-card-text">
-                          <span class="option-card-title">{t(on ? 'settings.autoPlayNext.on' : 'settings.autoPlayNext.off')}</span>
-                        </span>
-                        <Icon name={autoPlayNext() === on ? 'checkCircle' : 'radioOff'} />
-                      </FocusButton>
-                    )}
-                  </For>
-                </div>
+                <SketchPicker<boolean>
+                  id="settings-picture-skip"
+                  title="settings.pictureSkip"
+                  desc="settings.pictureSkipDesc"
+                  value={showPictureSkip()}
+                  onPick={setShowPictureSkip}
+                  options={ON_OFF.map((on) => ({ value: on, title: t(on ? 'settings.usage.on' : 'settings.usage.off'), sketch: () => <PictureSkipSketch shown={on} /> }))}
+                />
+                <SketchPicker<boolean>
+                  id="settings-auto-next"
+                  title="settings.autoPlayNext"
+                  desc="settings.autoPlayNextDesc"
+                  value={autoPlayNext()}
+                  onPick={setAutoPlayNext}
+                  options={ON_OFF.map((on) => ({ value: on, title: t(on ? 'settings.autoPlayNext.on' : 'settings.autoPlayNext.off'), sketch: () => <AutoPlayNextSketch on={on} /> }))}
+                />
               </Card>
             </Show>
 
             <Show when={shows('subtitles')}>
               <Card section={section('subtitles')}>
-                <div class="setting-row">
-                  <div class="setting-name">{t('settings.subtitleSize')}</div>
-                  <Segmented<SubtitleSize>
-                    id="settings-subsize"
-                    label={t('settings.subtitleSize')}
-                    value={subtitleSize()}
-                    onChange={setSubtitleSize}
-                    options={[
-                      { value: 'small', label: 'settings.size.small' },
-                      { value: 'medium', label: 'settings.size.medium' },
-                      { value: 'large', label: 'settings.size.large' },
-                    ]}
-                  />
-                </div>
+                <SketchPicker<SubtitleSize>
+                  id="settings-subsize"
+                  title="settings.subtitleSize"
+                  first
+                  value={subtitleSize()}
+                  onPick={setSubtitleSize}
+                  options={SUBTITLE_SIZES.map((size) => ({ value: size, title: t(`settings.size.${size}`), sketch: () => <SubtitleSketch size={size} /> }))}
+                />
                 <div class="status-row">
                   <Icon name="volume" />
                   <div class="grow">
@@ -659,22 +626,14 @@ export function SettingsScreen(): JSX.Element {
                 <Show when={canTurn()}>
                   <OrientationPicker />
                 </Show>
-                <div class="setting-name setting-gap">{t('settings.theme')}</div>
-                <div class="setting-desc">{t('settings.themeDesc')}</div>
-                <div class="option-cards" role="radiogroup" aria-label={t('settings.theme')} style={{ 'margin-top': '0.8rem' }}>
-                  <For each={['dark', 'light'] as Theme[]}>
-                    {(mode) => (
-                      <FocusButton id={`settings-theme-${mode}`} selected={theme() === mode} onSelect={() => setTheme(mode)}>
-                        <span class={`theme-swatch theme-swatch-${mode}`} />
-                        <span class="option-card-text">
-                          <span class="option-card-title">{t(`settings.theme.${mode}`)}</span>
-                          <span class="option-card-sub">{t(`settings.theme.${mode}Sub`)}</span>
-                        </span>
-                        <Icon name={theme() === mode ? 'checkCircle' : 'radioOff'} />
-                      </FocusButton>
-                    )}
-                  </For>
-                </div>
+                <SketchPicker<Theme>
+                  id="settings-theme"
+                  title="settings.theme"
+                  desc="settings.themeDesc"
+                  value={theme()}
+                  onPick={setTheme}
+                  options={THEMES.map((mode) => ({ value: mode, title: t(`settings.theme.${mode}`), sub: t(`settings.theme.${mode}Sub`), sketch: () => <ThemeSketch theme={mode} /> }))}
+                />
                 <div class="setting-name setting-gap">{t('settings.appColor')}</div>
                 <div class="setting-desc">{t('settings.appColorDesc')}</div>
                 <div class="option-cards option-cards-wrap" role="radiogroup" aria-label={t('settings.appColor')}>
@@ -690,93 +649,61 @@ export function SettingsScreen(): JSX.Element {
                     )}
                   </For>
                 </div>
-                <div class="setting-name setting-gap">{t('settings.topBarSections')}</div>
-                <div class="setting-desc">{t('settings.topBarSectionsDesc')}</div>
-                <div class="option-cards" role="radiogroup" aria-label={t('settings.topBarSections')} style={{ 'margin-top': '0.8rem' }}>
-                  <For each={[true, false]}>
-                    {(show) => (
-                      <FocusButton id={`settings-topbar-${show}`} selected={topBarSections() === show} onSelect={() => setTopBarSections(show)}>
-                        <span class="option-card-text">
-                          <span class="option-card-title">{t(show ? 'settings.topBarSections.show' : 'settings.topBarSections.hide')}</span>
-                        </span>
-                        <Icon name={topBarSections() === show ? 'checkCircle' : 'radioOff'} />
-                      </FocusButton>
-                    )}
-                  </For>
-                </div>
+                <SketchPicker<boolean>
+                  id="settings-topbar"
+                  title="settings.topBarSections"
+                  desc="settings.topBarSectionsDesc"
+                  value={topBarSections()}
+                  onPick={setTopBarSections}
+                  options={ON_OFF.map((show) => ({ value: show, title: t(show ? 'settings.topBarSections.show' : 'settings.topBarSections.hide'), sketch: () => <TopBarSketch tabs={show} /> }))}
+                />
                 <LayoutPicker title="settings.liveLayout" desc="settings.liveLayoutDesc" kind="live" options={['standard', 'large', 'split']} value={liveLayout()} onPick={setLiveLayout} />
                 <LayoutPicker title="settings.moviesLayout" kind="vod" options={['standard', 'large']} value={moviesLayout()} onPick={setMoviesLayout} />
                 <LayoutPicker title="settings.seriesLayout" kind="vod" options={['standard', 'large']} value={seriesLayout()} onPick={setSeriesLayout} />
                 <Show when={liveLayout() !== 'standard' || moviesLayout() === 'large' || seriesLayout() === 'large'}>
-                  <div class="setting-name setting-gap">{t('settings.largeCount')}</div>
-                  <div class="setting-desc">{t('settings.largeCountDesc')}</div>
-                  <div class="option-cards layout-picks" role="radiogroup" aria-label={t('settings.largeCount')}>
-                    <For each={LARGE_BOXES}>
-                      {(n) => (
-                        <FocusButton id={`settings-large-count-${n}`} class="layout-pick" selected={largeBoxes() === n} onSelect={() => setLargeBoxes(n)}>
-                          <BoxesSketch columns={boxGrid(n).columns} rows={boxGrid(n).rows} />
-                          <span class="layout-pick-label">
-                            <span class="option-card-title">{t('settings.largeCount.boxes', { n: formatNumber(n) })}</span>
-                            <Icon name={largeBoxes() === n ? 'checkCircle' : 'radioOff'} />
-                          </span>
-                        </FocusButton>
-                      )}
-                    </For>
-                  </div>
+                  <SketchPicker<number>
+                    id="settings-large-count"
+                    title="settings.largeCount"
+                    desc="settings.largeCountDesc"
+                    value={largeBoxes()}
+                    onPick={setLargeBoxes}
+                    options={LARGE_BOXES.map((n) => ({ value: n, title: t('settings.largeCount.boxes', { n: formatNumber(n) }), sketch: () => <BoxesSketch columns={boxGrid(n).columns} rows={boxGrid(n).rows} /> }))}
+                  />
                 </Show>
                 <Show when={moviesLayout() === 'large' || seriesLayout() === 'large'}>
-                  <div class="setting-name setting-gap">{t('settings.posterColumns')}</div>
-                  <div class="setting-desc">{t('settings.posterColumnsDesc')}</div>
-                  <div class="option-cards layout-picks" role="radiogroup" aria-label={t('settings.posterColumns')}>
-                    <For each={POSTER_COLUMNS}>
-                      {(n) => (
-                        <FocusButton id={`settings-poster-columns-${n}`} class="layout-pick" selected={posterColumns() === n} onSelect={() => setPosterColumns(n)}>
-                          <BoxesSketch columns={n} rows={1} />
-                          <span class="layout-pick-label">
-                            <span class="option-card-title">{t('settings.posterColumns.n', { n: formatNumber(n) })}</span>
-                            <Icon name={posterColumns() === n ? 'checkCircle' : 'radioOff'} />
-                          </span>
-                        </FocusButton>
-                      )}
-                    </For>
-                  </div>
+                  <SketchPicker<number>
+                    id="settings-poster-columns"
+                    title="settings.posterColumns"
+                    desc="settings.posterColumnsDesc"
+                    value={posterColumns()}
+                    onPick={setPosterColumns}
+                    options={POSTER_COLUMNS.map((n) => ({ value: n, title: t('settings.posterColumns.n', { n: formatNumber(n) }), sketch: () => <BoxesSketch columns={n} rows={1} /> }))}
+                  />
                 </Show>
                 <Show when={platform.systemUsage}>
-                  <div class="setting-name setting-gap">{t('settings.usage')}</div>
-                  <div class="setting-desc">{t('settings.usageDesc')}</div>
-                  <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
-                    <For each={[true, false]}>
-                      {(on) => (
-                        <FocusButton id={`settings-usage-${on}`} selected={showSystemUsage() === on} onSelect={() => setShowSystemUsage(on)}>
-                          <span class="option-card-text">
-                            <span class="option-card-title">{t(on ? 'settings.usage.on' : 'settings.usage.off')}</span>
-                          </span>
-                          <Icon name={showSystemUsage() === on ? 'checkCircle' : 'radioOff'} />
-                        </FocusButton>
-                      )}
-                    </For>
-                  </div>
+                  <SketchPicker<boolean>
+                    id="settings-usage"
+                    title="settings.usage"
+                    desc="settings.usageDesc"
+                    value={showSystemUsage()}
+                    onPick={setShowSystemUsage}
+                    options={ON_OFF.map((on) => ({ value: on, title: t(on ? 'settings.usage.on' : 'settings.usage.off'), sketch: () => <UsageSketch shown={on} /> }))}
+                  />
                 </Show>
               </Card>
             </Show>
 
             <Show when={shows('browsing')}>
               <Card section={section('browsing')}>
-                <div class="setting-name">{t('settings.detailMode')}</div>
-                <div class="setting-desc">{t('settings.detailModeDesc')}</div>
-                <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
-                  <For each={['page', 'inline'] as DetailMode[]}>
-                    {(m) => (
-                      <FocusButton id={`settings-detail-${m}`} selected={detailMode() === m} onSelect={() => setDetailMode(m)}>
-                        <span class="option-card-text">
-                          <span class="option-card-title">{t(`settings.detail.${m}`)}</span>
-                          <span class="option-card-sub">{t(`settings.detail.${m}Sub`)}</span>
-                        </span>
-                        <Icon name={detailMode() === m ? 'checkCircle' : 'radioOff'} />
-                      </FocusButton>
-                    )}
-                  </For>
-                </div>
+                <SketchPicker<DetailMode>
+                  id="settings-detail"
+                  title="settings.detailMode"
+                  desc="settings.detailModeDesc"
+                  first
+                  value={detailMode()}
+                  onPick={setDetailMode}
+                  options={DETAIL_MODES.map((m) => ({ value: m, title: t(`settings.detail.${m}`), sub: t(`settings.detail.${m}Sub`), sketch: () => <DetailSketch mode={m} /> }))}
+                />
                 <div class="setting-name setting-gap">{t('settings.defaultSort')}</div>
                 <div class="setting-desc">{t('settings.defaultSortDesc')}</div>
                 <div class="option-cards wrap" style={{ 'margin-top': '0.8rem' }}>
@@ -805,66 +732,54 @@ export function SettingsScreen(): JSX.Element {
                     )}
                   </For>
                 </div>
-                <div class="setting-name setting-gap">{t('settings.groupPicker')}</div>
-                <div class="setting-desc">{t('settings.groupPickerDesc')}</div>
-                <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
-                  <For each={[true, false]}>
-                    {(on) => (
-                      <FocusButton id={`settings-groups-${on}`} selected={liveGroupPicker() === on} onSelect={() => setLiveGroupPicker(on)}>
-                        <span class="option-card-text">
-                          <span class="option-card-title">{t(on ? 'settings.groupPicker.on' : 'settings.groupPicker.off')}</span>
-                          <span class="option-card-sub">{t(on ? 'settings.groupPicker.onSub' : 'settings.groupPicker.offSub')}</span>
-                        </span>
-                        <Icon name={liveGroupPicker() === on ? 'checkCircle' : 'radioOff'} />
-                      </FocusButton>
-                    )}
-                  </For>
-                </div>
-                <div class="setting-name setting-gap">{t('settings.guideRows')}</div>
-                <div class="setting-desc">{t('settings.guideRowsDesc')}</div>
-                <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
-                  <For each={[true, false]}>
-                    {(every) => (
-                      <FocusButton id={`settings-guide-${every}`} selected={guideOnEveryRow() === every} onSelect={() => setGuideOnEveryRow(every)}>
-                        <span class="option-card-text">
-                          <span class="option-card-title">{t(every ? 'settings.guideRows.every' : 'settings.guideRows.selected')}</span>
-                          <span class="option-card-sub">{t(every ? 'settings.guideRows.everySub' : 'settings.guideRows.selectedSub')}</span>
-                        </span>
-                        <Icon name={guideOnEveryRow() === every ? 'checkCircle' : 'radioOff'} />
-                      </FocusButton>
-                    )}
-                  </For>
-                </div>
-                <div class="setting-name setting-gap">{t('settings.liveRecent')}</div>
-                <div class="setting-desc">{t('settings.liveRecentDesc')}</div>
-                <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
-                  <For each={[true, false]}>
-                    {(show) => (
-                      <FocusButton id={`settings-live-recent-${show}`} selected={liveShowRecent() === show} onSelect={() => setLiveShowRecent(show)}>
-                        <span class="option-card-text">
-                          <span class="option-card-title">{t(show ? 'settings.usage.on' : 'settings.usage.off')}</span>
-                        </span>
-                        <Icon name={liveShowRecent() === show ? 'checkCircle' : 'radioOff'} />
-                      </FocusButton>
-                    )}
-                  </For>
-                </div>
+                <SketchPicker<boolean>
+                  id="settings-groups"
+                  title="settings.groupPicker"
+                  desc="settings.groupPickerDesc"
+                  value={liveGroupPicker()}
+                  onPick={setLiveGroupPicker}
+                  options={ON_OFF.map((on) => ({
+                    value: on,
+                    title: t(on ? 'settings.groupPicker.on' : 'settings.groupPicker.off'),
+                    sub: t(on ? 'settings.groupPicker.onSub' : 'settings.groupPicker.offSub'),
+                    sketch: () => <GroupPickerSketch shown={on} />,
+                  }))}
+                />
+                <SketchPicker<boolean>
+                  id="settings-guide"
+                  title="settings.guideRows"
+                  desc="settings.guideRowsDesc"
+                  value={guideOnEveryRow()}
+                  onPick={setGuideOnEveryRow}
+                  options={ON_OFF.map((every) => ({
+                    value: every,
+                    title: t(every ? 'settings.guideRows.every' : 'settings.guideRows.selected'),
+                    sub: t(every ? 'settings.guideRows.everySub' : 'settings.guideRows.selectedSub'),
+                    sketch: () => <GuideRowsSketch every={every} />,
+                  }))}
+                />
+                <SketchPicker<boolean>
+                  id="settings-live-recent"
+                  title="settings.liveRecent"
+                  desc="settings.liveRecentDesc"
+                  value={liveShowRecent()}
+                  onPick={setLiveShowRecent}
+                  options={ON_OFF.map((show) => ({ value: show, title: t(show ? 'settings.usage.on' : 'settings.usage.off'), sketch: () => <LiveRecentSketch shown={show} /> }))}
+                />
                 <Show when={detailMode() === 'inline'}>
-                  <div class="setting-name setting-gap">{t('settings.keepOpen')}</div>
-                  <div class="setting-desc">{t('settings.keepOpenDesc')}</div>
-                  <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
-                    <For each={[true, false]}>
-                      {(keep) => (
-                        <FocusButton id={`settings-keep-${keep}`} selected={keepTitleOpen() === keep} onSelect={() => setKeepTitleOpen(keep)}>
-                          <span class="option-card-text">
-                            <span class="option-card-title">{t(keep ? 'settings.keepOpen.on' : 'settings.keepOpen.off')}</span>
-                            <span class="option-card-sub">{t(keep ? 'settings.keepOpen.onSub' : 'settings.keepOpen.offSub')}</span>
-                          </span>
-                          <Icon name={keepTitleOpen() === keep ? 'checkCircle' : 'radioOff'} />
-                        </FocusButton>
-                      )}
-                    </For>
-                  </div>
+                  <SketchPicker<boolean>
+                    id="settings-keep"
+                    title="settings.keepOpen"
+                    desc="settings.keepOpenDesc"
+                    value={keepTitleOpen()}
+                    onPick={setKeepTitleOpen}
+                    options={ON_OFF.map((keep) => ({
+                      value: keep,
+                      title: t(keep ? 'settings.keepOpen.on' : 'settings.keepOpen.off'),
+                      sub: t(keep ? 'settings.keepOpen.onSub' : 'settings.keepOpen.offSub'),
+                      sketch: () => <KeepOpenSketch keep={keep} />,
+                    }))}
+                  />
                 </Show>
               </Card>
             </Show>
@@ -885,21 +800,14 @@ export function SettingsScreen(): JSX.Element {
                     )}
                   </For>
                 </div>
-                <div class="setting-name setting-gap">{t('settings.grouping')}</div>
-                <div class="setting-desc">{t('settings.groupingDesc')}</div>
-                <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>
-                  <For each={['auto', 'on', 'off'] as CategoryGrouping[]}>
-                    {(mode) => (
-                      <FocusButton id={`settings-grouping-${mode}`} selected={categoryGrouping() === mode} onSelect={() => setCategoryGrouping(mode)}>
-                        <span class="option-card-text">
-                          <span class="option-card-title">{t(`settings.grouping.${mode}`)}</span>
-                          <span class="option-card-sub">{t(`settings.grouping.${mode}Sub`)}</span>
-                        </span>
-                        <Icon name={categoryGrouping() === mode ? 'checkCircle' : 'radioOff'} />
-                      </FocusButton>
-                    )}
-                  </For>
-                </div>
+                <SketchPicker<CategoryGrouping>
+                  id="settings-grouping"
+                  title="settings.grouping"
+                  desc="settings.groupingDesc"
+                  value={categoryGrouping()}
+                  onPick={setCategoryGrouping}
+                  options={GROUPINGS.map((mode) => ({ value: mode, title: t(`settings.grouping.${mode}`), sub: t(`settings.grouping.${mode}Sub`), sketch: () => <GroupingSketch mode={mode} /> }))}
+                />
                 <div class="setting-name setting-gap">{t('rename.pageTitle')}</div>
                 <div class="setting-desc">{t('rename.settingsDesc')}</div>
                 <div class="option-cards" style={{ 'margin-top': '0.8rem' }}>

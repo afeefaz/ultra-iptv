@@ -1,5 +1,6 @@
 import { formatLine, LEVELS, log, logging, toNdjson, type LogEntry, type LogLevel } from '@ultra/core';
 import { createMemo, createSignal, For, onCleanup, onMount, Show, type JSX } from 'solid-js';
+import { BackButton } from '../components/BackButton';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { FocusButton } from '../components/FocusButton';
 import { FocusZone, useFocusable } from '../focus';
@@ -101,7 +102,10 @@ export function DebugScreen(): JSX.Element {
 
   return (
     <div class="screen debug">
-      <h1 class="screen-title">{t('debug.title')}</h1>
+      <div class="title-with-back">
+        <BackButton />
+        <h1 class="screen-title">{t('debug.title')}</h1>
+      </div>
       <FocusZone id="debug-toolbar" remember>
         <div class="button-row">
           <FocusButton id="debug-pause" autofocus onSelect={() => setPaused(!paused())}>

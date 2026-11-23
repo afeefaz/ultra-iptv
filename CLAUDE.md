@@ -4,9 +4,10 @@ Read `docs/engineering.md` before changing code. It holds the rules, conventions
 
 Hard rules:
 
-- No third-party services or telemetry, apart from downloading our own releases from GitHub when someone presses Update, and YouTube when someone presses Trailer (through our website's trailer page). Nothing readable leaves the device. The relay (`apps/relay`) only ever holds encrypted data, and is only contacted when the user presses Refresh, Push, Pull, Link or Trailer, or changes a playlist after having pressed Refresh once.
+- No third-party services or telemetry, apart from downloading our own releases from GitHub when someone presses Update, and YouTube when someone presses Trailer (through our website's trailer page). Nothing readable leaves the device. The one automatic contact: where the app can update itself, it reads our website's public `latest.json` at most every 12 hours, sending nothing. The relay (`apps/relay`) only ever holds encrypted data, and is only contacted when the user presses Refresh, Push, Pull, Link or Trailer, or changes a playlist after having pressed Refresh once.
 - Never type, read or print a real IPTV login. Keep real channel names, hosts and logins out of this public repo.
 - Performance tests may use the account already signed in on a device, one device at a time. Everyday development uses the mock provider.
-- Every action works by remote, touch and mouse. Moving focus never acts.
+- Every action works by remote, touch and mouse. Moving focus never acts. Every page and dialog has an on-screen Back or Close.
+- Settings that change the screen are drawn (`SketchPicker`), not radio buttons.
 - Every string goes in `i18n/en.ts` and `i18n/ar.ts`.
 - `pnpm check` passes before every commit. Commit or push only when asked.

@@ -397,9 +397,6 @@ export function VodScreen(props: { kind: Kind }): JSX.Element {
           <>
             <div class="live-header">
               <span class="live-title">
-                <span class="dot" />
-                <bdi>{p().name}</bdi>
-                <span class="sep">•</span>
                 <span class="accent">
                   <bdi>{large() && largeStep() === 'categories' ? t('live.largeTitle') : (railItems().filter((c) => c.id === category())[0]?.name ?? '')}</bdi>
                 </span>

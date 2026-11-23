@@ -1,7 +1,8 @@
 import type { LatestRelease } from '@ultra/core';
-import type { AppUpdater, UpdateProblem } from '@ultra/platform';
+import type { AppUpdater, Platform, UpdateProblem } from '@ultra/platform';
 import { createSignal, For, Show, type JSX } from 'solid-js';
 import { checkForUpdate } from '../data/appUpdate';
+import { offeredUpdate } from '../data/autoUpdate';
 import { track } from '../data/usage';
 import { usePlatform } from '../platform-context';
 import { locale, t, type MessageKey } from '../i18n';
@@ -26,10 +27,9 @@ const PROBLEMS: Record<UpdateProblem, MessageKey> = {
   install: 'update.errorInstall',
 };
 
-/** Check for updates, in Settings. Only shown where the app can update itself. */
-export function UpdateRow(props: { updater: AppUpdater }): JSX.Element {
-  const platform = usePlatform();
-  const [state, setState] = createSignal<State>({ kind: 'idle' });
+/** What Check now, the update button and its text do, shared by Settings and the update popup. */
+export function createUpdateFlow(updater: AppUpdater, platform: Platform, found?: LatestRelease) {
+  const [state, setState] = createSignal<State>(found ? { kind: 'available', latest: found } : { kind: 'idle' });
 
   const check = async () => {
     setState({ kind: 'checking' });
@@ -40,13 +40,13 @@ export function UpdateRow(props: { updater: AppUpdater }): JSX.Element {
   };
 
   const update = async (latest: LatestRelease) => {
-    const info = await props.updater.info();
+    const info = await updater.info();
     // The Mac app can't replace itself while it runs from the disk image or Downloads.
     if (!info.canInstall && info.blocker === 'location') return setState({ kind: 'error', message: 'update.moveToApplications', latest });
     if (!info.canInstall) return setState({ kind: 'permission', latest });
     track('update.install');
     setState({ kind: 'downloading', latest, percent: 0 });
-    await props.updater.install(latest, {
+    await updater.install(latest, {
       onProgress: (percent) => setState({ kind: 'downloading', latest, percent }),
       onInstalling: () => setState({ kind: 'installing', latest }),
       onCancelled: () => setState({ kind: 'available', latest }),
@@ -56,7 +56,7 @@ export function UpdateRow(props: { updater: AppUpdater }): JSX.Element {
 
   const openPermission = async (latest: LatestRelease) => {
     // Update checks the permission again when they come back, or says so if they didn't allow it.
-    setState((await props.updater.openInstallPermission()) ? { kind: 'available', latest } : { kind: 'permission', latest, settingsMissing: true });
+    setState((await updater.openInstallPermission()) ? { kind: 'available', latest } : { kind: 'permission', latest, settingsMissing: true });
   };
 
   // One button that stays in place. If it disappeared while busy, the remote's focus would be lost.
@@ -87,12 +87,9 @@ export function UpdateRow(props: { updater: AppUpdater }): JSX.Element {
     void check();
   };
 
-  const latestOf = () => {
-    const s = state();
-    return 'latest' in s ? s.latest : undefined;
-  };
   const notes = () => {
-    const latest = latestOf();
+    const s = state();
+    const latest = 'latest' in s ? s.latest : undefined;
     return latest ? (locale() === 'ar' ? latest.notes.ar : latest.notes.en) : [];
   };
 
@@ -110,13 +107,27 @@ export function UpdateRow(props: { updater: AppUpdater }): JSX.Element {
       case 'downloading':
         return t('update.downloading', { percent: s.percent });
       case 'installing':
-        return t(props.updater.relaunches ? 'update.installingRelaunch' : 'update.installing');
+        return t(updater.relaunches ? 'update.installingRelaunch' : 'update.installing');
       case 'error':
         return t(s.message);
       default:
-        return t(props.updater.relaunches ? 'update.descDesktop' : 'update.desc');
+        return t(updater.relaunches ? 'update.descDesktop' : 'update.desc');
     }
   };
+
+  const percent = () => {
+    const s = state();
+    return s.kind === 'downloading' ? s.percent : null;
+  };
+
+  return { state, act, label, description, notes, percent, busy: () => ['checking', 'downloading', 'installing'].indexOf(state().kind) >= 0 };
+}
+
+/** Check for updates, in Settings. Only shown where the app can update itself. */
+export function UpdateRow(props: { updater: AppUpdater }): JSX.Element {
+  // What the automatic check found shows here too, ready to install.
+  const flow = createUpdateFlow(props.updater, usePlatform(), offeredUpdate() ?? undefined);
+  const { state, act, label, description, notes, percent } = flow;
 
   return (
     <div class="status-row update-row">
@@ -126,9 +137,9 @@ export function UpdateRow(props: { updater: AppUpdater }): JSX.Element {
         <div class="setting-desc" classList={{ 'text-error': state().kind === 'error' }} role="status">
           {description()}
         </div>
-        <Show when={state().kind === 'downloading'}>
+        <Show when={percent() !== null}>
           <div class="update-bar">
-            <div class="update-bar-fill" style={{ width: `${(state() as { percent: number }).percent}%` }} />
+            <div class="update-bar-fill" style={{ width: `${percent()}%` }} />
           </div>
         </Show>
         <Show when={state().kind === 'available' && notes().length}>

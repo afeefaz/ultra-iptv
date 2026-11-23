@@ -564,9 +564,6 @@ export function LiveScreen(props: { focusKey?: string }): JSX.Element {
           <>
             <div class="live-header">
               <span class="live-title">
-                <span class="dot" />
-                <bdi>{p().name}</bdi>
-                <span class="sep">•</span>
                 <span class="accent">
                   <bdi>{large() && largeStep() === 'categories' ? t('live.largeTitle') : categoryName(category())}</bdi>
                 </span>
