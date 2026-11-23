@@ -221,7 +221,7 @@ function LivePlayer(): JSX.Element {
   return (
     <div
       class="player-screen"
-      onMouseMove={showOverlay}
+      onMouseMove={tap.move}
       onTouchStart={tap.down}
       onMouseDown={tap.down}
       onClick={(e) => {
@@ -655,7 +655,7 @@ function MediaPlayer(): JSX.Element {
   return (
     <div
       class="player-screen"
-      onMouseMove={showOverlay}
+      onMouseMove={tap.move}
       onTouchStart={tap.down}
       onMouseDown={tap.down}
       onClick={(e) => {
@@ -815,8 +815,9 @@ function MediaPlayer(): JSX.Element {
 const DOUBLE_TAP_MS = 300;
 
 /**
- * A tap on the picture toggles the controls. A tap also sends a mouse move (which shows them)
- * before its click, so what counts is whether they were up when the finger or button went down.
+ * A tap on the picture toggles the controls. A tap also sends a fake mouse move before its click:
+ * `move` ignores those, so only a real mouse shows the controls by moving, and a double tap leaves
+ * them as they were. What counts is whether they were up when the finger or button went down.
  * With `onDoubleTap` (movies and episodes), a touch screen also seeks: two quick taps on the left
  * third jump back, on the right third forward, and each further quick tap jumps again. A single
  * tap there waits a moment for a second one; the middle answers at once.
@@ -826,7 +827,7 @@ function tapOnPicture(
   show: () => void,
   hide: () => void,
   onDoubleTap?: (direction: -1 | 1) => void,
-): { down: (e: Event) => void; click: (e: MouseEvent) => void } {
+): { down: (e: Event) => void; move: () => void; click: (e: MouseEvent) => void } {
   let wasShown = false;
   let touchedAt = 0;
   let lastTapAt = 0;
@@ -840,6 +841,9 @@ function tapOnPicture(
       if (e.type === 'touchstart') touchedAt = Date.now();
       else if (Date.now() - touchedAt < 1000) return;
       wasShown = shown();
+    },
+    move: () => {
+      if (Date.now() - touchedAt >= 1000) show();
     },
     click: (e) => {
       const now = Date.now();
